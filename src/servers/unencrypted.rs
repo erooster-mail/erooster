@@ -30,7 +30,7 @@ pub async fn run() {
                 secure: false,
             };
             while let Some(Ok(line)) = lines.next().await {
-                let data = &mut Data {
+                let data = Data {
                     command_data: None,
                     con_state: &mut state,
                 };

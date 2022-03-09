@@ -157,7 +157,7 @@ pub trait Command<Lines> {
 
 #[async_trait]
 pub trait Parser<Lines, 'a> {
-    async fn parse(&'a mut self, lines: &'a mut Lines, line: String) -> anyhow::Result<bool>;
+    async fn parse(mut self, lines: &'a mut Lines, line: String) -> anyhow::Result<bool>;
 }
 
 #[async_trait]
@@ -167,7 +167,7 @@ where
     S::Error: From<io::Error>,
 {
     #[allow(clippy::too_many_lines)]
-    async fn parse(&'a mut self, lines: &'a mut S, line: String) -> anyhow::Result<bool> {
+    async fn parse(mut self, lines: &'a mut S, line: String) -> anyhow::Result<bool> {
         debug!("Current state: {:?}", self.con_state.state);
         if let State::Authenticating((AuthenticationMethod::Plain, tag)) = &self.con_state.state {
             self.command_data = Some(ComandData {
@@ -177,7 +177,7 @@ where
                 arguments: None,
             });
             Authenticate {
-                data: self,
+                data: &mut self,
                 auth_data: line,
             }
             .plain(lines)
@@ -189,10 +189,10 @@ where
         match parse_result {
             Ok(_) => {
                 match self.command_data.as_ref().unwrap().command {
-                    Commands::Capability => Capability { data: self }.exec(lines).await?,
-                    Commands::Login => Login { data: self }.exec(lines).await?,
+                    Commands::Capability => Capability { data: &self }.exec(lines).await?,
+                    Commands::Login => Login { data: &self }.exec(lines).await?,
                     Commands::Logout => {
-                        Logout { data: self }.exec(lines).await?;
+                        Logout { data: &self }.exec(lines).await?;
                         // We return true here early as we want to make sure that this closes the connection
                         return Ok(true);
                     }
@@ -208,7 +208,7 @@ where
                             .unwrap()
                             .to_string();
                         Authenticate {
-                            data: self,
+                            data: &mut self,
                             auth_data,
                         }
                         .exec(lines)
@@ -217,9 +217,9 @@ where
                     Commands::List => {
                         if let Some(ref arguments) = self.command_data.as_ref().unwrap().arguments {
                             if arguments.len() == 2 {
-                                Basic { data: self }.exec(lines).await?;
+                                Basic { data: &self }.exec(lines).await?;
                             } else if arguments.len() == 4 {
-                                Extended { data: self }.exec(lines).await?;
+                                Extended { data: &self }.exec(lines).await?;
                             } else {
                                 lines
                                     .send(format!(
@@ -240,7 +240,7 @@ where
                     Commands::LSub => {
                         if let Some(ref arguments) = self.command_data.as_ref().unwrap().arguments {
                             if arguments.len() == 2 {
-                                Basic { data: self }.exec(lines).await?;
+                                Basic { data: &mut self }.exec(lines).await?;
                             } else {
                                 lines
                                     .send(format!(

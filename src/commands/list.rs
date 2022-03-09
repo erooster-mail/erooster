@@ -11,7 +11,7 @@ use crate::{
 };
 
 pub struct Basic<'a> {
-    pub data: &'a mut Data<'a>,
+    pub data: &'a Data<'a>,
 }
 
 #[async_trait]
@@ -91,7 +91,7 @@ where
 }
 
 pub struct Extended<'a> {
-    pub data: &'a mut Data<'a>,
+    pub data: &'a Data<'a>,
 }
 
 #[async_trait]

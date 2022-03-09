@@ -101,7 +101,7 @@ pub async fn run() -> anyhow::Result<()> {
                         secure: true,
                     };
                     while let Some(Ok(line)) = lines.next().await {
-                        let data = &mut Data {
+                        let data = Data {
                             command_data: None,
                             // TODO mutex?
                             con_state: &mut state,

@@ -9,7 +9,7 @@ use crate::{
 };
 
 pub struct Capability<'a> {
-    pub data: &'a mut Data<'a>,
+    pub data: &'a Data<'a>,
 }
 
 #[async_trait]

@@ -24,12 +24,12 @@ pub async fn run() {
                 .send(format!("* OK [{}] IMAP4rev2 Service Ready", capabilities))
                 .await
                 .unwrap();
+            let mut state = super::ConnectionState {
+                state: super::State::NotAuthenticated,
+                ip: peer.ip(),
+                secure: false,
+            };
             while let Some(Ok(line)) = lines.next().await {
-                let mut state = super::ConnectionState {
-                    state: super::State::NotAuthenticated,
-                    ip: peer.ip(),
-                    secure: false,
-                };
                 let data = &mut Data {
                     command_data: None,
                     con_state: &mut state,

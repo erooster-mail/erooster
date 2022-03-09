@@ -1,13 +1,14 @@
 use async_trait::async_trait;
 use futures::{Sink, SinkExt};
 use simdutf8::compat::from_utf8;
-use std::io;
-use tracing::{debug, error};
+use std::{io, sync::Arc};
+use tracing::error;
 
 use crate::{
     commands::{Command, Data},
+    config::Config,
     line_codec::LinesCodecError,
-    state::State,
+    servers::state::State,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -21,7 +22,7 @@ pub struct Authenticate<'a> {
 }
 
 impl Authenticate<'_> {
-    pub async fn plain<S>(&mut self, lines: &mut S) -> anyhow::Result<()>
+    pub async fn plain<S>(&mut self, lines: &mut S, _config: Arc<Config>) -> anyhow::Result<()>
     where
         S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
         S::Error: From<io::Error>,
@@ -34,17 +35,21 @@ impl Authenticate<'_> {
                     .filter_map(|string| {
                         let new_string = from_utf8(string);
                         if let Ok(new_string) = new_string {
+                            if new_string.is_empty() {
+                                return None;
+                            }
                             return Some(new_string);
                         }
                         None
                     })
                     .collect();
 
-                debug_assert_eq!(auth_data_vec.len(), 3);
-                if auth_data_vec.len() == 3 {
-                    // TODO remove with actual implementation.
-                    // This exists so the compiler knows that collect is justified here
-                    let _guard = auth_data_vec.get(0);
+                debug_assert_eq!(auth_data_vec.len(), 2);
+                if auth_data_vec.len() == 2 {
+                    let username = auth_data_vec[0];
+                    self.data.con_state.username = Some(username.to_string());
+
+                    let _password = auth_data_vec[1];
 
                     // TODO check against DB
                     self.data.con_state.state = State::Authenticated;
@@ -99,7 +104,7 @@ where
     S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
     S::Error: From<io::Error>,
 {
-    async fn exec(&mut self, lines: &mut S) -> anyhow::Result<()> {
+    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> anyhow::Result<()> {
         if self.data.con_state.state == State::NotAuthenticated {
             let args = &self.data.command_data.as_ref().unwrap().arguments;
             debug_assert_eq!(args.len(), 1);
@@ -111,7 +116,7 @@ where
                     ));
                     lines.send(String::from("+ ")).await?;
                 } else {
-                    self.plain(lines).await?;
+                    self.plain(lines, config).await?;
                 }
             } else {
                 lines

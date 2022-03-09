@@ -1,12 +1,13 @@
-use std::io;
+use std::{io, sync::Arc};
 
 use async_trait::async_trait;
 use futures::{Sink, SinkExt};
 
 use crate::{
     commands::{Command, Data},
+    config::Config,
     line_codec::LinesCodecError,
-    state::State,
+    servers::state::State,
 };
 
 pub struct Check<'a> {
@@ -19,7 +20,7 @@ where
     S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
     S::Error: From<io::Error>,
 {
-    async fn exec(&mut self, lines: &mut S) -> anyhow::Result<()> {
+    async fn exec(&mut self, lines: &mut S, _config: Arc<Config>) -> anyhow::Result<()> {
         // This is an Imap4rev1 feature. It does the same as Noop for us as we have no memory gc.
         // It also only is allowed in selected state
         if matches!(self.data.con_state.state, State::Selected(_)) {

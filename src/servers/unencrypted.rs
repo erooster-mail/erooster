@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use futures::SinkExt;
 use tokio::net::TcpListener;
@@ -7,17 +9,18 @@ use tracing::{debug, info};
 
 use crate::{
     commands::{capability::get_capabilities, Data, Parser},
+    config::Config,
     line_codec::LinesCodec,
-    servers::Server,
-    state::{Connection, State},
+    servers::state::{Connection, State},
+    servers::ImapServer,
 };
 
 /// An unencrypted imap Server
 pub struct Unencrypted;
 
 #[async_trait]
-impl Server for Unencrypted {
-    async fn run() -> anyhow::Result<()> {
+impl ImapServer for Unencrypted {
+    async fn run(config: Arc<Config>) -> anyhow::Result<()> {
         let listener = TcpListener::bind("0.0.0.0:143").await?;
         info!("Listening on unecrypted Port");
         let mut stream = TcpListenerStream::new(listener);
@@ -25,6 +28,7 @@ impl Server for Unencrypted {
             let peer = tcp_stream.peer_addr().expect("peer addr to exist");
             debug!("Got new peer: {}", peer);
 
+            let config = Arc::clone(&config);
             tokio::spawn(async move {
                 let mut lines = Framed::new(tcp_stream, LinesCodec::new());
                 let capabilities = get_capabilities();
@@ -36,6 +40,7 @@ impl Server for Unencrypted {
                     state: State::NotAuthenticated,
                     ip: peer.ip(),
                     secure: false,
+                    username: None,
                 };
                 while let Some(Ok(line)) = lines.next().await {
                     let data = Data {
@@ -47,7 +52,7 @@ impl Server for Unencrypted {
 
                     // TODO make sure to handle IDLE different as it needs us to stream lines
                     // TODO pass lines and make it possible to not need new lines in responds but instead directly use `lines.send`
-                    let response = data.parse(&mut lines, line).await;
+                    let response = data.parse(&mut lines, Arc::clone(&config), line).await;
 
                     match response {
                         Ok(response) => {

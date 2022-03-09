@@ -1,0 +1,4 @@
+tls:
+  cert_path: "./certs"
+mail:
+  maildir_folders: "./maildir"

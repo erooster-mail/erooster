@@ -17,9 +17,10 @@ use tracing::{debug, error, info};
 
 use crate::{
     commands::{capability::get_capabilities, Data, Parser},
+    config::Config,
     line_codec::LinesCodec,
-    servers::Server,
-    state::{Connection, State},
+    servers::state::{Connection, State},
+    servers::ImapServer,
 };
 
 /// An encrypted imap Server
@@ -56,26 +57,26 @@ impl Encrypted {
 }
 
 #[async_trait]
-impl Server for Encrypted {
+impl ImapServer for Encrypted {
     /// Starts a TLS server
     ///
     /// # Errors
     ///
     /// Returns an error if the cert setup fails
-    async fn run() -> anyhow::Result<()> {
+    async fn run(config: Arc<Config>) -> anyhow::Result<()> {
         // Load SSL Keys
         let certs = Encrypted::load_certs(Path::new("certs/cert.pem"));
         let key = Encrypted::load_key(Path::new("certs/key.pem"));
 
         // Sets up the TLS acceptor.
-        let config = rustls::ServerConfig::builder()
+        let server_config = rustls::ServerConfig::builder()
             .with_safe_defaults()
             .with_no_client_auth()
             .with_single_cert(certs, key)
             .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
 
         // Starts a TLS accepting thing.
-        let acceptor = TlsAcceptor::from(Arc::new(config));
+        let acceptor = TlsAcceptor::from(Arc::new(server_config));
 
         // Opens the listener
         let listener = TcpListener::bind("0.0.0.0:993").await.unwrap();
@@ -89,6 +90,7 @@ impl Server for Encrypted {
 
             // Start talking with new peer on new thread
             let acceptor = acceptor.clone();
+            let config = Arc::clone(&config);
             tokio::spawn(async move {
                 // Accept TCP connection
                 let tls_stream = acceptor.accept(tcp_stream).await;
@@ -110,6 +112,7 @@ impl Server for Encrypted {
                             state: State::NotAuthenticated,
                             ip: peer.ip(),
                             secure: true,
+                            username: None,
                         };
                         while let Some(Ok(line)) = lines.next().await {
                             let data = Data {
@@ -122,7 +125,8 @@ impl Server for Encrypted {
                             // TODO pass lines and make it possible to not need new lines in responds but instead directly use `lines.send`
 
                             {
-                                let response = data.parse(&mut lines, line).await;
+                                let response =
+                                    data.parse(&mut lines, Arc::clone(&config), line).await;
                                 match response {
                                     Ok(response) => {
                                         // Cleanup timeout managers

@@ -1,18 +1,20 @@
-use std::io;
+use std::{io, sync::Arc};
 
 use crate::{
     commands::{
         auth::{Authenticate, AuthenticationMethod},
         capability::Capability,
         check::Check,
+        create::Create,
         list::{LSub, List},
         login::Login,
         logout::Logout,
         noop::Noop,
         select::Select,
     },
+    config::Config,
     line_codec::LinesCodecError,
-    state::{Connection, State},
+    servers::state::{Connection, State},
 };
 use async_trait::async_trait;
 use futures::{Sink, SinkExt};
@@ -30,6 +32,7 @@ use tracing::{debug, error, warn};
 pub mod auth;
 pub mod capability;
 mod check;
+mod create;
 mod list;
 mod login;
 mod logout;
@@ -60,6 +63,7 @@ pub enum Commands {
     Select,
     Noop,
     Check,
+    Create,
 }
 
 impl TryFrom<&str> for Commands {
@@ -76,6 +80,7 @@ impl TryFrom<&str> for Commands {
             "select" => Ok(Commands::Select),
             "noop" => Ok(Commands::Noop),
             "check" => Ok(Commands::Check),
+            "create" => Ok(Commands::Create),
             _ => {
                 warn!("Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
@@ -150,12 +155,17 @@ impl Data<'_> {
 
 #[async_trait]
 pub trait Command<Lines> {
-    async fn exec(&mut self, lines: &mut Lines) -> anyhow::Result<()>;
+    async fn exec(&mut self, lines: &mut Lines, config: Arc<Config>) -> anyhow::Result<()>;
 }
 
 #[async_trait]
 pub trait Parser<Lines, 'a> {
-    async fn parse(mut self, lines: &'a mut Lines, line: String) -> anyhow::Result<bool>;
+    async fn parse(
+        mut self,
+        lines: &'a mut Lines,
+        config: Arc<Config>,
+        line: String,
+    ) -> anyhow::Result<bool>;
 }
 
 #[async_trait]
@@ -164,7 +174,12 @@ where
     S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
     S::Error: From<io::Error>,
 {
-    async fn parse(mut self, lines: &'a mut S, line: String) -> anyhow::Result<bool> {
+    async fn parse(
+        mut self,
+        lines: &'a mut S,
+        config: Arc<Config>,
+        line: String,
+    ) -> anyhow::Result<bool> {
         debug!("Current state: {:?}", self.con_state.state);
         if let State::Authenticating((AuthenticationMethod::Plain, tag)) = &self.con_state.state {
             self.command_data = Some(CommandData {
@@ -177,7 +192,7 @@ where
                 data: &mut self,
                 auth_data: line,
             }
-            .plain(lines)
+            .plain(lines, config)
             .await?;
             // We are done here
             return Ok(false);
@@ -192,10 +207,12 @@ where
                 }) = self.command_data
                 {
                     match command {
-                        Commands::Capability => Capability { data: &self }.exec(lines).await?,
-                        Commands::Login => Login { data: &self }.exec(lines).await?,
+                        Commands::Capability => {
+                            Capability { data: &self }.exec(lines, config).await?;
+                        }
+                        Commands::Login => Login { data: &self }.exec(lines, config).await?,
                         Commands::Logout => {
-                            Logout { data: &self }.exec(lines).await?;
+                            Logout { data: &self }.exec(lines, config).await?;
                             // We return true here early as we want to make sure that this closes the connection
                             return Ok(true);
                         }
@@ -205,23 +222,24 @@ where
                                 data: &mut self,
                                 auth_data,
                             }
-                            .exec(lines)
+                            .exec(lines, config)
                             .await?;
                         }
                         Commands::List => {
-                            List { data: &self }.exec(lines).await?;
+                            List { data: &self }.exec(lines, config).await?;
                         }
                         Commands::LSub => {
-                            LSub { data: &self }.exec(lines).await?;
+                            LSub { data: &self }.exec(lines, config).await?;
                         }
                         Commands::Select => {
-                            Select { data: &mut self }.exec(lines).await?;
+                            Select { data: &mut self }.exec(lines, config).await?;
                         }
+                        Commands::Create => Create { data: &self }.exec(lines, config).await?,
                         Commands::Noop => {
-                            Noop { data: &self }.exec(lines).await?;
+                            Noop { data: &self }.exec(lines, config).await?;
                         }
                         Commands::Check => {
-                            Check { data: &self }.exec(lines).await?;
+                            Check { data: &self }.exec(lines, config).await?;
                         }
                     }
                 }
@@ -269,6 +287,7 @@ mod tests {
             state: super::State::NotAuthenticated,
             ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             secure: true,
+            username: None,
         };
         let mut data = Data {
             command_data: None,
@@ -306,6 +325,7 @@ mod tests {
             state: super::State::NotAuthenticated,
             ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             secure: true,
+            username: None,
         };
         let mut data = Data {
             command_data: None,
@@ -330,6 +350,7 @@ mod tests {
             state: super::State::Authenticated,
             ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             secure: true,
+            username: None,
         };
         let mut data = Data {
             command_data: None,

@@ -30,8 +30,10 @@
 #![warn(missing_docs)]
 #![allow(clippy::missing_panics_doc)]
 
+use std::sync::Arc;
+
 use anyhow::Result;
-use erooster::servers::Server;
+use erooster::{config::Config, servers::ImapServer};
 use tokio::signal;
 use tracing::{error, info};
 
@@ -39,13 +41,15 @@ use tracing::{error, info};
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     info!("Starting ERooster Imap Server");
-    tokio::spawn(async {
-        if let Err(e) = erooster::servers::Unencrypted::run().await {
+    let config = Arc::new(Config::load("./config.yml")?);
+    let config_clone = Arc::clone(&config);
+    tokio::spawn(async move {
+        if let Err(e) = erooster::servers::Unencrypted::run(Arc::clone(&config_clone)).await {
             panic!("Unable to start server: {:?}", e);
         }
     });
-    tokio::spawn(async {
-        if let Err(e) = erooster::servers::Encrypted::run().await {
+    tokio::spawn(async move {
+        if let Err(e) = erooster::servers::Encrypted::run(Arc::clone(&config)).await {
             panic!("Unable to start TLS server: {:?}", e);
         }
     });

@@ -28,8 +28,10 @@
 
 mod commands;
 mod line_codec;
-mod state;
 
-/// The core server logic for the imap server.
+/// The core server logic for the server.
 /// This is the tls and non tls variant of the server.
 pub mod servers;
+
+/// The configuration file for the server
+pub mod config;

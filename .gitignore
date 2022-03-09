@@ -2,3 +2,5 @@
 /certs
 /*.stacks
 /windows_thunderbird_debug.cmd
+/config.yml
+/maildir

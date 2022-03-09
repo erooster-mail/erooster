@@ -3,7 +3,7 @@ name = "erooster"
 version = "0.1.0"
 edition = "2021"
 description = "An IMAP4v2 compatible imap server"
-license = "Apache-2"
+license = "Apache-2.0"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }

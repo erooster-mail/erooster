@@ -32,6 +32,7 @@ where
     };
 
     let arguments = &data.command_data.as_ref().unwrap().arguments;
+    debug_assert_eq!(arguments.len(), 2);
     if let Some(first_arg) = arguments.first() {
         if first_arg == "\"\"" {
             if let Some(second_arg) = arguments.last() {
@@ -121,6 +122,7 @@ where
 {
     async fn exec(&mut self, lines: &mut S) -> anyhow::Result<()> {
         let arguments = &self.data.command_data.as_ref().unwrap().arguments;
+        debug_assert_eq!(arguments.len(), 2);
         if arguments.len() == 2 {
             basic(self.data, lines).await?;
         } else if arguments.len() == 4 {
@@ -149,6 +151,7 @@ where
 {
     async fn exec(&mut self, lines: &mut S) -> anyhow::Result<()> {
         let arguments = &self.data.command_data.as_ref().unwrap().arguments;
+        debug_assert_eq!(arguments.len(), 2);
         if arguments.len() == 2 {
             basic(self.data, lines).await?;
         } else {

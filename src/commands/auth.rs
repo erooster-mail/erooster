@@ -26,7 +26,6 @@ impl Authenticate<'_> {
         S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
         S::Error: From<io::Error>,
     {
-        debug!("auth_data: {}", self.auth_data);
         let bytes = base64::decode(self.auth_data.as_bytes());
         match bytes {
             Ok(bytes) => {
@@ -40,6 +39,8 @@ impl Authenticate<'_> {
                         None
                     })
                     .collect();
+
+                debug_assert_eq!(auth_data_vec.len(), 3);
                 if auth_data_vec.len() == 3 {
                     // TODO remove with actual implementation.
                     // This exists so the compiler knows that collect is justified here
@@ -101,6 +102,7 @@ where
     async fn exec(&mut self, lines: &mut S) -> anyhow::Result<()> {
         if self.data.con_state.state == State::NotAuthenticated {
             let args = &self.data.command_data.as_ref().unwrap().arguments;
+            debug_assert_eq!(args.len(), 1);
             if args.len() == 1 {
                 if args.first().unwrap().to_lowercase() == "plain" {
                     self.data.con_state.state = State::Authenticating((

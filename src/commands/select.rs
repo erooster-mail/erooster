@@ -22,7 +22,8 @@ where
     async fn exec(&mut self, lines: &mut S) -> anyhow::Result<()> {
         if self.data.con_state.state == State::Authenticated {
             let args = &self.data.command_data.as_ref().unwrap().arguments;
-
+            
+            debug_assert_eq!(args.len(), 1);
             let mut folder = args.first().expect("server selects a folder").to_string();
             folder.remove_matches('"');
             self.data.con_state.state = State::Selected(folder);

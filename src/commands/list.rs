@@ -6,7 +6,7 @@ use maildir::Maildir;
 use tracing::debug;
 
 use crate::{
-    commands::{Command, Commands, Data},
+    commands::{utils::get_flags, Command, Commands, Data},
     config::Config,
     line_codec::LinesCodecError,
     servers::state::State,
@@ -79,27 +79,23 @@ where
                         command_resp,
                     ))
                     .await?;
-            } else {
-                // TODO calc flags
-                let mut flags = vec![];
-                let folder_name = sub_folder.path().file_name().unwrap().to_string_lossy();
-                if folder_name.contains("Trash") {
-                    flags.push("\\Trash");
-                }
-                lines
-                    .feed(format!(
-                        "* {} ({}) \"/\" \"{}\"",
-                        command_resp,
-                        flags.join(" "),
-                        sub_folder
-                            .path()
-                            .file_name()
-                            .unwrap()
-                            .to_string_lossy()
-                            .trim_start_matches('.')
-                    ))
-                    .await?;
             }
+            // TODO calc flags
+            let flags_raw = get_flags(sub_folder.path());
+            let flags = if let Ok(flags_raw) = flags_raw {
+                flags_raw
+            } else {
+                vec![]
+            };
+            let folder_name = sub_folder.path().file_name().unwrap().to_string_lossy();
+            lines
+                .feed(format!(
+                    "* {} ({}) \"/\" \"{}\"",
+                    command_resp,
+                    flags.join(" "),
+                    folder_name.trim_start_matches('.')
+                ))
+                .await?;
         }
     } else if mailbox_patterns.ends_with('%') {
         let mut folder =
@@ -144,27 +140,27 @@ where
                         command_resp,
                     ))
                     .await?;
-            } else {
-                // TODO calc flags
-                let mut flags = vec![];
-                let folder_name = sub_folder.path().file_name().unwrap().to_string_lossy();
-                if folder_name.contains("Trash") {
-                    flags.push("\\Trash");
-                }
-                lines
-                    .feed(format!(
-                        "* {} ({}) \"/\" \"{}\"",
-                        command_resp,
-                        flags.join(" "),
-                        sub_folder
-                            .path()
-                            .file_name()
-                            .unwrap()
-                            .to_string_lossy()
-                            .trim_start_matches('.')
-                    ))
-                    .await?;
             }
+            // TODO calc flags
+            let flags_raw = get_flags(sub_folder.path());
+            let flags = if let Ok(flags_raw) = flags_raw {
+                flags_raw
+            } else {
+                vec![]
+            };
+            lines
+                .feed(format!(
+                    "* {} ({}) \"/\" \"{}\"",
+                    command_resp,
+                    flags.join(" "),
+                    sub_folder
+                        .path()
+                        .file_name()
+                        .unwrap()
+                        .to_string_lossy()
+                        .trim_start_matches('.')
+                ))
+                .await?;
         }
     } else {
         let mut folder =
@@ -184,12 +180,19 @@ where
 
         // TODO check for folder existence
         // TODO calc flags
-        let mut flags = vec![];
-        if mailbox_patterns_folder.contains("Trash") && folder.exists() {
-            flags.push("\\Trash");
-        }
+        let flags_raw = get_flags(&folder);
+        let mut flags = if let Ok(flags_raw) = flags_raw {
+            if folder.exists() {
+                flags_raw
+            } else {
+                vec![]
+            }
+        } else {
+            vec![]
+        };
+
         if !folder.exists() {
-            flags.push("\\NonExistent");
+            flags.push(String::from("\\NonExistent"));
         }
         lines
             .feed(format!(

@@ -38,6 +38,7 @@ mod login;
 mod logout;
 mod noop;
 mod select;
+mod utils;
 
 #[derive(Debug, PartialEq)]
 pub struct Data<'a> {

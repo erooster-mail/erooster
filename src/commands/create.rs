@@ -6,7 +6,7 @@ use maildir::Maildir;
 use tracing::error;
 
 use crate::{
-    commands::{Command, Data},
+    commands::{utils::add_flag, Command, Data},
     config::Config,
     line_codec::LinesCodecError,
 };
@@ -29,10 +29,13 @@ where
             folder.remove_matches('"');
             let mailbox_path = Path::new(&config.mail.maildir_folders)
                 .join(self.data.con_state.username.clone().unwrap())
-                .join(folder);
-            let maildir = Maildir::from(mailbox_path);
+                .join(folder.clone());
+            let maildir = Maildir::from(mailbox_path.clone());
             match maildir.create_dirs() {
                 Ok(_) => {
+                    if folder.to_lowercase() == ".trash" {
+                        add_flag(&mailbox_path, "\\Trash")?;
+                    }
                     lines
                         .send(format!(
                             "{} OK CREATE completed",

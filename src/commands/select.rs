@@ -5,7 +5,7 @@ use futures::{Sink, SinkExt};
 use maildir::Maildir;
 
 use crate::{
-    commands::{Command, Data},
+    commands::{utils::add_flag, Command, Data},
     config::Config,
     line_codec::LinesCodecError,
     servers::state::State,
@@ -83,6 +83,7 @@ where
             let maildir = Maildir::from(mailbox_path.clone());
             if folder == "INBOX" && !mailbox_path.exists() {
                 maildir.create_dirs()?;
+                add_flag(&mailbox_path, "\\Subscribed")?;
             }
             self.send_success(lines, folder, maildir).await?;
         } else {

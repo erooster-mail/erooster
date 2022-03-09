@@ -20,7 +20,7 @@ pub fn add_flag(path: &Path, flag: &str) -> anyhow::Result<()> {
     let flags_file = path.join(".erooster_folder_lags");
     let mut file = OpenOptions::new()
         .append(true)
-        .create_new(true)
+        .create(true)
         .open(flags_file)?;
     writeln!(file, "{}", flag)?;
     Ok(())

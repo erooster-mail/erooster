@@ -11,6 +11,7 @@ use crate::{
         logout::Logout,
         noop::Noop,
         select::Select,
+        subscribe::Subscribe,
     },
     config::Config,
     line_codec::LinesCodecError,
@@ -29,6 +30,8 @@ use nom::{
 };
 use tracing::{debug, error, warn};
 
+mod utils;
+
 pub mod auth;
 pub mod capability;
 mod check;
@@ -38,7 +41,7 @@ mod login;
 mod logout;
 mod noop;
 mod select;
-mod utils;
+mod subscribe;
 
 #[derive(Debug, PartialEq)]
 pub struct Data<'a> {
@@ -65,6 +68,7 @@ pub enum Commands {
     Noop,
     Check,
     Create,
+    Subscribe,
 }
 
 impl TryFrom<&str> for Commands {
@@ -82,6 +86,7 @@ impl TryFrom<&str> for Commands {
             "noop" => Ok(Commands::Noop),
             "check" => Ok(Commands::Check),
             "create" => Ok(Commands::Create),
+            "subscribe" => Ok(Commands::Subscribe),
             _ => {
                 warn!("Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
@@ -211,7 +216,9 @@ where
                         Commands::Capability => {
                             Capability { data: &self }.exec(lines, config).await?;
                         }
-                        Commands::Login => Login { data: &self }.exec(lines, config).await?,
+                        Commands::Login => {
+                            Login { data: &self }.exec(lines, config).await?;
+                        }
                         Commands::Logout => {
                             Logout { data: &self }.exec(lines, config).await?;
                             // We return true here early as we want to make sure that this closes the connection
@@ -235,7 +242,12 @@ where
                         Commands::Select => {
                             Select { data: &mut self }.exec(lines, config).await?;
                         }
-                        Commands::Create => Create { data: &self }.exec(lines, config).await?,
+                        Commands::Create => {
+                            Create { data: &self }.exec(lines, config).await?;
+                        }
+                        Commands::Subscribe => {
+                            Subscribe { data: &self }.exec(lines, config).await?;
+                        }
                         Commands::Noop => {
                             Noop { data: &self }.exec(lines, config).await?;
                         }

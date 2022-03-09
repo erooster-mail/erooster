@@ -4,9 +4,12 @@ use crate::{
     commands::{
         auth::{Authenticate, AuthenticationMethod},
         capability::Capability,
-        list::{Basic, Extended},
+        check::Check,
+        list::{LSub, List},
         login::Login,
         logout::Logout,
+        noop::Noop,
+        select::Select,
     },
     line_codec::LinesCodecError,
     state::{Connection, State},
@@ -27,9 +30,12 @@ use tracing::{debug, error, warn};
 
 pub mod auth;
 pub mod capability;
-pub mod list;
-pub mod login;
-pub mod logout;
+mod check;
+mod list;
+mod login;
+mod logout;
+mod noop;
+mod select;
 
 #[derive(Debug, PartialEq)]
 pub struct Data<'a> {
@@ -188,150 +194,43 @@ where
         let parse_result = self.parse_internal(&line);
         match parse_result {
             Ok(_) => {
-                match self.command_data.as_ref().unwrap().command {
-                    Commands::Capability => Capability { data: &self }.exec(lines).await?,
-                    Commands::Login => Login { data: &self }.exec(lines).await?,
-                    Commands::Logout => {
-                        Logout { data: &self }.exec(lines).await?;
-                        // We return true here early as we want to make sure that this closes the connection
-                        return Ok(true);
-                    }
-                    Commands::Authenticate => {
-                        let auth_data = self
-                            .command_data
-                            .as_ref()
-                            .unwrap()
-                            .arguments
-                            .as_ref()
-                            .unwrap()
-                            .last()
-                            .unwrap()
-                            .to_string();
-                        Authenticate {
-                            data: &mut self,
-                            auth_data,
+                if let Some(CommandData {
+                    command,
+                    arguments: Some(ref arguments),
+                    ..
+                }) = self.command_data
+                {
+                    match command {
+                        Commands::Capability => Capability { data: &self }.exec(lines).await?,
+                        Commands::Login => Login { data: &self }.exec(lines).await?,
+                        Commands::Logout => {
+                            Logout { data: &self }.exec(lines).await?;
+                            // We return true here early as we want to make sure that this closes the connection
+                            return Ok(true);
                         }
-                        .exec(lines)
-                        .await?;
-                    }
-                    Commands::List => {
-                        if let Some(ref arguments) = self.command_data.as_ref().unwrap().arguments {
-                            if arguments.len() == 2 {
-                                Basic { data: &self }.exec(lines).await?;
-                            } else if arguments.len() == 4 {
-                                Extended { data: &self }.exec(lines).await?;
-                            } else {
-                                lines
-                                    .send(format!(
-                                        "{} BAD [SERVERBUG] invalid arguments",
-                                        self.command_data.as_ref().unwrap().tag
-                                    ))
-                                    .await?;
+                        Commands::Authenticate => {
+                            let auth_data = arguments.last().unwrap().to_string();
+                            Authenticate {
+                                data: &mut self,
+                                auth_data,
                             }
-                        } else {
-                            lines
-                                .send(format!(
-                                    "{} BAD [SERVERBUG] invalid arguments",
-                                    self.command_data.as_ref().unwrap().tag
-                                ))
-                                .await?;
-                        }
-                    }
-                    Commands::LSub => {
-                        if let Some(ref arguments) = self.command_data.as_ref().unwrap().arguments {
-                            if arguments.len() == 2 {
-                                Basic { data: &mut self }.exec(lines).await?;
-                            } else {
-                                lines
-                                    .send(format!(
-                                        "{} BAD [SERVERBUG] invalid arguments",
-                                        self.command_data.as_ref().unwrap().tag
-                                    ))
-                                    .await?;
-                            }
-                        } else {
-                            lines
-                                .send(format!(
-                                    "{} BAD [SERVERBUG] invalid arguments",
-                                    self.command_data.as_ref().unwrap().tag
-                                ))
-                                .await?;
-                        }
-                    }
-                    Commands::Select => {
-                        if self.con_state.state == State::Authenticated {
-                            if let Some(ref args) = self.command_data.as_ref().unwrap().arguments {
-                                let mut folder =
-                                    args.first().expect("server selects a folder").to_string();
-                                folder.remove_matches('"');
-                                self.con_state.state = State::Selected(folder);
-                                // TODO get count of mails
-                                // TODO get flags and perma flags
-                                // TODO get real list
-                                // TODO UIDNEXT and UIDVALIDITY
-                                lines.feed(String::from("* 0 EXISTS")).await?;
-                                lines
-                                    .feed(String::from("* OK [UIDVALIDITY 3857529045] UIDs valid"))
-                                    .await?;
-                                lines
-                                    .feed(String::from("* OK [UIDNEXT 4392] Predicted next UID"))
-                                    .await?;
-                                lines
-                                    .feed(String::from(
-                                        "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)",
-                                    ))
-                                    .await?;
-                                lines
-                                    .feed(String::from(
-                                        "* OK [PERMANENTFLAGS (\\Deleted \\Seen \\*)] Limited",
-                                    ))
-                                    .await?;
-                                lines
-                                    .feed(String::from("* LIST () \"/\" \"INBOX\""))
-                                    .await?;
-                                lines
-                                    .feed(format!(
-                                        "{} OK [READ-WRITE] SELECT completed",
-                                        self.command_data.as_ref().unwrap().tag
-                                    ))
-                                    .await?;
-                                lines.flush().await?;
-                            }
-                        } else {
-                            lines
-                                .send(format!(
-                                    "{} NO invalid state",
-                                    self.command_data.as_ref().unwrap().tag
-                                ))
-                                .await?;
-                        }
-                    }
-                    Commands::Noop => {
-                        // TODO return status as suggested in https://www.rfc-editor.org/rfc/rfc9051.html#name-noop-command
-                        lines
-                            .send(format!(
-                                "{} OK NOOP completed",
-                                self.command_data.as_ref().unwrap().tag
-                            ))
+                            .exec(lines)
                             .await?;
-                    }
-                    Commands::Check => {
-                        // This is an Imap4rev1 feature. It does the same as Noop for us as we have no memory gc.
-                        // It also only is allowed in selected state
-                        if matches!(self.con_state.state, State::Selected(_)) {
-                            lines
-                                .send(format!(
-                                    "{} OK CHECK completed",
-                                    self.command_data.as_ref().unwrap().tag
-                                ))
-                                .await?;
-                        } else {
-                            lines
-                                .send(format!(
-                                    "{} NO invalid state",
-                                    self.command_data.as_ref().unwrap().tag
-                                ))
-                                .await?;
+                        }
+                        Commands::List => {
+                            List { data: &self }.exec(lines).await?;
+                        }
+                        Commands::LSub => {
+                            LSub { data: &self }.exec(lines).await?;
+                        }
+                        Commands::Select => {
+                            Select { data: &mut self }.exec(lines).await?;
+                        }
+                        Commands::Noop => {
+                            Noop { data: &self }.exec(lines).await?;
+                        }
+                        Commands::Check => {
+                            Check { data: &self }.exec(lines).await?;
                         }
                     }
                 }

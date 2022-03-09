@@ -34,10 +34,10 @@ use tracing::{error, info};
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     info!("Starting ERooster Imap Server");
-    tokio::spawn(async { if let Err(e) = erooster::servers::Unencrypted::run().await {
+    tokio::spawn(async {
+        if let Err(e) = erooster::servers::Unencrypted::run().await {
             panic!("Unable to start server: {:?}", e);
         }
-        
     });
     tokio::spawn(async {
         if let Err(e) = erooster::servers::Encrypted::run().await {

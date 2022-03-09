@@ -199,7 +199,11 @@ where
                 "* {} ({}) \"/\" \"{}\"",
                 command_resp,
                 flags.join(" "),
-                mailbox_patterns_folder.trim_start_matches('.')
+                folder
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .trim_start_matches('.')
             ))
             .await?;
     }

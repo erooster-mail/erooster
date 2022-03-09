@@ -91,7 +91,12 @@ where
                         "* {} ({}) \"/\" \"{}\"",
                         command_resp,
                         flags.join(" "),
-                        sub_folder.path().file_name().unwrap().to_string_lossy()
+                        sub_folder
+                            .path()
+                            .file_name()
+                            .unwrap()
+                            .to_string_lossy()
+                            .trim_start_matches('.')
                     ))
                     .await?;
             }
@@ -151,7 +156,12 @@ where
                         "* {} ({}) \"/\" \"{}\"",
                         command_resp,
                         flags.join(" "),
-                        sub_folder.path().file_name().unwrap().to_string_lossy()
+                        sub_folder
+                            .path()
+                            .file_name()
+                            .unwrap()
+                            .to_string_lossy()
+                            .trim_start_matches('.')
                     ))
                     .await?;
             }
@@ -186,7 +196,7 @@ where
                 "* {} ({}) \"/\" \"{}\"",
                 command_resp,
                 flags.join(" "),
-                mailbox_patterns_folder
+                mailbox_patterns_folder.trim_start_matches('.')
             ))
             .await?;
     }

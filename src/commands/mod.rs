@@ -131,23 +131,16 @@ fn arguments(input: &str) -> Res<Vec<String>> {
 impl Data<'_> {
     fn parse_internal(&mut self, line: &str) -> anyhow::Result<()> {
         match context("parse", tuple((imaptag, command, opt(arguments))))(line).map(
-            |(_, (tag, command, mut arguments))| {
-                if let Some(ref arguments_inner) = arguments {
-                    if arguments_inner.is_empty() {
-                        arguments = None;
-                    }
+            |(_, (tag, command, arguments))| match command {
+                Ok(command) => {
+                    self.command_data = Some(CommandData {
+                        tag: tag.to_string(),
+                        command,
+                        arguments,
+                    });
+                    Ok(())
                 }
-                match command {
-                    Ok(command) => {
-                        self.command_data = Some(CommandData {
-                            tag: tag.to_string(),
-                            command,
-                            arguments,
-                        });
-                        Ok(())
-                    }
-                    Err(e) => Err(anyhow::Error::msg(e)),
-                }
+                Err(e) => Err(anyhow::Error::msg(e)),
             },
         ) {
             Ok(v) => v,
@@ -196,7 +189,7 @@ where
             Ok(_) => {
                 if let Some(CommandData {
                     command,
-                    arguments: Some(ref arguments),
+                    ref arguments,
                     ..
                 }) = self.command_data
                 {
@@ -209,13 +202,15 @@ where
                             return Ok(true);
                         }
                         Commands::Authenticate => {
-                            let auth_data = arguments.last().unwrap().to_string();
-                            Authenticate {
-                                data: &mut self,
-                                auth_data,
+                            if let Some(arguments) = arguments {
+                                let auth_data = arguments.last().unwrap().to_string();
+                                Authenticate {
+                                    data: &mut self,
+                                    auth_data,
+                                }
+                                .exec(lines)
+                                .await?;
                             }
-                            .exec(lines)
-                            .await?;
                         }
                         Commands::List => {
                             List { data: &self }.exec(lines).await?;

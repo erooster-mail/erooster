@@ -31,53 +31,52 @@ where
         "LIST"
     };
 
-    if let Some(ref arguments) = data.command_data.as_ref().unwrap().arguments {
-        if let Some(first_arg) = arguments.first() {
-            if first_arg == "\"\"" {
-                if let Some(second_arg) = arguments.last() {
-                    // TODO proper parse. This is obviously wrong and also fails for second arg == "INBOX"
-                    if second_arg == "\"\"" {
-                        lines
-                            .feed(format!("* {} (\\Noselect) \"/\" \"\"", command_resp))
-                            .await?;
-                        lines
-                            .feed(format!(
-                                "{} OK {} Completed",
-                                data.command_data.as_ref().unwrap().tag,
-                                command_resp
-                            ))
-                            .await?;
-                        lines.flush().await?;
-                        return Ok(());
-                    }
-                    if second_arg == "\"*\"" {
-                        lines
-                            .feed(format!(
-                                "* {} (\\NoInferiors) \"/\" \"INBOX\"",
-                                command_resp,
-                            ))
-                            .await?;
+    let arguments = &data.command_data.as_ref().unwrap().arguments;
+    if let Some(first_arg) = arguments.first() {
+        if first_arg == "\"\"" {
+            if let Some(second_arg) = arguments.last() {
+                // TODO proper parse. This is obviously wrong and also fails for second arg == "INBOX"
+                if second_arg == "\"\"" {
+                    lines
+                        .feed(format!("* {} (\\Noselect) \"/\" \"\"", command_resp))
+                        .await?;
+                    lines
+                        .feed(format!(
+                            "{} OK {} Completed",
+                            data.command_data.as_ref().unwrap().tag,
+                            command_resp
+                        ))
+                        .await?;
+                    lines.flush().await?;
+                    return Ok(());
+                }
+                if second_arg == "\"*\"" {
+                    lines
+                        .feed(format!(
+                            "* {} (\\NoInferiors) \"/\" \"INBOX\"",
+                            command_resp,
+                        ))
+                        .await?;
 
-                        lines
-                            .feed(format!(
-                                "{} OK done",
-                                data.command_data.as_ref().unwrap().tag,
-                            ))
-                            .await?;
-                        lines.flush().await?;
-                        return Ok(());
-                    }
+                    lines
+                        .feed(format!(
+                            "{} OK done",
+                            data.command_data.as_ref().unwrap().tag,
+                        ))
+                        .await?;
+                    lines.flush().await?;
+                    return Ok(());
                 }
             }
         }
-        lines
-            .send(format!(
-                "{} BAD {} Arguments unknown",
-                data.command_data.as_ref().unwrap().tag,
-                command_resp
-            ))
-            .await?;
     }
+    lines
+        .send(format!(
+            "{} BAD {} Arguments unknown",
+            data.command_data.as_ref().unwrap().tag,
+            command_resp
+        ))
+        .await?;
 
     Ok(())
 }
@@ -121,19 +120,11 @@ where
     S::Error: From<io::Error>,
 {
     async fn exec(&mut self, lines: &mut S) -> anyhow::Result<()> {
-        if let Some(ref arguments) = self.data.command_data.as_ref().unwrap().arguments {
-            if arguments.len() == 2 {
-                basic(self.data, lines).await?;
-            } else if arguments.len() == 4 {
-                self.extended(lines).await?;
-            } else {
-                lines
-                    .send(format!(
-                        "{} BAD [SERVERBUG] invalid arguments",
-                        self.data.command_data.as_ref().unwrap().tag
-                    ))
-                    .await?;
-            }
+        let arguments = &self.data.command_data.as_ref().unwrap().arguments;
+        if arguments.len() == 2 {
+            basic(self.data, lines).await?;
+        } else if arguments.len() == 4 {
+            self.extended(lines).await?;
         } else {
             lines
                 .send(format!(
@@ -157,17 +148,9 @@ where
     S::Error: From<io::Error>,
 {
     async fn exec(&mut self, lines: &mut S) -> anyhow::Result<()> {
-        if let Some(ref arguments) = self.data.command_data.as_ref().unwrap().arguments {
-            if arguments.len() == 2 {
-                basic(self.data, lines).await?;
-            } else {
-                lines
-                    .send(format!(
-                        "{} BAD [SERVERBUG] invalid arguments",
-                        self.data.command_data.as_ref().unwrap().tag
-                    ))
-                    .await?;
-            }
+        let arguments = &self.data.command_data.as_ref().unwrap().arguments;
+        if arguments.len() == 2 {
+            basic(self.data, lines).await?;
         } else {
             lines
                 .send(format!(

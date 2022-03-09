@@ -20,7 +20,6 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_while1},
     character::complete::alpha1,
-    combinator::opt,
     error::{context, VerboseError},
     multi::many0,
     sequence::{terminated, tuple},
@@ -47,7 +46,7 @@ pub struct Data<'a> {
 pub struct CommandData {
     tag: String,
     command: Commands,
-    arguments: Option<Vec<String>>,
+    arguments: Vec<String>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -130,7 +129,7 @@ fn arguments(input: &str) -> Res<Vec<String>> {
 
 impl Data<'_> {
     fn parse_internal(&mut self, line: &str) -> anyhow::Result<()> {
-        match context("parse", tuple((imaptag, command, opt(arguments))))(line).map(
+        match context("parse", tuple((imaptag, command, arguments)))(line).map(
             |(_, (tag, command, arguments))| match command {
                 Ok(command) => {
                     self.command_data = Some(CommandData {
@@ -172,7 +171,7 @@ where
                 tag: tag.to_string(),
                 // This is unused but needed. We just assume Authenticate here
                 command: Commands::Authenticate,
-                arguments: None,
+                arguments: vec![],
             });
             Authenticate {
                 data: &mut self,
@@ -201,15 +200,13 @@ where
                             return Ok(true);
                         }
                         Commands::Authenticate => {
-                            if let Some(arguments) = arguments {
-                                let auth_data = arguments.last().unwrap().to_string();
-                                Authenticate {
-                                    data: &mut self,
-                                    auth_data,
-                                }
-                                .exec(lines)
-                                .await?;
+                            let auth_data = arguments.last().unwrap().to_string();
+                            Authenticate {
+                                data: &mut self,
+                                auth_data,
                             }
+                            .exec(lines)
+                            .await?;
                         }
                         Commands::List => {
                             List { data: &self }.exec(lines).await?;
@@ -285,7 +282,7 @@ mod tests {
             CommandData {
                 tag: String::from("a"),
                 command: Commands::Authenticate,
-                arguments: Some(vec![String::from("PLAIN"), String::from("abcde")]),
+                arguments: vec![String::from("PLAIN"), String::from("abcde")],
             }
         );
 
@@ -298,7 +295,7 @@ mod tests {
             CommandData {
                 tag: String::from("a"),
                 command: Commands::Authenticate,
-                arguments: Some(vec![String::from("PLAIN")]),
+                arguments: vec![String::from("PLAIN")],
             }
         );
     }
@@ -322,7 +319,7 @@ mod tests {
             CommandData {
                 tag: String::from("a"),
                 command: Commands::Capability,
-                arguments: None,
+                arguments: vec![],
             }
         );
     }
@@ -346,7 +343,7 @@ mod tests {
             CommandData {
                 tag: String::from("18"),
                 command: Commands::List,
-                arguments: Some(vec![String::from("\"\""), String::from("\"*\"")]),
+                arguments: vec![String::from("\"\""), String::from("\"*\"")],
             }
         );
         data.command_data = None;
@@ -358,7 +355,7 @@ mod tests {
             CommandData {
                 tag: String::from("18"),
                 command: Commands::List,
-                arguments: Some(vec![String::from("\"\""), String::from("\"\"")]),
+                arguments: vec![String::from("\"\""), String::from("\"\"")],
             }
         );
     }

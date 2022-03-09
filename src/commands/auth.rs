@@ -100,24 +100,16 @@ where
 {
     async fn exec(&mut self, lines: &mut S) -> anyhow::Result<()> {
         if self.data.con_state.state == State::NotAuthenticated {
-            if let Some(ref args) = self.data.command_data.as_ref().unwrap().arguments {
-                if args.len() == 1 {
-                    if args.first().unwrap().to_lowercase() == "plain" {
-                        self.data.con_state.state = State::Authenticating((
-                            AuthenticationMethod::Plain,
-                            self.data.command_data.as_ref().unwrap().tag.clone(),
-                        ));
-                        lines.send(String::from("+ ")).await?;
-                    } else {
-                        self.plain(lines).await?;
-                    }
+            let args = &self.data.command_data.as_ref().unwrap().arguments;
+            if args.len() == 1 {
+                if args.first().unwrap().to_lowercase() == "plain" {
+                    self.data.con_state.state = State::Authenticating((
+                        AuthenticationMethod::Plain,
+                        self.data.command_data.as_ref().unwrap().tag.clone(),
+                    ));
+                    lines.send(String::from("+ ")).await?;
                 } else {
-                    lines
-                        .send(format!(
-                            "{} BAD [SERVERBUG] unable to parse command",
-                            self.data.command_data.as_ref().unwrap().tag
-                        ))
-                        .await?;
+                    self.plain(lines).await?;
                 }
             } else {
                 lines

@@ -9,7 +9,7 @@ use crate::{
         logout::Logout,
     },
     line_codec::LinesCodecError,
-    servers::{ConnectionState, State},
+    state::{Connection, State},
 };
 use async_trait::async_trait;
 use futures::{Sink, SinkExt};
@@ -33,12 +33,12 @@ pub mod logout;
 
 #[derive(Debug, PartialEq)]
 pub struct Data<'a> {
-    pub command_data: Option<ComandData>,
-    pub con_state: &'a mut ConnectionState,
+    pub command_data: Option<CommandData>,
+    pub con_state: &'a mut Connection,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ComandData {
+pub struct CommandData {
     tag: String,
     command: Commands,
     arguments: Option<Vec<String>>,
@@ -133,7 +133,7 @@ impl Data<'_> {
                 }
                 match command {
                     Ok(command) => {
-                        self.command_data = Some(ComandData {
+                        self.command_data = Some(CommandData {
                             tag: tag.to_string(),
                             command,
                             arguments,
@@ -170,7 +170,7 @@ where
     async fn parse(mut self, lines: &'a mut S, line: String) -> anyhow::Result<bool> {
         debug!("Current state: {:?}", self.con_state.state);
         if let State::Authenticating((AuthenticationMethod::Plain, tag)) = &self.con_state.state {
-            self.command_data = Some(ComandData {
+            self.command_data = Some(CommandData {
                 tag: tag.to_string(),
                 // This is unused but needed. We just assume Authenticate here
                 command: Commands::Authenticate,
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn test_parsing_authenticate_command() {
-        let mut con_state = super::ConnectionState {
+        let mut con_state = super::Connection {
             state: super::State::NotAuthenticated,
             ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             secure: true,
@@ -389,7 +389,7 @@ mod tests {
         assert!(data.command_data.is_some());
         assert_eq!(
             data.command_data.unwrap(),
-            ComandData {
+            CommandData {
                 tag: String::from("a"),
                 command: Commands::Authenticate,
                 arguments: Some(vec![String::from("PLAIN"), String::from("abcde")]),
@@ -402,7 +402,7 @@ mod tests {
         assert!(data.command_data.is_some());
         assert_eq!(
             data.command_data.unwrap(),
-            ComandData {
+            CommandData {
                 tag: String::from("a"),
                 command: Commands::Authenticate,
                 arguments: Some(vec![String::from("PLAIN")]),
@@ -412,7 +412,7 @@ mod tests {
 
     #[test]
     fn test_parsing_capability_command() {
-        let mut con_state = super::ConnectionState {
+        let mut con_state = super::Connection {
             state: super::State::NotAuthenticated,
             ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             secure: true,
@@ -426,7 +426,7 @@ mod tests {
         assert!(data.command_data.is_some());
         assert_eq!(
             data.command_data.unwrap(),
-            ComandData {
+            CommandData {
                 tag: String::from("a"),
                 command: Commands::Capability,
                 arguments: None,
@@ -436,7 +436,7 @@ mod tests {
 
     #[test]
     fn test_parsing_list_command() {
-        let mut con_state = super::ConnectionState {
+        let mut con_state = super::Connection {
             state: super::State::Authenticated,
             ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             secure: true,
@@ -450,7 +450,7 @@ mod tests {
         assert!(data.command_data.is_some());
         assert_eq!(
             data.command_data.unwrap(),
-            ComandData {
+            CommandData {
                 tag: String::from("18"),
                 command: Commands::List,
                 arguments: Some(vec![String::from("\"\""), String::from("\"*\"")]),
@@ -462,7 +462,7 @@ mod tests {
         assert!(data.command_data.is_some());
         assert_eq!(
             data.command_data.unwrap(),
-            ComandData {
+            CommandData {
                 tag: String::from("18"),
                 command: Commands::List,
                 arguments: Some(vec![String::from("\"\""), String::from("\"\"")]),

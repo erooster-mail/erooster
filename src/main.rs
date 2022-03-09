@@ -1,3 +1,9 @@
+//! Erooster Mail Server
+//!
+//! Erooster is a rust native imap server build on modern solutions.
+//! The goal being easy to setup, use and maintain for smaller mail servers
+//! while being also fast and efficient.
+//!
 #![feature(string_remove_matches)]
 #![deny(unsafe_code)]
 #![warn(
@@ -16,9 +22,11 @@
     clippy::mut_mut,
     clippy::todo
 )]
+#![warn(missing_docs)]
 #![allow(clippy::missing_panics_doc)]
 
 use anyhow::Result;
+use erooster::servers::Server;
 use tokio::signal;
 use tracing::{error, info};
 
@@ -26,11 +34,13 @@ use tracing::{error, info};
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     info!("Starting ERooster Imap Server");
-    tokio::spawn(async {
-        erooster::servers::unencrypted::run().await;
+    tokio::spawn(async { if let Err(e) = erooster::servers::Unencrypted::run().await {
+            panic!("Unable to start server: {:?}", e);
+        }
+        
     });
     tokio::spawn(async {
-        if let Err(e) = erooster::servers::encrypted::run().await {
+        if let Err(e) = erooster::servers::Encrypted::run().await {
             panic!("Unable to start TLS server: {:?}", e);
         }
     });

@@ -1,5 +1,7 @@
+//! Core logic for the erooster mail server
+//!
 #![feature(string_remove_matches)]
-//#![deny(unsafe_code)]
+#![deny(unsafe_code)]
 #![warn(
     clippy::cognitive_complexity,
     clippy::branches_sharing_code,
@@ -16,8 +18,13 @@
     clippy::mut_mut,
     clippy::todo
 )]
+#![warn(missing_docs)]
 #![allow(clippy::missing_panics_doc)]
 
 mod commands;
 mod line_codec;
+mod state;
+
+/// The core server logic for the imap server.
+/// This is the tls and non tls variant of the server.
 pub mod servers;

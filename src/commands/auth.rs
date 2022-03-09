@@ -7,7 +7,7 @@ use tracing::{debug, error};
 use crate::{
     commands::{Command, Data},
     line_codec::LinesCodecError,
-    servers::State,
+    state::State,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

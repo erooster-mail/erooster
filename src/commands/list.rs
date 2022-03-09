@@ -7,7 +7,7 @@ use tracing::debug;
 use crate::{
     commands::{Command, Commands, Data},
     line_codec::LinesCodecError,
-    servers::State,
+    state::State,
 };
 
 pub struct Basic<'a> {

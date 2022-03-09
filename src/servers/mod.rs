@@ -1,21 +1,14 @@
-use std::net::IpAddr;
+use async_trait::async_trait;
 
-use crate::commands::auth::AuthenticationMethod;
+pub(crate) mod encrypted;
+pub(crate) mod unencrypted;
 
-pub mod encrypted;
-pub mod unencrypted;
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct ConnectionState {
-    pub state: State,
-    pub ip: IpAddr,
-    pub secure: bool,
+/// An implementation of a imap server
+#[async_trait]
+pub trait Server {
+    /// Start the server
+    async fn run() -> anyhow::Result<()>;
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum State {
-    NotAuthenticated,
-    Authenticating((AuthenticationMethod, String)),
-    Authenticated,
-    Selected(String),
-}
+pub use encrypted::Encrypted;
+pub use unencrypted::Unencrypted;

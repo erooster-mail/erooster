@@ -1,21 +1,21 @@
-use std::{borrow::Cow, net::IpAddr};
+use std::net::IpAddr;
 
 use crate::commands::auth::AuthenticationMethod;
 
 pub mod encrypted;
 pub mod unencrypted;
 
-#[derive(Debug, PartialEq)]
-pub struct ConnectionState<'a> {
-    pub state: State<'a>,
+#[derive(Debug, PartialEq, Clone)]
+pub struct ConnectionState {
+    pub state: State,
     pub ip: IpAddr,
     pub secure: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum State<'a> {
+pub enum State {
     NotAuthenticated,
-    Authenticating((AuthenticationMethod, Cow<'a, str>)),
+    Authenticating((AuthenticationMethod, String)),
     Authenticated,
-    Selected(Cow<'a, str>),
+    Selected(String),
 }

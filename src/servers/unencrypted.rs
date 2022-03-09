@@ -1,6 +1,5 @@
-
 use futures::SinkExt;
-use tokio::{net::TcpListener};
+use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 use tokio_util::codec::Framed;
 use tracing::{debug, info};
@@ -17,11 +16,6 @@ pub async fn run() {
     while let Some(Ok(tcp_stream)) = stream.next().await {
         let peer = tcp_stream.peer_addr().expect("peer addr to exist");
         debug!("Got new peer: {}", peer);
-        let mut state = super::ConnectionState {
-            state: super::State::NotAuthenticated,
-            ip: peer.ip(),
-            secure: false,
-        };
 
         tokio::spawn(async move {
             let mut lines = Framed::new(tcp_stream, LinesCodec::new());
@@ -31,11 +25,21 @@ pub async fn run() {
                 .await
                 .unwrap();
             while let Some(Ok(line)) = lines.next().await {
+                let mut state = super::ConnectionState {
+                    state: super::State::NotAuthenticated,
+                    ip: peer.ip(),
+                    secure: false,
+                };
+                let data = &mut Data {
+                    command_data: None,
+                    con_state: &mut state,
+                };
+
                 debug!("[{}] Got Command: {}", peer, line);
 
                 // TODO make sure to handle IDLE different as it needs us to stream lines
                 // TODO pass lines and make it possible to not need new lines in responds but instead directly use `lines.send`
-                let response = Data::parse(&mut lines, line, &mut state).await;
+                let response = data.parse(&mut lines, line).await;
 
                 match response {
                     Ok(response) => {

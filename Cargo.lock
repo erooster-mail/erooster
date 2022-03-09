@@ -74,6 +74,7 @@ dependencies = [
  "bytes",
  "futures",
  "nom",
+ "once_cell",
  "rustls-pemfile",
  "simdutf8",
  "tokio",

@@ -1,5 +1,5 @@
 #![feature(string_remove_matches)]
-#![deny(unsafe_code)]
+//#![deny(unsafe_code)]
 #![warn(
     clippy::cognitive_complexity,
     clippy::branches_sharing_code,

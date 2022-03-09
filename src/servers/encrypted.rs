@@ -79,11 +79,6 @@ pub async fn run() -> anyhow::Result<()> {
         // Start talking with new peer on new thread
         let acceptor = acceptor.clone();
         tokio::spawn(async move {
-            let mut state = super::ConnectionState {
-                state: super::State::NotAuthenticated,
-                ip: peer.ip(),
-                secure: true,
-            };
             // Accept TCP connection
             let tls_stream = acceptor.accept(tcp_stream).await;
 
@@ -100,34 +95,46 @@ pub async fn run() -> anyhow::Result<()> {
                         .send(format!("* OK [{}] IMAP4rev2 Service Ready", capabilities))
                         .await
                         .unwrap();
+                    let mut state = super::ConnectionState {
+                        state: super::State::NotAuthenticated,
+                        ip: peer.ip(),
+                        secure: true,
+                    };
                     while let Some(Ok(line)) = lines.next().await {
+                        let data = &mut Data {
+                            command_data: None,
+                            // TODO mutex?
+                            con_state: &mut state,
+                        };
                         debug!("[{}] Got Command: {}", peer, line);
                         // TODO make sure to handle IDLE different as it needs us to stream lines
                         // TODO pass lines and make it possible to not need new lines in responds but instead directly use `lines.send`
 
-                        let response = Data::parse(&mut lines, line, &mut state).await;
-                        match response {
-                            Ok(response) => {
-                                // Cleanup timeout managers
-                                if response {
-                                    // Used for later session timer management
+                        {
+                            let response = data.parse(&mut lines, line).await;
+                            match response {
+                                Ok(response) => {
+                                    // Cleanup timeout managers
+                                    if response {
+                                        // Used for later session timer management
+                                        debug!("Closing TLS connection");
+                                        break;
+                                    }
+                                }
+                                // We try a last time to do a graceful shutdown before closing
+                                Err(e) => {
+                                    lines
+                                        .send(format!(
+                                            "* BAD [SERVERBUG] This should not happen: {}",
+                                            e
+                                        ))
+                                        .await
+                                        .unwrap();
                                     debug!("Closing TLS connection");
                                     break;
                                 }
                             }
-                            // We try a last time to do a graceful shutdown before closing
-                            Err(e) => {
-                                lines
-                                    .send(format!(
-                                        "* BAD [SERVERBUG] This should not happen: {}",
-                                        e
-                                    ))
-                                    .await
-                                    .unwrap();
-                                debug!("Closing TLS connection");
-                                break;
-                            }
-                        }
+                        };
                     }
                 }
                 Err(e) => error!("Got error while accepting TLS: {}", e),

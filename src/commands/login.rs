@@ -8,30 +8,23 @@ use crate::{
     line_codec::LinesCodecError,
 };
 
-pub struct Capability<'a> {
+pub struct Login<'a> {
     pub data: &'a mut Data<'a>,
 }
 
 #[async_trait]
-impl<S> Command<S> for Capability<'_>
+impl<S> Command<S> for Login<'_>
 where
     S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
     S::Error: From<io::Error>,
 {
     async fn exec(&mut self, lines: &mut S) -> anyhow::Result<()> {
-        let capabilities = get_capabilities();
-        lines.feed(format!("* {}", capabilities)).await?;
         lines
-            .feed(format!(
-                "{} OK CAPABILITY completed",
+            .send(format!(
+                "{} NO LOGIN COMMAND DISABLED FOR SECURITY. USE AUTH",
                 self.data.command_data.as_ref().unwrap().tag
             ))
             .await?;
-        lines.flush().await?;
         Ok(())
     }
-}
-
-pub fn get_capabilities() -> String {
-    String::from("CAPABILITY AUTH=PLAIN LOGINDISABLED IMAP4rev2")
 }

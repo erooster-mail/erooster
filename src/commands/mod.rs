@@ -1,12 +1,15 @@
-use std::{borrow::Cow, io};
+use std::io;
 
 use crate::{
     commands::{
-        auth::Plain,
+        auth::{Authenticate, AuthenticationMethod},
         capability::Capability,
         list::{Basic, Extended},
+        login::Login,
+        logout::Logout,
     },
     line_codec::LinesCodecError,
+    servers::{ConnectionState, State},
 };
 use async_trait::async_trait;
 use futures::{Sink, SinkExt};
@@ -22,24 +25,26 @@ use nom::{
 };
 use tracing::{debug, error, warn};
 
-use crate::{
-    commands::auth::AuthenticationMethod,
-    servers::{ConnectionState, State},
-};
-
 pub mod auth;
 pub mod capability;
 pub mod list;
+pub mod login;
+pub mod logout;
 
 #[derive(Debug, PartialEq)]
-pub struct Data<'a, 'b> {
-    tag: String,
-    command: Commands,
-    arguments: Option<Vec<Cow<'a, str>>>,
-    con_state: &'a mut ConnectionState<'b>,
+pub struct Data<'a> {
+    pub command_data: Option<ComandData>,
+    pub con_state: &'a mut ConnectionState,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
+pub struct ComandData {
+    tag: String,
+    command: Commands,
+    arguments: Option<Vec<String>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Commands {
     Capability,
     Login,
@@ -53,7 +58,7 @@ pub enum Commands {
 }
 
 impl TryFrom<&str> for Commands {
-    type Error = &'static str;
+    type Error = String;
 
     fn try_from(i: &str) -> Result<Self, Self::Error> {
         match i.to_lowercase().as_str() {
@@ -68,13 +73,13 @@ impl TryFrom<&str> for Commands {
             "check" => Ok(Commands::Check),
             _ => {
                 warn!("Got unknown command: {}", i);
-                Err("no other commands supported")
+                Err(String::from("no other commands supported"))
             }
         }
     }
 }
 
-type Res<T, U> = IResult<T, U, VerboseError<T>>;
+type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
 
 fn is_imaptag_char(c: char) -> bool {
     (c.is_ascii() || c == '1' || c == '*' || c == ']')
@@ -90,23 +95,23 @@ fn is_imaptag_char(c: char) -> bool {
 }
 
 /// Takes as input the full string
-fn imaptag(input: &str) -> Res<&str, String> {
+fn imaptag(input: &str) -> Res<&str> {
     //alphanumeric1, none_of("+(){ %\\\""), one_of("1*]")
     context(
         "imaptag",
         terminated(take_while1(is_imaptag_char), tag(" ")),
     )(input)
-    .map(|(next_input, res)| (next_input, res.into()))
+    .map(|(next_input, res)| (next_input, res))
 }
 
 /// Gets the input minus the tag
-fn command(input: &str) -> Res<&str, Result<Commands, &'static str>> {
+fn command(input: &str) -> Res<Result<Commands, String>> {
     context("command", alt((terminated(alpha1, tag(" ")), alpha1)))(input)
         .map(|(next_input, res)| (next_input, res.try_into()))
 }
 
 /// Gets the input minus the tag and minus the command
-fn arguments(input: &str) -> Res<&str, Vec<Cow<'_, str>>> {
+fn arguments(input: &str) -> Res<Vec<String>> {
     context(
         "arguments",
         many0(alt((
@@ -114,185 +119,152 @@ fn arguments(input: &str) -> Res<&str, Vec<Cow<'_, str>>> {
             take_while1(|c: char| c != ' '),
         ))),
     )(input)
-    .map(|(next_input, res)| (next_input, res.into_iter().map(Cow::Borrowed).collect()))
+    .map(|(x, y)| (x, y.iter().map(ToString::to_string).collect()))
 }
 
-fn parse_internal<'a, 'b>(
-    line: &'a str,
-    con_state: &'a mut ConnectionState<'b>,
-) -> anyhow::Result<Data<'a, 'b>> {
-    match context("parse", tuple((imaptag, command, opt(arguments))))(line).map(
-        |(_, (tag, command, mut arguments))| {
-            if let Some(ref arguments_inner) = arguments {
-                if arguments_inner.is_empty() {
-                    arguments = None;
+impl Data<'_> {
+    fn parse_internal(&mut self, line: &str) -> anyhow::Result<()> {
+        match context("parse", tuple((imaptag, command, opt(arguments))))(line).map(
+            |(_, (tag, command, mut arguments))| {
+                if let Some(ref arguments_inner) = arguments {
+                    if arguments_inner.is_empty() {
+                        arguments = None;
+                    }
                 }
-            }
-            match command {
-                Ok(command) => Ok(Data {
-                    tag,
-                    command,
-                    arguments,
-                    con_state,
-                }),
-                Err(e) => Err(anyhow::Error::msg(e.to_string())),
-            }
-        },
-    ) {
-        Ok(v) => v,
-        Err(e) => Err(anyhow::Error::msg(format!("{}", e))),
+                match command {
+                    Ok(command) => {
+                        self.command_data = Some(ComandData {
+                            tag: tag.to_string(),
+                            command,
+                            arguments,
+                        });
+                        Ok(())
+                    }
+                    Err(e) => Err(anyhow::Error::msg(e)),
+                }
+            },
+        ) {
+            Ok(v) => v,
+            Err(e) => Err(anyhow::Error::msg(format!("{}", e))),
+        }
     }
 }
 
 #[async_trait]
 pub trait Command<Lines> {
-    async fn exec(&mut self, lines: &'async_trait mut Lines) -> anyhow::Result<()>;
+    async fn exec(&mut self, lines: &mut Lines) -> anyhow::Result<()>;
 }
 
 #[async_trait]
-pub trait Parser<Lines> {
-    async fn parse(
-        lines: &'async_trait mut Lines,
-        line: String,
-        con_state: &'async_trait mut ConnectionState<'_>,
-    ) -> anyhow::Result<bool>;
+pub trait Parser<Lines, 'a> {
+    async fn parse(&'a mut self, lines: &'a mut Lines, line: String) -> anyhow::Result<bool>;
 }
 
 #[async_trait]
-impl<S> Parser<S> for Data<'_, '_>
+impl<S, 'a> Parser<S, 'a> for Data<'a>
 where
     S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
     S::Error: From<io::Error>,
 {
     #[allow(clippy::too_many_lines)]
-    async fn parse(
-        lines: &'async_trait mut S,
-        line: String,
-        con_state: &'async_trait mut ConnectionState<'_>,
-    ) -> anyhow::Result<bool> {
-        let cloned_line = line.clone();
-
-        let state_read = { con_state.state.clone() };
-        debug!("Current state: {:?}", state_read);
-        if let State::Authenticating((AuthenticationMethod::Plain, ref tag)) = state_read {
-            Plain {
-                data: Data {
-                    tag: tag.to_string(),
-                    // This is unused but needed. We just assume Authenticate here
-                    command: Commands::Authenticate,
-                    arguments: None,
-                    con_state,
-                },
-                auth_data: Cow::Owned(cloned_line),
+    async fn parse(&'a mut self, lines: &'a mut S, line: String) -> anyhow::Result<bool> {
+        debug!("Current state: {:?}", self.con_state.state);
+        if let State::Authenticating((AuthenticationMethod::Plain, tag)) = &self.con_state.state {
+            self.command_data = Some(ComandData {
+                tag: tag.to_string(),
+                // This is unused but needed. We just assume Authenticate here
+                command: Commands::Authenticate,
+                arguments: None,
+            });
+            Authenticate {
+                data: self,
+                auth_data: line,
             }
-            .exec(lines)
+            .plain(lines)
             .await?;
             // We are done here
             return Ok(false);
         }
-        let parse_result = parse_internal(&line, con_state);
+        let parse_result = self.parse_internal(&line);
         match parse_result {
-            Ok(command) => {
-                match command.command {
-                    Commands::Capability => Capability { data: command }.exec(lines).await?,
-                    Commands::Login => {
-                        lines
-                            .send(format!(
-                                "{} NO LOGIN COMMAND DISABLED FOR SECURITY. USE AUTH",
-                                command.tag
-                            ))
-                            .await?;
-                    }
+            Ok(_) => {
+                match self.command_data.as_ref().unwrap().command {
+                    Commands::Capability => Capability { data: self }.exec(lines).await?,
+                    Commands::Login => Login { data: self }.exec(lines).await?,
                     Commands::Logout => {
-                        lines
-                            .feed(String::from("* BYE IMAP4rev2 Server logging out"))
-                            .await?;
-                        lines
-                            .feed(format!("{} OK LOGOUT completed", command.tag))
-                            .await?;
-                        lines.flush().await?;
+                        Logout { data: self }.exec(lines).await?;
                         // We return true here early as we want to make sure that this closes the connection
                         return Ok(true);
                     }
                     Commands::Authenticate => {
-                        if state_read == State::NotAuthenticated && command.arguments.is_some() {
-                            let args = command.arguments.unwrap();
-                            if args.len() == 1 {
-                                if args.first().unwrap().to_lowercase() == "plain" {
-                                    {
-                                        con_state.state = State::Authenticating((
-                                            AuthenticationMethod::Plain,
-                                            Cow::Owned(command.tag),
-                                        ));
-                                    };
-                                    lines.send(String::from("+ ")).await?;
-                                } else {
-                                    Plain {
-                                        data: command,
-                                        auth_data: Cow::Borrowed(args.last().unwrap()),
-                                    }
-                                    .exec(lines)
-                                    .await?;
-                                }
-                            } else {
-                                lines
-                                    .send(format!(
-                                        "{} BAD [SERVERBUG] unable to parse command",
-                                        command.tag
-                                    ))
-                                    .await?;
-                            }
-                        } else {
-                            lines
-                                .send(format!("{} NO invalid state", command.tag))
-                                .await?;
+                        let auth_data = self
+                            .command_data
+                            .as_ref()
+                            .unwrap()
+                            .arguments
+                            .as_ref()
+                            .unwrap()
+                            .last()
+                            .unwrap()
+                            .to_string();
+                        Authenticate {
+                            data: self,
+                            auth_data,
                         }
+                        .exec(lines)
+                        .await?;
                     }
                     Commands::List => {
-                        if let Some(arguments) = command.arguments {
+                        if let Some(ref arguments) = self.command_data.as_ref().unwrap().arguments {
                             if arguments.len() == 2 {
-                                Basic { data: command }.exec(lines).await?;
+                                Basic { data: self }.exec(lines).await?;
                             } else if arguments.len() == 4 {
-                                Extended { data: command }.exec(lines).await?;
+                                Extended { data: self }.exec(lines).await?;
                             } else {
                                 lines
                                     .send(format!(
                                         "{} BAD [SERVERBUG] invalid arguments",
-                                        command.tag
+                                        self.command_data.as_ref().unwrap().tag
                                     ))
                                     .await?;
                             }
                         } else {
                             lines
-                                .send(format!("{} BAD [SERVERBUG] invalid arguments", command.tag))
+                                .send(format!(
+                                    "{} BAD [SERVERBUG] invalid arguments",
+                                    self.command_data.as_ref().unwrap().tag
+                                ))
                                 .await?;
                         }
                     }
                     Commands::LSub => {
-                        if let Some(arguments) = command.arguments {
+                        if let Some(ref arguments) = self.command_data.as_ref().unwrap().arguments {
                             if arguments.len() == 2 {
-                                Basic { data: command }.exec(lines).await?;
+                                Basic { data: self }.exec(lines).await?;
                             } else {
                                 lines
                                     .send(format!(
                                         "{} BAD [SERVERBUG] invalid arguments",
-                                        command.tag
+                                        self.command_data.as_ref().unwrap().tag
                                     ))
                                     .await?;
                             }
                         } else {
                             lines
-                                .send(format!("{} BAD [SERVERBUG] invalid arguments", command.tag))
+                                .send(format!(
+                                    "{} BAD [SERVERBUG] invalid arguments",
+                                    self.command_data.as_ref().unwrap().tag
+                                ))
                                 .await?;
                         }
                     }
                     Commands::Select => {
-                        if state_read == State::Authenticated {
-                            if let Some(args) = command.arguments {
+                        if self.con_state.state == State::Authenticated {
+                            if let Some(ref args) = self.command_data.as_ref().unwrap().arguments {
                                 let mut folder =
                                     args.first().expect("server selects a folder").to_string();
                                 folder.remove_matches('"');
-                                con_state.state = State::Selected(Cow::Owned(folder));
+                                self.con_state.state = State::Selected(folder);
                                 // TODO get count of mails
                                 // TODO get flags and perma flags
                                 // TODO get real list
@@ -320,33 +292,45 @@ where
                                 lines
                                     .feed(format!(
                                         "{} OK [READ-WRITE] SELECT completed",
-                                        command.tag
+                                        self.command_data.as_ref().unwrap().tag
                                     ))
                                     .await?;
                                 lines.flush().await?;
                             }
                         } else {
                             lines
-                                .send(format!("{} NO invalid state", command.tag))
+                                .send(format!(
+                                    "{} NO invalid state",
+                                    self.command_data.as_ref().unwrap().tag
+                                ))
                                 .await?;
                         }
                     }
                     Commands::Noop => {
                         // TODO return status as suggested in https://www.rfc-editor.org/rfc/rfc9051.html#name-noop-command
                         lines
-                            .send(format!("{} OK NOOP completed", command.tag))
+                            .send(format!(
+                                "{} OK NOOP completed",
+                                self.command_data.as_ref().unwrap().tag
+                            ))
                             .await?;
                     }
                     Commands::Check => {
                         // This is an Imap4rev1 feature. It does the same as Noop for us as we have no memory gc.
                         // It also only is allowed in selected state
-                        if matches!(state_read, State::Selected(_)) {
+                        if matches!(self.con_state.state, State::Selected(_)) {
                             lines
-                                .send(format!("{} OK CHECK completed", command.tag))
+                                .send(format!(
+                                    "{} OK CHECK completed",
+                                    self.command_data.as_ref().unwrap().tag
+                                ))
                                 .await?;
                         } else {
                             lines
-                                .send(format!("{} NO invalid state", command.tag))
+                                .send(format!(
+                                    "{} NO invalid state",
+                                    self.command_data.as_ref().unwrap().tag
+                                ))
                                 .await?;
                         }
                     }
@@ -366,16 +350,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::borrow::Cow;
     use std::net::IpAddr;
     use std::net::Ipv4Addr;
 
     #[test]
     fn test_parsing_imaptag() {
-        assert_eq!(
-            imaptag("abcd CAPABILITY"),
-            Ok(("CAPABILITY", String::from("abcd")))
-        );
+        assert_eq!(imaptag("abcd CAPABILITY"), Ok(("CAPABILITY", "abcd")));
     }
 
     #[test]
@@ -388,90 +368,104 @@ mod tests {
     fn test_parsing_arguments() {
         assert_eq!(
             arguments("PLAIN abd=="),
-            Ok(("", vec![Cow::Borrowed("PLAIN"), Cow::Borrowed("abd==")]))
+            Ok(("", vec![String::from("PLAIN"), String::from("abd==")]))
         );
-        assert_eq!(arguments("PLAIN"), Ok(("", vec![Cow::Borrowed("PLAIN")])));
+        assert_eq!(arguments("PLAIN"), Ok(("", vec![String::from("PLAIN")])));
     }
 
     #[test]
     fn test_parsing_authenticate_command() {
-        let con_state = super::ConnectionState {
+        let mut con_state = super::ConnectionState {
             state: super::State::NotAuthenticated,
             ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             secure: true,
         };
-        let result = parse_internal("a AUTHENTICATE PLAIN abcde", &mut con_state);
+        let mut data = Data {
+            command_data: None,
+            con_state: &mut con_state,
+        };
+        let result = data.parse_internal("a AUTHENTICATE PLAIN abcde");
         assert!(result.is_ok());
+        assert!(data.command_data.is_some());
         assert_eq!(
-            result.unwrap(),
-            Data {
+            data.command_data.unwrap(),
+            ComandData {
                 tag: String::from("a"),
                 command: Commands::Authenticate,
-                arguments: Some(vec![Cow::Borrowed("PLAIN"), Cow::Borrowed("abcde")]),
-                con_state: &mut con_state
+                arguments: Some(vec![String::from("PLAIN"), String::from("abcde")]),
             }
         );
 
-        let result = parse_internal("a AUTHENTICATE PLAIN", &mut con_state);
+        data.command_data = None;
+        let result = data.parse_internal("a AUTHENTICATE PLAIN");
         assert!(result.is_ok());
+        assert!(data.command_data.is_some());
         assert_eq!(
-            result.unwrap(),
-            Data {
+            data.command_data.unwrap(),
+            ComandData {
                 tag: String::from("a"),
                 command: Commands::Authenticate,
-                arguments: Some(vec![Cow::Borrowed("PLAIN")]),
-                con_state: &mut con_state
+                arguments: Some(vec![String::from("PLAIN")]),
             }
         );
     }
 
     #[test]
     fn test_parsing_capability_command() {
-        let con_state = super::ConnectionState {
+        let mut con_state = super::ConnectionState {
             state: super::State::NotAuthenticated,
             ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             secure: true,
         };
-        let result = parse_internal("a CAPABILITY", &mut con_state);
+        let mut data = Data {
+            command_data: None,
+            con_state: &mut con_state,
+        };
+        let result = data.parse_internal("a CAPABILITY");
         assert!(result.is_ok());
+        assert!(data.command_data.is_some());
         assert_eq!(
-            result.unwrap(),
-            Data {
+            data.command_data.unwrap(),
+            ComandData {
                 tag: String::from("a"),
                 command: Commands::Capability,
                 arguments: None,
-                con_state: &mut con_state
             }
         );
     }
 
     #[test]
     fn test_parsing_list_command() {
-        let con_state = super::ConnectionState {
+        let mut con_state = super::ConnectionState {
             state: super::State::Authenticated,
             ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             secure: true,
         };
-        let result = parse_internal("18 list \"\" \"*\"", &mut con_state);
+        let mut data = Data {
+            command_data: None,
+            con_state: &mut con_state,
+        };
+        let result = data.parse_internal("18 list \"\" \"*\"");
         assert!(result.is_ok());
+        assert!(data.command_data.is_some());
         assert_eq!(
-            result.unwrap(),
-            Data {
+            data.command_data.unwrap(),
+            ComandData {
                 tag: String::from("18"),
                 command: Commands::List,
-                arguments: Some(vec![Cow::Borrowed("\"\""), Cow::Borrowed("\"*\"")]),
-                con_state: &mut con_state
+                arguments: Some(vec![String::from("\"\""), String::from("\"*\"")]),
             }
         );
-        let result = parse_internal("18 list \"\" \"\"", &mut con_state);
+        data.command_data = None;
+        let result = data.parse_internal("18 list \"\" \"\"");
         assert!(result.is_ok());
+        assert!(data.command_data.is_some());
         assert_eq!(
-            result.unwrap(),
-            Data {
+            data.command_data.unwrap(),
+            ComandData {
                 tag: String::from("18"),
                 command: Commands::List,
-                arguments: Some(vec![Cow::Borrowed("\"\""), Cow::Borrowed("\"\"")]),
-                con_state: &mut con_state
+                arguments: Some(vec![String::from("\"\""), String::from("\"\"")]),
             }
         );
     }

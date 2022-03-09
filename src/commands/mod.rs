@@ -165,7 +165,6 @@ where
     S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
     S::Error: From<io::Error>,
 {
-    #[allow(clippy::too_many_lines)]
     async fn parse(mut self, lines: &'a mut S, line: String) -> anyhow::Result<bool> {
         debug!("Current state: {:?}", self.con_state.state);
         if let State::Authenticating((AuthenticationMethod::Plain, tag)) = &self.con_state.state {

@@ -84,6 +84,7 @@ where
             if folder == "INBOX" && !mailbox_path.exists() {
                 maildir.create_dirs()?;
                 add_flag(&mailbox_path, "\\Subscribed")?;
+                add_flag(&mailbox_path, "\\NoInferiors")?;
             }
             self.send_success(lines, folder, maildir).await?;
         } else {

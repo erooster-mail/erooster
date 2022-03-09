@@ -71,15 +71,15 @@ where
 
         let maildir = Maildir::from(folder);
         let sub_folders = maildir.list_subdirs();
+        if reference_name.is_empty() && mailbox_patterns == "*" {
+            lines
+                .feed(format!(
+                    "* {} (\\NoInferiors) \"/\" \"INBOX\"",
+                    command_resp,
+                ))
+                .await?;
+        }
         for sub_folder in sub_folders.flatten() {
-            if reference_name.is_empty() && mailbox_patterns == "*" {
-                lines
-                    .feed(format!(
-                        "* {} (\\NoInferiors) \"/\" \"INBOX\"",
-                        command_resp,
-                    ))
-                    .await?;
-            }
             // TODO calc flags
             let flags_raw = get_flags(sub_folder.path());
             let flags = if let Ok(flags_raw) = flags_raw {
@@ -93,7 +93,7 @@ where
                     "* {} ({}) \"/\" \"{}\"",
                     command_resp,
                     flags.join(" "),
-                    folder_name.trim_start_matches('.')
+                    folder_name.trim_start_matches('.').replace('.', "/")
                 ))
                 .await?;
         }
@@ -131,16 +131,15 @@ where
 
         let maildir = Maildir::from(folder);
         let sub_folders = maildir.list_subdirs();
-
+        if reference_name.is_empty() && mailbox_patterns == "%" {
+            lines
+                .feed(format!(
+                    "* {} (\\NoInferiors) \"/\" \"INBOX\"",
+                    command_resp,
+                ))
+                .await?;
+        }
         for sub_folder in sub_folders.flatten() {
-            if reference_name.is_empty() && mailbox_patterns == "%" {
-                lines
-                    .feed(format!(
-                        "* {} (\\NoInferiors) \"/\" \"INBOX\"",
-                        command_resp,
-                    ))
-                    .await?;
-            }
             // TODO calc flags
             let flags_raw = get_flags(sub_folder.path());
             let flags = if let Ok(flags_raw) = flags_raw {
@@ -159,6 +158,7 @@ where
                         .unwrap()
                         .to_string_lossy()
                         .trim_start_matches('.')
+                        .replace('.', "/")
                 ))
                 .await?;
         }
@@ -204,6 +204,7 @@ where
                     .unwrap()
                     .to_string_lossy()
                     .trim_start_matches('.')
+                    .replace('.', "/")
             ))
             .await?;
     }

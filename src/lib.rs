@@ -26,7 +26,7 @@
 #![warn(missing_docs)]
 #![allow(clippy::missing_panics_doc)]
 
-mod commands;
+mod imap_commands;
 mod line_codec;
 
 /// The core server logic for the server.

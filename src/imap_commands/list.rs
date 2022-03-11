@@ -6,7 +6,7 @@ use maildir::Maildir;
 use tracing::debug;
 
 use crate::{
-    commands::{utils::get_flags, Command, Commands, Data},
+    imap_commands::{utils::get_flags, Command, Commands, Data},
     config::Config,
     line_codec::LinesCodecError,
     servers::state::State,

@@ -8,19 +8,19 @@ use tokio_util::codec::Framed;
 use tracing::{debug, info};
 
 use crate::{
-    commands::{capability::get_capabilities, Data, Parser},
+    imap_commands::{capability::get_capabilities, Data, Parser},
     config::Config,
     line_codec::LinesCodec,
     servers::state::{Connection, State},
-    servers::ImapServer,
+    servers::Server,
 };
 
 /// An unencrypted imap Server
 pub struct Unencrypted;
 
 #[async_trait]
-impl ImapServer for Unencrypted {
-    async fn run(config: Arc<Config>) -> anyhow::Result<()> {
+impl Server for Unencrypted {
+    async fn run_imap(config: Arc<Config>) -> anyhow::Result<()> {
         let listener = TcpListener::bind("0.0.0.0:143").await?;
         info!("Listening on unecrypted Port");
         let mut stream = TcpListenerStream::new(listener);

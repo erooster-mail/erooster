@@ -5,7 +5,7 @@ use futures::{Sink, SinkExt};
 use maildir::Maildir;
 
 use crate::{
-    commands::{utils::add_flag, Command, Data},
+    imap_commands::{utils::add_flag, Command, Data},
     config::Config,
     line_codec::LinesCodecError,
     servers::state::State,

@@ -8,9 +8,9 @@ pub(crate) mod unencrypted;
 
 /// An implementation of a imap server
 #[async_trait]
-pub trait ImapServer {
+pub trait Server {
     /// Start the server
-    async fn run(config: Arc<Config>) -> anyhow::Result<()>;
+    async fn run_imap(config: Arc<Config>) -> anyhow::Result<()>;
 }
 
 pub use encrypted::Encrypted;

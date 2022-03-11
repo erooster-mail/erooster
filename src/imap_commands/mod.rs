@@ -1,7 +1,7 @@
 use std::{io, sync::Arc};
 
 use crate::{
-    commands::{
+    imap_commands::{
         auth::{Authenticate, AuthenticationMethod},
         capability::Capability,
         check::Check,

@@ -1,4 +1,4 @@
-- Add client id to the command logging
 - Test the different state changes
 - Run https://github.com/dovecot/imaptest/tree/main/src/tests test suite (blocked by them not doing auth or tls...)
 - Typed errors
+- lockfiles for uid map and flags

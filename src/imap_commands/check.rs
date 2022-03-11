@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use futures::{Sink, SinkExt};
 
 use crate::{
-    commands::{Command, Data},
+    imap_commands::{Command, Data},
     config::Config,
     line_codec::LinesCodecError,
     servers::state::State,

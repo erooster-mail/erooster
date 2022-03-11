@@ -33,7 +33,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use erooster::{config::Config, servers::ImapServer};
+use erooster::{config::Config, servers::Server};
 use tokio::signal;
 use tracing::{error, info};
 
@@ -44,12 +44,12 @@ async fn main() -> Result<()> {
     let config = Arc::new(Config::load("./config.yml")?);
     let config_clone = Arc::clone(&config);
     tokio::spawn(async move {
-        if let Err(e) = erooster::servers::Unencrypted::run(Arc::clone(&config_clone)).await {
+        if let Err(e) = erooster::servers::Unencrypted::run_imap(Arc::clone(&config_clone)).await {
             panic!("Unable to start server: {:?}", e);
         }
     });
     tokio::spawn(async move {
-        if let Err(e) = erooster::servers::Encrypted::run(Arc::clone(&config)).await {
+        if let Err(e) = erooster::servers::Encrypted::run_imap(Arc::clone(&config)).await {
             panic!("Unable to start TLS server: {:?}", e);
         }
     });

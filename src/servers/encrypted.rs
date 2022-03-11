@@ -16,11 +16,11 @@ use tokio_util::codec::Framed;
 use tracing::{debug, error, info};
 
 use crate::{
-    commands::{capability::get_capabilities, Data, Parser},
+    imap_commands::{capability::get_capabilities, Data, Parser},
     config::Config,
     line_codec::LinesCodec,
     servers::state::{Connection, State},
-    servers::ImapServer,
+    servers::Server,
 };
 
 /// An encrypted imap Server
@@ -57,13 +57,13 @@ impl Encrypted {
 }
 
 #[async_trait]
-impl ImapServer for Encrypted {
+impl Server for Encrypted {
     /// Starts a TLS server
     ///
     /// # Errors
     ///
     /// Returns an error if the cert setup fails
-    async fn run(config: Arc<Config>) -> anyhow::Result<()> {
+    async fn run_imap(config: Arc<Config>) -> anyhow::Result<()> {
         // Load SSL Keys
         let certs = Encrypted::load_certs(Path::new("certs/cert.pem"));
         let key = Encrypted::load_key(Path::new("certs/key.pem"));

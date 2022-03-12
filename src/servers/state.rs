@@ -20,5 +20,11 @@ pub enum State {
     /// Auth successful
     Authenticated,
     /// Folder selected
-    Selected(String),
+    Selected(String, Access),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum Access {
+    ReadOnly,
+    ReadWrite,
 }

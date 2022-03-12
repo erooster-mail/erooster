@@ -2,4 +2,4 @@
 - Run https://github.com/dovecot/imaptest/tree/main/src/tests test suite (blocked by them not doing auth or tls...)
 - Typed errors
 - UID map in db
-- Use https://docs.rs/notify/latest/notify/ to check for updates in the maildirs
+- Optimize locks

@@ -194,7 +194,7 @@ async fn check_changes(
     event: Event,
 ) {
     let state = { state.read().await.state.clone() };
-    if state == State::Authenticated || matches!(state, State::Selected(_)) {
+    if state == State::Authenticated || matches!(state, State::Selected(_, _)) {
         println!("{:?}", event);
     }
 }

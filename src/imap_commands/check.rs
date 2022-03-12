@@ -19,7 +19,10 @@ where
     async fn exec(&mut self, lines: &mut S, _config: Arc<Config>) -> anyhow::Result<()> {
         // This is an Imap4rev1 feature. It does the same as Noop for us as we have no memory gc.
         // It also only is allowed in selected state
-        if matches!(self.data.con_state.read().await.state, State::Selected(_)) {
+        if matches!(
+            self.data.con_state.read().await.state,
+            State::Selected(_, _)
+        ) {
             lines
                 .send(format!(
                     "{} OK CHECK completed",

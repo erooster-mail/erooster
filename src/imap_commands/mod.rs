@@ -9,7 +9,7 @@ use crate::{
         login::Login,
         logout::Logout,
         noop::Noop,
-        select::Select,
+        select::{Examine, Select},
         subscribe::Subscribe,
     },
     servers::state::{Connection, State},
@@ -64,6 +64,7 @@ pub enum Commands {
     LSub,
     Logout,
     Select,
+    Examine,
     Noop,
     Check,
     Create,
@@ -82,6 +83,7 @@ impl TryFrom<&str> for Commands {
             "lsub" => Ok(Commands::LSub),
             "logout" => Ok(Commands::Logout),
             "select" => Ok(Commands::Select),
+            "examine" => Ok(Commands::Examine),
             "noop" => Ok(Commands::Noop),
             "check" => Ok(Commands::Check),
             "create" => Ok(Commands::Create),
@@ -242,6 +244,9 @@ where
                         }
                         Commands::Select => {
                             Select { data: &mut self }.exec(lines, config).await?;
+                        }
+                        Commands::Examine => {
+                            Examine { data: &mut self }.exec(lines, config).await?;
                         }
                         Commands::Create => {
                             Create { data: &self }.exec(lines, config).await?;

@@ -1,23 +1,19 @@
-use std::{io, sync::Arc};
-
+use std::{ sync::Arc};
 use async_trait::async_trait;
-use futures::{Sink, SinkExt};
-
+use futures::{Sink, SinkExt, channel::mpsc::SendError};
 use crate::{
     imap_commands::{Command, Data},
     config::Config,
-    line_codec::LinesCodecError,
 };
 
 pub struct Capability<'a> {
-    pub data: &'a Data<'a>,
+    pub data: &'a Data,
 }
 
 #[async_trait]
 impl<S> Command<S> for Capability<'_>
 where
-    S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
-    S::Error: From<io::Error>,
+    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
     async fn exec(&mut self, lines: &mut S, _config: Arc<Config>) -> anyhow::Result<()> {
         let capabilities = get_capabilities();

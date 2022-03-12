@@ -1,15 +1,13 @@
-use async_trait::async_trait;
-use futures::{Sink, SinkExt};
-use simdutf8::compat::from_utf8;
-use std::{io, sync::Arc};
-use tracing::error;
-
 use crate::{
-    imap_commands::{Command, Data},
     config::Config,
-    line_codec::LinesCodecError,
+    imap_commands::{Command, Data},
     servers::state::State,
 };
+use async_trait::async_trait;
+use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use simdutf8::compat::from_utf8;
+use std::sync::Arc;
+use tracing::error;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum AuthenticationMethod {
@@ -17,17 +15,17 @@ pub enum AuthenticationMethod {
 }
 
 pub struct Authenticate<'a> {
-    pub data: &'a mut Data<'a>,
+    pub data: &'a mut Data,
     pub auth_data: String,
 }
 
 impl Authenticate<'_> {
     pub async fn plain<S>(&mut self, lines: &mut S, _config: Arc<Config>) -> anyhow::Result<()>
     where
-        S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
-        S::Error: From<io::Error>,
+        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         let bytes = base64::decode(self.auth_data.as_bytes());
+        let mut write_lock = self.data.con_state.write().await;
         match bytes {
             Ok(bytes) => {
                 let auth_data_vec: Vec<&str> = bytes
@@ -47,13 +45,14 @@ impl Authenticate<'_> {
                 debug_assert_eq!(auth_data_vec.len(), 2);
                 if auth_data_vec.len() == 2 {
                     let username = auth_data_vec[0];
-                    self.data.con_state.username = Some(username.to_string());
-
                     let _password = auth_data_vec[1];
 
                     // TODO check against DB
-                    self.data.con_state.state = State::Authenticated;
-                    let secure = { self.data.con_state.secure };
+                    {
+                        write_lock.username = Some(username.to_string());
+                        write_lock.state = State::Authenticated;
+                    };
+                    let secure = write_lock.secure;
                     if secure {
                         lines
                             .send(format!(
@@ -70,7 +69,9 @@ impl Authenticate<'_> {
                             .await?;
                     }
                 } else {
-                    self.data.con_state.state = State::NotAuthenticated;
+                    {
+                        write_lock.state = State::NotAuthenticated;
+                    };
                     lines
                         .send(format!(
                             "{} BAD Invalid arguments",
@@ -81,7 +82,7 @@ impl Authenticate<'_> {
             }
             Err(e) => {
                 {
-                    self.data.con_state.state = State::NotAuthenticated;
+                    write_lock.state = State::NotAuthenticated;
                 };
                 error!("Error logging in: {}", e);
                 lines
@@ -101,19 +102,20 @@ impl Authenticate<'_> {
 #[async_trait]
 impl<S> Command<S> for Authenticate<'_>
 where
-    S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
-    S::Error: From<io::Error>,
+    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
     async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> anyhow::Result<()> {
-        if self.data.con_state.state == State::NotAuthenticated {
+        if self.data.con_state.read().await.state == State::NotAuthenticated {
             let args = &self.data.command_data.as_ref().unwrap().arguments;
             debug_assert_eq!(args.len(), 1);
             if args.len() == 1 {
                 if args.first().unwrap().to_lowercase() == "plain" {
-                    self.data.con_state.state = State::Authenticating((
-                        AuthenticationMethod::Plain,
-                        self.data.command_data.as_ref().unwrap().tag.clone(),
-                    ));
+                    {
+                        self.data.con_state.write().await.state = State::Authenticating((
+                            AuthenticationMethod::Plain,
+                            self.data.command_data.as_ref().unwrap().tag.clone(),
+                        ));
+                    };
                     lines.send(String::from("+ ")).await?;
                 } else {
                     self.plain(lines, config).await?;

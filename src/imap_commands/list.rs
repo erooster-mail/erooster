@@ -1,28 +1,20 @@
-use std::{io, path::Path, sync::Arc};
-
-use async_trait::async_trait;
-use futures::{Sink, SinkExt};
-use maildir::Maildir;
-use tracing::debug;
-
 use crate::{
-    imap_commands::{utils::get_flags, Command, Commands, Data},
     config::Config,
-    line_codec::LinesCodecError,
+    imap_commands::{utils::get_flags, Command, Commands, Data},
     servers::state::State,
 };
+use async_trait::async_trait;
+use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use maildir::Maildir;
+use std::{path::Path, sync::Arc};
+use tracing::debug;
 
 #[allow(clippy::too_many_lines)]
-pub async fn basic<'a, S>(
-    data: &'a Data<'a>,
-    lines: &mut S,
-    config: Arc<Config>,
-) -> anyhow::Result<()>
+pub async fn basic<'a, S>(data: &'a Data, lines: &mut S, config: Arc<Config>) -> anyhow::Result<()>
 where
-    S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
-    S::Error: From<io::Error>,
+    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    if data.con_state.state == State::NotAuthenticated {
+    if data.con_state.read().await.state == State::NotAuthenticated {
         lines
             .send(format!(
                 "{} BAD Not Authenticated",
@@ -52,8 +44,8 @@ where
             .feed(format!("* {} (\\Noselect) \"/\" \"\"", command_resp))
             .await?;
     } else if mailbox_patterns.ends_with('*') {
-        let mut folder =
-            Path::new(&config.mail.maildir_folders).join(data.con_state.username.clone().unwrap());
+        let mut folder = Path::new(&config.mail.maildir_folders)
+            .join(data.con_state.read().await.username.clone().unwrap());
         if !reference_name.is_empty() {
             let mut reference_name_folder = reference_name.clone().replace('/', ".");
             reference_name_folder.insert(0, '.');
@@ -98,8 +90,8 @@ where
                 .await?;
         }
     } else if mailbox_patterns.ends_with('%') {
-        let mut folder =
-            Path::new(&config.mail.maildir_folders).join(data.con_state.username.clone().unwrap());
+        let mut folder = Path::new(&config.mail.maildir_folders)
+            .join(data.con_state.read().await.username.clone().unwrap());
         if !reference_name.is_empty() {
             let mut reference_name_folder = reference_name.clone().replace('/', ".");
             reference_name_folder.insert(0, '.');
@@ -163,8 +155,8 @@ where
                 .await?;
         }
     } else {
-        let mut folder =
-            Path::new(&config.mail.maildir_folders).join(data.con_state.username.clone().unwrap());
+        let mut folder = Path::new(&config.mail.maildir_folders)
+            .join(data.con_state.read().await.username.clone().unwrap());
         if !reference_name.is_empty() {
             let mut reference_name_folder = reference_name.clone().replace('/', ".");
             reference_name_folder.remove_matches('"');
@@ -218,7 +210,7 @@ where
     Ok(())
 }
 pub struct List<'a> {
-    pub data: &'a Data<'a>,
+    pub data: &'a Data,
 }
 
 impl List<'_> {
@@ -227,11 +219,10 @@ impl List<'_> {
     // TODO setup
     pub async fn extended<S>(&mut self, lines: &mut S, _config: Arc<Config>) -> anyhow::Result<()>
     where
-        S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
-        S::Error: From<io::Error>,
+        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         debug!("extended");
-        if self.data.con_state.state == State::NotAuthenticated {
+        if self.data.con_state.read().await.state == State::NotAuthenticated {
             lines
                 .send(format!(
                     "{} BAD Not Authenticated",
@@ -263,8 +254,7 @@ impl List<'_> {
 #[async_trait]
 impl<S> Command<S> for List<'_>
 where
-    S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
-    S::Error: From<io::Error>,
+    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
     async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> anyhow::Result<()> {
         let arguments = &self.data.command_data.as_ref().unwrap().arguments;
@@ -286,14 +276,13 @@ where
 }
 
 pub struct LSub<'a> {
-    pub data: &'a Data<'a>,
+    pub data: &'a Data,
 }
 
 #[async_trait]
 impl<S> Command<S> for LSub<'_>
 where
-    S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
-    S::Error: From<io::Error>,
+    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
     async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> anyhow::Result<()> {
         let arguments = &self.data.command_data.as_ref().unwrap().arguments;

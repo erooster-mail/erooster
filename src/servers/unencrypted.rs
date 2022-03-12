@@ -1,15 +1,19 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use futures::SinkExt;
-use tokio::net::TcpListener;
-use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
+use futures::{channel::mpsc, SinkExt, StreamExt};
+use notify::Event;
+use tokio::{
+    net::TcpListener,
+    sync::{broadcast, RwLock},
+};
+use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
 use tracing::{debug, info};
 
 use crate::{
-    imap_commands::{capability::get_capabilities, Data, Parser},
     config::Config,
+    imap_commands::{capability::get_capabilities, Data, Parser},
     line_codec::LinesCodec,
     servers::state::{Connection, State},
     servers::Server,
@@ -20,7 +24,10 @@ pub struct Unencrypted;
 
 #[async_trait]
 impl Server for Unencrypted {
-    async fn run_imap(config: Arc<Config>) -> anyhow::Result<()> {
+    async fn run_imap(
+        config: Arc<Config>,
+        mut _file_watcher: broadcast::Sender<Event>,
+    ) -> anyhow::Result<()> {
         let listener = TcpListener::bind("0.0.0.0:143").await?;
         info!("Listening on unecrypted Port");
         let mut stream = TcpListenerStream::new(listener);
@@ -30,29 +37,37 @@ impl Server for Unencrypted {
 
             let config = Arc::clone(&config);
             tokio::spawn(async move {
-                let mut lines = Framed::new(tcp_stream, LinesCodec::new());
+                let lines = Framed::new(tcp_stream, LinesCodec::new());
+                let (mut lines_sender, mut lines_reader) = lines.split();
                 let capabilities = get_capabilities();
-                lines
+                lines_sender
                     .send(format!("* OK [{}] IMAP4rev2 Service Ready", capabilities))
                     .await
                     .unwrap();
-                let mut state = Connection {
+                let state = Arc::new(RwLock::new(Connection {
                     state: State::NotAuthenticated,
                     ip: peer.ip(),
                     secure: false,
                     username: None,
-                };
-                while let Some(Ok(line)) = lines.next().await {
+                }));
+
+                let (mut tx, mut rx) = mpsc::unbounded();
+                tokio::spawn(async move {
+                    while let Some(res) = rx.next().await {
+                        lines_sender.send(res).await.unwrap();
+                    }
+                });
+                while let Some(Ok(line)) = lines_reader.next().await {
                     let data = Data {
                         command_data: None,
-                        con_state: &mut state,
+                        con_state: Arc::clone(&state),
                     };
 
                     debug!("[{}] Got Command: {}", peer, line);
 
                     // TODO make sure to handle IDLE different as it needs us to stream lines
                     // TODO pass lines and make it possible to not need new lines in responds but instead directly use `lines.send`
-                    let response = data.parse(&mut lines, Arc::clone(&config), line).await;
+                    let response = data.parse(&mut tx, Arc::clone(&config), line).await;
 
                     match response {
                         Ok(response) => {
@@ -65,8 +80,7 @@ impl Server for Unencrypted {
                         }
                         // We try a last time to do a graceful shutdown before closing
                         Err(e) => {
-                            lines
-                                .send(format!("* BAD [SERVERBUG] This should not happen: {}", e))
+                            tx.send(format!("* BAD [SERVERBUG] This should not happen: {}", e))
                                 .await
                                 .unwrap();
                             debug!("Closing connection");

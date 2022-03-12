@@ -1,18 +1,15 @@
-use std::{io, path::Path, sync::Arc};
-
-use async_trait::async_trait;
-use futures::{Sink, SinkExt};
-use maildir::Maildir;
-
 use crate::{
-    imap_commands::{utils::add_flag, Command, Data},
     config::Config,
-    line_codec::LinesCodecError,
+    imap_commands::{utils::add_flag, Command, Data},
     servers::state::State,
 };
+use async_trait::async_trait;
+use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use maildir::Maildir;
+use std::{path::Path, sync::Arc};
 
 pub struct Select<'a> {
-    pub data: &'a mut Data<'a>,
+    pub data: &'a mut Data,
 }
 
 impl Select<'_> {
@@ -23,8 +20,7 @@ impl Select<'_> {
         maildir: Maildir,
     ) -> anyhow::Result<()>
     where
-        S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
-        S::Error: From<io::Error>,
+        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         // TODO get flags and perma flags
         // TODO UIDNEXT and UIDVALIDITY
@@ -64,21 +60,22 @@ impl Select<'_> {
 #[async_trait]
 impl<S> Command<S> for Select<'_>
 where
-    S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
-    S::Error: From<io::Error>,
+    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
     async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> anyhow::Result<()> {
-        if self.data.con_state.state == State::Authenticated {
+        if self.data.con_state.read().await.state == State::Authenticated {
             let args = &self.data.command_data.as_ref().unwrap().arguments;
 
             debug_assert_eq!(args.len(), 1);
             let mut folder = args.first().expect("server selects a folder").to_string();
             folder.remove_matches('"');
-            self.data.con_state.state = State::Selected(folder.clone());
+            {
+                self.data.con_state.write().await.state = State::Selected(folder.clone());
+            };
 
             // Special INBOX check to make sure we have a mailbox
             let mailbox_path = Path::new(&config.mail.maildir_folders)
-                .join(self.data.con_state.username.clone().unwrap())
+                .join(self.data.con_state.read().await.username.clone().unwrap())
                 .join(folder.clone());
             let maildir = Maildir::from(mailbox_path.clone());
             if folder == "INBOX" && !mailbox_path.exists() {

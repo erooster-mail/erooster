@@ -1,25 +1,21 @@
-use std::{io, path::Path, sync::Arc};
-
+use crate::{
+    config::Config,
+    imap_commands::{utils::add_flag, Command, Data},
+};
 use async_trait::async_trait;
-use futures::{Sink, SinkExt};
+use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use maildir::Maildir;
+use std::{path::Path, sync::Arc};
 use tracing::error;
 
-use crate::{
-    imap_commands::{utils::add_flag, Command, Data},
-    config::Config,
-    line_codec::LinesCodecError,
-};
-
 pub struct Create<'a> {
-    pub data: &'a Data<'a>,
+    pub data: &'a Data,
 }
 
 #[async_trait]
 impl<S> Command<S> for Create<'_>
 where
-    S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
-    S::Error: From<io::Error>,
+    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
     async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> anyhow::Result<()> {
         let arguments = &self.data.command_data.as_ref().unwrap().arguments;
@@ -28,7 +24,7 @@ where
             folder.insert(0, '.');
             folder.remove_matches('"');
             let mailbox_path = Path::new(&config.mail.maildir_folders)
-                .join(self.data.con_state.username.clone().unwrap())
+                .join(self.data.con_state.read().await.username.clone().unwrap())
                 .join(folder.clone());
             let maildir = Maildir::from(mailbox_path.clone());
             match maildir.create_dirs() {

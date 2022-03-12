@@ -1,27 +1,34 @@
+use crate::{
+    config::Config,
+    imap_commands::{capability::get_capabilities, Data, Parser},
+    line_codec::LinesCodec,
+    servers::state::{Connection, State},
+    servers::Server,
+};
 use async_trait::async_trait;
 use futures::SinkExt;
+use futures::{
+    channel::mpsc::{self, UnboundedSender},
+    StreamExt,
+};
+use notify::Event;
 use std::{
     fs::{self},
     io::{self, BufReader},
     path::Path,
     sync::Arc,
 };
-use tokio::net::TcpListener;
+use tokio::{
+    net::TcpListener,
+    sync::{broadcast, RwLock},
+};
 use tokio_rustls::{
     rustls::{self, Certificate, PrivateKey},
     TlsAcceptor,
 };
-use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
+use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, info};
-
-use crate::{
-    imap_commands::{capability::get_capabilities, Data, Parser},
-    config::Config,
-    line_codec::LinesCodec,
-    servers::state::{Connection, State},
-    servers::Server,
-};
 
 /// An encrypted imap Server
 pub struct Encrypted;
@@ -63,7 +70,10 @@ impl Server for Encrypted {
     /// # Errors
     ///
     /// Returns an error if the cert setup fails
-    async fn run_imap(config: Arc<Config>) -> anyhow::Result<()> {
+    async fn run_imap(
+        config: Arc<Config>,
+        file_watcher: broadcast::Sender<Event>,
+    ) -> anyhow::Result<()> {
         // Load SSL Keys
         let certs = Encrypted::load_certs(Path::new("certs/cert.pem"));
         let key = Encrypted::load_key(Path::new("certs/key.pem"));
@@ -84,6 +94,7 @@ impl Server for Encrypted {
         let mut stream = TcpListenerStream::new(listener);
 
         // Looks for new peers
+        let file_watcher = file_watcher.clone();
         while let Some(Ok(tcp_stream)) = stream.next().await {
             debug!("Got new TLS peer: {:?}", tcp_stream.peer_addr());
             let peer = tcp_stream.peer_addr().expect("peer addr to exist");
@@ -91,6 +102,7 @@ impl Server for Encrypted {
             // Start talking with new peer on new thread
             let acceptor = acceptor.clone();
             let config = Arc::clone(&config);
+            let file_watcher = file_watcher.clone();
             tokio::spawn(async move {
                 // Accept TCP connection
                 let tls_stream = acceptor.accept(tcp_stream).await;
@@ -101,32 +113,49 @@ impl Server for Encrypted {
                         debug!("TLS negotiation done");
 
                         // Proceed as normal
-                        let mut lines = Framed::new(stream, LinesCodec::new());
+                        let lines = Framed::new(stream, LinesCodec::new());
+                        let (mut lines_sender, mut lines_reader) = lines.split();
                         let capabilities = get_capabilities();
 
-                        lines
+                        lines_sender
                             .send(format!("* OK [{}] IMAP4rev2 Service Ready", capabilities))
                             .await
                             .unwrap();
-                        let mut state = Connection {
+                        let state = Arc::new(RwLock::new(Connection {
                             state: State::NotAuthenticated,
                             ip: peer.ip(),
                             secure: true,
                             username: None,
-                        };
-                        while let Some(Ok(line)) = lines.next().await {
+                        }));
+
+                        let mut file_watcher_subscriber = file_watcher.subscribe();
+                        let (mut tx, mut rx) = mpsc::unbounded();
+                        let cloned_tx = tx.clone();
+                        tokio::spawn(async move {
+                            while let Some(res) = rx.next().await {
+                                lines_sender.send(res).await.unwrap();
+                            }
+                        });
+                        let cloned_state = Arc::clone(&state);
+                        tokio::spawn(async move {
+                            let cloned_state = Arc::clone(&cloned_state);
+                            while let Ok(res) = file_watcher_subscriber.recv().await {
+                                check_changes(cloned_tx.clone(), Arc::clone(&cloned_state), res)
+                                    .await;
+                            }
+                        });
+                        while let Some(Ok(line)) = lines_reader.next().await {
                             let data = Data {
                                 command_data: None,
                                 // TODO mutex?
-                                con_state: &mut state,
+                                con_state: Arc::clone(&state),
                             };
                             debug!("[{}] Got Command: {}", peer, line);
                             // TODO make sure to handle IDLE different as it needs us to stream lines
                             // TODO pass lines and make it possible to not need new lines in responds but instead directly use `lines.send`
 
                             {
-                                let response =
-                                    data.parse(&mut lines, Arc::clone(&config), line).await;
+                                let response = data.parse(&mut tx, Arc::clone(&config), line).await;
                                 match response {
                                     Ok(response) => {
                                         // Cleanup timeout managers
@@ -138,13 +167,12 @@ impl Server for Encrypted {
                                     }
                                     // We try a last time to do a graceful shutdown before closing
                                     Err(e) => {
-                                        lines
-                                            .send(format!(
-                                                "* BAD [SERVERBUG] This should not happen: {}",
-                                                e
-                                            ))
-                                            .await
-                                            .unwrap();
+                                        tx.send(format!(
+                                            "* BAD [SERVERBUG] This should not happen: {}",
+                                            e
+                                        ))
+                                        .await
+                                        .unwrap();
                                         debug!("Closing TLS connection");
                                         break;
                                     }
@@ -157,5 +185,16 @@ impl Server for Encrypted {
             });
         }
         Ok(())
+    }
+}
+
+async fn check_changes(
+    lines: UnboundedSender<String>,
+    state: Arc<RwLock<Connection>>,
+    event: Event,
+) {
+    let state = { state.read().await.state.clone() };
+    if state == State::Authenticated || matches!(state, State::Selected(_)) {
+        println!("{:?}", event);
     }
 }

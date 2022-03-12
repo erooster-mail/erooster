@@ -1,6 +1,5 @@
-use std::{io, sync::Arc};
-
 use crate::{
+    config::Config,
     imap_commands::{
         auth::{Authenticate, AuthenticationMethod},
         capability::Capability,
@@ -13,12 +12,10 @@ use crate::{
         select::Select,
         subscribe::Subscribe,
     },
-    config::Config,
-    line_codec::LinesCodecError,
     servers::state::{Connection, State},
 };
 use async_trait::async_trait;
-use futures::{Sink, SinkExt};
+use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while1},
@@ -28,6 +25,8 @@ use nom::{
     sequence::{terminated, tuple},
     IResult,
 };
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use tracing::{debug, error, warn};
 
 mod utils;
@@ -43,10 +42,10 @@ mod noop;
 mod select;
 mod subscribe;
 
-#[derive(Debug, PartialEq)]
-pub struct Data<'a> {
+#[derive(Debug)]
+pub struct Data {
     pub command_data: Option<CommandData>,
-    pub con_state: &'a mut Connection,
+    pub con_state: Arc<RwLock<Connection>>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -138,7 +137,7 @@ fn arguments(input: &str) -> Res<Vec<String>> {
     .map(|(x, y)| (x, y.iter().map(ToString::to_string).collect()))
 }
 
-impl Data<'_> {
+impl Data {
     fn parse_internal(&mut self, line: &str) -> anyhow::Result<()> {
         match context("parse", tuple((imaptag, command, arguments)))(line).map(
             |(_, (tag, command, arguments))| match command {
@@ -175,10 +174,9 @@ pub trait Parser<Lines, 'a> {
 }
 
 #[async_trait]
-impl<S, 'a> Parser<S, 'a> for Data<'a>
+impl<S, 'a> Parser<S, 'a> for Data
 where
-    S: Sink<String, Error = LinesCodecError> + std::marker::Unpin + std::marker::Send,
-    S::Error: From<io::Error>,
+    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
     async fn parse(
         mut self,
@@ -186,8 +184,11 @@ where
         config: Arc<Config>,
         line: String,
     ) -> anyhow::Result<bool> {
-        debug!("Current state: {:?}", self.con_state.state);
-        if let State::Authenticating((AuthenticationMethod::Plain, tag)) = &self.con_state.state {
+        debug!("Current state: {:?}", self.con_state.read().await.state);
+
+        let con_clone = Arc::clone(&self.con_state);
+        let state = { con_clone.read().await.state.clone() };
+        if let State::Authenticating((AuthenticationMethod::Plain, ref tag)) = state {
             self.command_data = Some(CommandData {
                 tag: tag.to_string(),
                 // This is unused but needed. We just assume Authenticate here
@@ -202,7 +203,7 @@ where
             .await?;
             // We are done here
             return Ok(false);
-        }
+        };
         let parse_result = self.parse_internal(&line);
         match parse_result {
             Ok(_) => {

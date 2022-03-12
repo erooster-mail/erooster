@@ -33,15 +33,24 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use clap::Parser;
 use erooster::{config::Config, servers::Server};
 use tokio::signal;
 use tracing::{error, info};
 
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    #[clap(short, long, default_value = "./config.yml")]
+    config: String,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
+    let args = Args::parse();
     info!("Starting ERooster Imap Server");
-    let config = Arc::new(Config::load("./config.yml")?);
+    let config = Arc::new(Config::load(args.config)?);
     let config_clone = Arc::clone(&config);
     tokio::spawn(async move {
         if let Err(e) = erooster::servers::Unencrypted::run_imap(Arc::clone(&config_clone)).await {

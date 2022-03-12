@@ -26,6 +26,7 @@ bytes = "1.1.0"
 async-trait = "0.1.52"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
+clap = { version = "3.1.6", features = ["derive", "color", "suggestions","env"] }
 
 [dependencies.maildir]
 version = "0.6.0"

@@ -1,4 +1,5 @@
 - Test the different state changes
 - Run https://github.com/dovecot/imaptest/tree/main/src/tests test suite (blocked by them not doing auth or tls...)
 - Typed errors
-- lockfiles for uid map and flags
+- UID map in db
+- Use https://docs.rs/notify/latest/notify/ to check for updates in the maildirs

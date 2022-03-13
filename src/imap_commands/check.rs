@@ -16,7 +16,7 @@ impl<S> Command<S> for Check<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, _config: Arc<Config>) -> anyhow::Result<()> {
+    async fn exec(&mut self, lines: &mut S, _config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         // This is an Imap4rev1 feature. It does the same as Noop for us as we have no memory gc.
         // It also only is allowed in selected state
         if matches!(

@@ -20,7 +20,7 @@ pub struct Authenticate<'a> {
 }
 
 impl Authenticate<'_> {
-    pub async fn plain<S>(&mut self, lines: &mut S, _config: Arc<Config>) -> anyhow::Result<()>
+    pub async fn plain<S>(&mut self, lines: &mut S, _config: Arc<Config>) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
@@ -104,7 +104,7 @@ impl<S> Command<S> for Authenticate<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> anyhow::Result<()> {
+    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         if self.data.con_state.read().await.state == State::NotAuthenticated {
             let args = &self.data.command_data.as_ref().unwrap().arguments;
             debug_assert_eq!(args.len(), 1);

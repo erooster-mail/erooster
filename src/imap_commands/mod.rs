@@ -144,7 +144,7 @@ fn arguments(input: &str) -> Res<Vec<String>> {
 }
 
 impl Data {
-    fn parse_internal(&mut self, line: &str) -> anyhow::Result<()> {
+    fn parse_internal(&mut self, line: &str) -> color_eyre::eyre::Result<()> {
         match context("parse", tuple((imaptag, command, arguments)))(line).map(
             |(_, (tag, command, arguments))| match command {
                 Ok(command) => {
@@ -155,18 +155,18 @@ impl Data {
                     });
                     Ok(())
                 }
-                Err(e) => Err(anyhow::Error::msg(e)),
+                Err(e) => Err(color_eyre::eyre::Report::msg(e)),
             },
         ) {
             Ok(v) => v,
-            Err(e) => Err(anyhow::Error::msg(format!("{}", e))),
+            Err(e) => Err(color_eyre::eyre::Report::msg(format!("{}", e))),
         }
     }
 }
 
 #[async_trait]
 pub trait Command<Lines> {
-    async fn exec(&mut self, lines: &mut Lines, config: Arc<Config>) -> anyhow::Result<()>;
+    async fn exec(&mut self, lines: &mut Lines, config: Arc<Config>) -> color_eyre::eyre::Result<()>;
 }
 
 #[async_trait]
@@ -176,7 +176,7 @@ pub trait Parser<Lines, 'a> {
         lines: &'a mut Lines,
         config: Arc<Config>,
         line: String,
-    ) -> anyhow::Result<bool>;
+    ) -> color_eyre::eyre::Result<bool>;
 }
 
 #[async_trait]
@@ -189,7 +189,7 @@ where
         lines: &'a mut S,
         config: Arc<Config>,
         line: String,
-    ) -> anyhow::Result<bool> {
+    ) -> color_eyre::eyre::Result<bool> {
         debug!("Current state: {:?}", self.con_state.read().await.state);
 
         let con_clone = Arc::clone(&self.con_state);

@@ -29,7 +29,7 @@ impl Config {
     /// # Errors
     ///
     /// Does return io errors if something goes wrong
-    pub fn load<P: AsRef<std::path::Path> + std::fmt::Debug>(path: P) -> anyhow::Result<Self> {
+    pub fn load<P: AsRef<std::path::Path> + std::fmt::Debug>(path: P) -> color_eyre::eyre::Result<Self> {
         let contents = std::fs::read_to_string(path)?;
         let config: Self = serde_yaml::from_str(&contents)?;
         Ok(config)

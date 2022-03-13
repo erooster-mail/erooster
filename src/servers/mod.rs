@@ -15,7 +15,7 @@ pub trait Server {
     async fn run_imap(
         config: Arc<Config>,
         file_watcher: broadcast::Sender<Event>,
-    ) -> anyhow::Result<()>;
+    ) -> color_eyre::eyre::Result<()>;
 }
 
 /// Starts the imap server
@@ -23,7 +23,7 @@ pub trait Server {
 /// # Errors
 ///
 /// Returns an error if the server startup fails
-pub fn start_imap(config: Arc<Config>) -> anyhow::Result<()> {
+pub fn start_imap(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
     let (tx, _rx) = broadcast::channel(1);
     let tx_clone = tx.clone();
     let mut watcher = RecommendedWatcher::new(move |res: notify::Result<Event>| {

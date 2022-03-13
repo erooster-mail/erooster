@@ -32,8 +32,8 @@
 
 use std::sync::Arc;
 
-use anyhow::Result;
 use clap::Parser;
+use color_eyre::eyre::Result;
 use erooster::config::Config;
 use tokio::signal;
 use tracing::{error, info};
@@ -47,6 +47,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    color_eyre::install()?;
     tracing_subscriber::fmt::init();
     let args = Args::parse();
     info!("Starting ERooster Imap Server");

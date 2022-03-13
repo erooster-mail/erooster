@@ -15,7 +15,7 @@ impl<S> Command<S> for Noop<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, _config: Arc<Config>) -> anyhow::Result<()> {
+    async fn exec(&mut self, lines: &mut S, _config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         // TODO return status as suggested in https://www.rfc-editor.org/rfc/rfc9051.html#name-noop-command
         lines
             .send(format!(

@@ -14,7 +14,7 @@ impl<S> Command<S> for Logout<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, _config: Arc<Config>) -> anyhow::Result<()> {
+    async fn exec(&mut self, lines: &mut S, _config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         lines
             .feed(String::from("* BYE IMAP4rev2 Server logging out"))
             .await?;

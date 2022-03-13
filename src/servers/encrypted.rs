@@ -73,7 +73,7 @@ impl Server for Encrypted {
     async fn run_imap(
         config: Arc<Config>,
         file_watcher: broadcast::Sender<Event>,
-    ) -> anyhow::Result<()> {
+    ) -> color_eyre::eyre::Result<()> {
         // Load SSL Keys
         let certs = Encrypted::load_certs(Path::new("certs/cert.pem"));
         let key = Encrypted::load_key(Path::new("certs/key.pem"));

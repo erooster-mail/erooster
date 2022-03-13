@@ -27,7 +27,7 @@ impl Server for Unencrypted {
     async fn run_imap(
         config: Arc<Config>,
         mut _file_watcher: broadcast::Sender<Event>,
-    ) -> anyhow::Result<()> {
+    ) -> color_eyre::eyre::Result<()> {
         let listener = TcpListener::bind("0.0.0.0:143").await?;
         info!("Listening on unecrypted Port");
         let mut stream = TcpListenerStream::new(listener);

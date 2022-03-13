@@ -10,7 +10,7 @@ use std::{path::Path, sync::Arc};
 use tracing::debug;
 
 #[allow(clippy::too_many_lines)]
-pub async fn basic<'a, S>(data: &'a Data, lines: &mut S, config: Arc<Config>) -> anyhow::Result<()>
+pub async fn basic<'a, S>(data: &'a Data, lines: &mut S, config: Arc<Config>) -> color_eyre::eyre::Result<()>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
@@ -217,7 +217,7 @@ impl List<'_> {
     // TODO parse all arguments
 
     // TODO setup
-    pub async fn extended<S>(&mut self, lines: &mut S, _config: Arc<Config>) -> anyhow::Result<()>
+    pub async fn extended<S>(&mut self, lines: &mut S, _config: Arc<Config>) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
@@ -256,7 +256,7 @@ impl<S> Command<S> for List<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> anyhow::Result<()> {
+    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         let arguments = &self.data.command_data.as_ref().unwrap().arguments;
         debug_assert_eq!(arguments.len(), 2);
         if arguments.len() == 2 {
@@ -284,7 +284,7 @@ impl<S> Command<S> for LSub<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> anyhow::Result<()> {
+    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         let arguments = &self.data.command_data.as_ref().unwrap().arguments;
         debug_assert_eq!(arguments.len(), 2);
         if arguments.len() == 2 {

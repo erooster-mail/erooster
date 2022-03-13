@@ -17,7 +17,7 @@ async fn select<S>(
     lines: &mut S,
     config: Arc<Config>,
     rw: bool,
-) -> anyhow::Result<()>
+) -> color_eyre::eyre::Result<()>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
@@ -55,7 +55,7 @@ async fn send_success<S>(
     folder: String,
     maildir: Maildir,
     rw: bool,
-) -> anyhow::Result<()>
+) -> color_eyre::eyre::Result<()>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
@@ -105,7 +105,7 @@ impl<S> Command<S> for Select<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> anyhow::Result<()> {
+    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         if self.data.con_state.read().await.state == State::Authenticated {
             select(self.data, lines, config, true).await?;
         } else {
@@ -129,7 +129,7 @@ impl<S> Command<S> for Examine<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> anyhow::Result<()> {
+    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         if self.data.con_state.read().await.state == State::Authenticated {
             select(self.data, lines, config, false).await?;
         } else {

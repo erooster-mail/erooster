@@ -15,7 +15,7 @@ impl<S> Command<S> for Delete<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> anyhow::Result<()> {
+    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         let arguments = &self.data.command_data.as_ref().unwrap().arguments;
         if arguments.len() == 1 {
             let mut folder = arguments[0].replace('/', ".");

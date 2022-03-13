@@ -12,7 +12,7 @@ categories = ["email", "network-programming"]
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 nom = "7.1.0"
-anyhow = "1.0.45"
+color-eyre = "0.6"
 tokio-util = { version = "0.7.0", features = ["full"] }
 tokio-stream = { version = "0.1.8", features = ["net"] }
 futures = { version = "0.3.0", features = ["thread-pool"]}
@@ -36,3 +36,6 @@ rev = "179625c3cc15212fb26eca5b819f7fe0d6f802e1"
 
 #[profile.release]
 #debug = true
+
+[profile.dev.package.backtrace]
+opt-level = 3

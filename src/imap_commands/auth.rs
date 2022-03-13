@@ -1,9 +1,8 @@
 use crate::{
     config::Config,
-    imap_commands::{Command, CommandData, Data},
+    imap_commands::{CommandData, Data},
     servers::state::State,
 };
-use async_trait::async_trait;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use simdutf8::compat::from_utf8;
 use std::sync::Arc;
@@ -91,17 +90,16 @@ impl Authenticate<'_> {
     }
 }
 
-#[async_trait]
-impl<S> Command<S> for Authenticate<'_>
-where
-    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
-{
-    async fn exec(
+impl Authenticate<'_> {
+    pub async fn exec<S>(
         &mut self,
         lines: &mut S,
         _config: Arc<Config>,
         command_data: &CommandData,
-    ) -> color_eyre::eyre::Result<()> {
+    ) -> color_eyre::eyre::Result<()>
+    where
+        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+    {
         if self.data.con_state.read().await.state == State::NotAuthenticated {
             let args = &command_data.arguments;
             assert!(args.len() == 1);

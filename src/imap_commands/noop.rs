@@ -1,26 +1,17 @@
-use crate::{
-    config::Config,
-    imap_commands::{Command, CommandData, Data},
-};
-use async_trait::async_trait;
+use crate::imap_commands::CommandData;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use std::sync::Arc;
 
-pub struct Noop<'a> {
-    pub data: &'a Data,
-}
+pub struct Noop;
 
-#[async_trait]
-impl<S> Command<S> for Noop<'_>
-where
-    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
-{
-    async fn exec(
+impl Noop {
+    pub async fn exec<S>(
         &mut self,
         lines: &mut S,
-        _config: Arc<Config>,
         command_data: &CommandData,
-    ) -> color_eyre::eyre::Result<()> {
+    ) -> color_eyre::eyre::Result<()>
+    where
+        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+    {
         // TODO return status as suggested in https://www.rfc-editor.org/rfc/rfc9051.html#name-noop-command
         lines
             .send(format!("{} OK NOOP completed", command_data.tag))

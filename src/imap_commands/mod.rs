@@ -16,7 +16,6 @@ use crate::{
     },
     servers::state::{Connection, State},
 };
-use async_trait::async_trait;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use nom::{
     branch::alt,
@@ -164,16 +163,6 @@ impl Data {
     }
 }
 
-#[async_trait]
-pub trait Command<Lines> {
-    async fn exec(
-        &mut self,
-        lines: &mut Lines,
-        config: Arc<Config>,
-        command_data: &CommandData,
-    ) -> color_eyre::eyre::Result<()>;
-}
-
 impl<'a> Data {
     #[allow(clippy::too_many_lines)]
     pub async fn parse<S>(
@@ -210,19 +199,13 @@ impl<'a> Data {
             Ok(command_data) => {
                 match command_data.command {
                     Commands::Capability => {
-                        Capability { data: self }
-                            .exec(lines, config, &command_data)
-                            .await?;
+                        Capability.exec(lines, &command_data).await?;
                     }
                     Commands::Login => {
-                        Login { data: self }
-                            .exec(lines, config, &command_data)
-                            .await?;
+                        Login.exec(lines, &command_data).await?;
                     }
                     Commands::Logout => {
-                        Logout { data: self }
-                            .exec(lines, config, &command_data)
-                            .await?;
+                        Logout.exec(lines, &command_data).await?;
                         // We return true here early as we want to make sure that this closes the connection
                         return Ok(true);
                     }
@@ -271,14 +254,10 @@ impl<'a> Data {
                             .await?;
                     }
                     Commands::Noop => {
-                        Noop { data: self }
-                            .exec(lines, config, &command_data)
-                            .await?;
+                        Noop.exec(lines, &command_data).await?;
                     }
                     Commands::Check => {
-                        Check { data: self }
-                            .exec(lines, config, &command_data)
-                            .await?;
+                        Check { data: self }.exec(lines, &command_data).await?;
                     }
                     Commands::Close => {
                         Close { data: self }

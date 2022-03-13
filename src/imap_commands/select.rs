@@ -1,9 +1,8 @@
 use crate::{
     config::Config,
-    imap_commands::{utils::add_flag, Command, CommandData, Data},
+    imap_commands::{utils::add_flag, CommandData, Data},
     servers::state::{Access, State},
 };
-use async_trait::async_trait;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use maildir::Maildir;
 use std::{path::Path, sync::Arc};
@@ -95,17 +94,16 @@ where
     Ok(())
 }
 
-#[async_trait]
-impl<S> Command<S> for Select<'_>
-where
-    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
-{
-    async fn exec(
+impl Select<'_> {
+    pub async fn exec<S>(
         &mut self,
         lines: &mut S,
         config: Arc<Config>,
         command_data: &CommandData,
-    ) -> color_eyre::eyre::Result<()> {
+    ) -> color_eyre::eyre::Result<()>
+    where
+        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+    {
         if self.data.con_state.read().await.state == State::Authenticated {
             select(self.data, lines, config, true, command_data).await?;
         } else {
@@ -121,17 +119,16 @@ pub struct Examine<'a> {
     pub data: &'a mut Data,
 }
 
-#[async_trait]
-impl<S> Command<S> for Examine<'_>
-where
-    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
-{
-    async fn exec(
+impl Examine<'_> {
+    pub async fn exec<S>(
         &mut self,
         lines: &mut S,
         config: Arc<Config>,
         command_data: &CommandData,
-    ) -> color_eyre::eyre::Result<()> {
+    ) -> color_eyre::eyre::Result<()>
+    where
+        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+    {
         if self.data.con_state.read().await.state == State::Authenticated {
             select(self.data, lines, config, false, command_data).await?;
         } else {

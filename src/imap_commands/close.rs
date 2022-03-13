@@ -1,9 +1,8 @@
 use crate::{
     config::Config,
-    imap_commands::{Command, Data, CommandData},
+    imap_commands::{CommandData, Data},
     servers::state::{Access, State},
 };
-use async_trait::async_trait;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use maildir::Maildir;
 use std::{fs, path::Path, sync::Arc};
@@ -13,17 +12,16 @@ pub struct Close<'a> {
     pub data: &'a Data,
 }
 
-#[async_trait]
-impl<S> Command<S> for Close<'_>
-where
-    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
-{
-    async fn exec(
+impl Close<'_> {
+    pub async fn exec<S>(
         &mut self,
         lines: &mut S,
         config: Arc<Config>,
         command_data: &CommandData,
-    ) -> color_eyre::eyre::Result<()> {
+    ) -> color_eyre::eyre::Result<()>
+    where
+        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+    {
         let mut write_lock = self.data.con_state.write().await;
 
         if let State::Selected(folder, access) = &write_lock.state {

@@ -1,25 +1,16 @@
-use crate::{
-    config::Config,
-    imap_commands::{Command, CommandData, Data},
-};
-use async_trait::async_trait;
+use crate::imap_commands::CommandData;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use std::sync::Arc;
-pub struct Logout<'a> {
-    pub data: &'a Data,
-}
+pub struct Logout;
 
-#[async_trait]
-impl<S> Command<S> for Logout<'_>
-where
-    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
-{
-    async fn exec(
+impl Logout {
+    pub async fn exec<S>(
         &mut self,
         lines: &mut S,
-        _config: Arc<Config>,
         command_data: &CommandData,
-    ) -> color_eyre::eyre::Result<()> {
+    ) -> color_eyre::eyre::Result<()>
+    where
+        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+    {
         lines
             .feed(String::from("* BYE IMAP4rev2 Server logging out"))
             .await?;

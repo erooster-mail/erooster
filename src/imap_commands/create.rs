@@ -1,8 +1,7 @@
 use crate::{
     config::Config,
-    imap_commands::{utils::add_flag, Command, CommandData, Data},
+    imap_commands::{utils::add_flag, CommandData, Data},
 };
-use async_trait::async_trait;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use maildir::Maildir;
 use std::{path::Path, sync::Arc};
@@ -11,18 +10,16 @@ use tracing::error;
 pub struct Create<'a> {
     pub data: &'a Data,
 }
-
-#[async_trait]
-impl<S> Command<S> for Create<'_>
-where
-    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
-{
-    async fn exec(
+impl Create<'_> {
+    pub async fn exec<S>(
         &mut self,
         lines: &mut S,
         config: Arc<Config>,
         command_data: &CommandData,
-    ) -> color_eyre::eyre::Result<()> {
+    ) -> color_eyre::eyre::Result<()>
+    where
+        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+    {
         let arguments = &command_data.arguments;
         assert!(arguments.len() == 1);
         if arguments.len() == 1 {

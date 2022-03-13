@@ -1,9 +1,8 @@
 use crate::{
     config::Config,
-    imap_commands::{utils::get_flags, Command, CommandData, Commands, Data},
+    imap_commands::{utils::get_flags, CommandData, Commands, Data},
     servers::state::State,
 };
-use async_trait::async_trait;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use maildir::Maildir;
 use std::{path::Path, sync::Arc};
@@ -246,17 +245,16 @@ impl List<'_> {
     }
 }
 
-#[async_trait]
-impl<S> Command<S> for List<'_>
-where
-    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
-{
-    async fn exec(
+impl List<'_> {
+    pub async fn exec<S>(
         &mut self,
         lines: &mut S,
         config: Arc<Config>,
         command_data: &CommandData,
-    ) -> color_eyre::eyre::Result<()> {
+    ) -> color_eyre::eyre::Result<()>
+    where
+        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+    {
         let arguments = &command_data.arguments;
         assert!(arguments.len() >= 2);
         if arguments.len() == 2 {
@@ -279,17 +277,16 @@ pub struct LSub<'a> {
     pub data: &'a Data,
 }
 
-#[async_trait]
-impl<S> Command<S> for LSub<'_>
-where
-    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
-{
-    async fn exec(
+impl LSub<'_> {
+    pub async fn exec<S>(
         &mut self,
         lines: &mut S,
         config: Arc<Config>,
         command_data: &CommandData,
-    ) -> color_eyre::eyre::Result<()> {
+    ) -> color_eyre::eyre::Result<()>
+    where
+        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+    {
         let arguments = &command_data.arguments;
         assert!(arguments.len() == 2);
         if arguments.len() == 2 {

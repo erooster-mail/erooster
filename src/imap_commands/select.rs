@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    imap_commands::{utils::add_flag, Command, Data},
+    imap_commands::{utils::add_flag, Command, CommandData, Data},
     servers::state::{Access, State},
 };
 use async_trait::async_trait;
@@ -17,13 +17,14 @@ async fn select<S>(
     lines: &mut S,
     config: Arc<Config>,
     rw: bool,
+    command_data: &CommandData,
 ) -> color_eyre::eyre::Result<()>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    let args = &data.command_data.as_ref().unwrap().arguments;
+    let args = &command_data.arguments;
 
-    debug_assert_eq!(args.len(), 1);
+    assert!(args.len() == 1);
     let mut folder = args.first().expect("server selects a folder").to_string();
     folder.remove_matches('"');
     let access = if rw {
@@ -45,16 +46,16 @@ where
         add_flag(&mailbox_path, "\\Subscribed")?;
         add_flag(&mailbox_path, "\\NoInferiors")?;
     }
-    send_success(data, lines, folder, maildir, rw).await?;
+    send_success(lines, folder, maildir, rw, command_data).await?;
     Ok(())
 }
 
 async fn send_success<S>(
-    data: &mut Data,
     lines: &mut S,
     folder: String,
     maildir: Maildir,
     rw: bool,
+    command_data: &CommandData,
 ) -> color_eyre::eyre::Result<()>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
@@ -85,15 +86,9 @@ where
         .await?;
 
     let resp = if rw {
-        format!(
-            "{} OK [READ-WRITE] SELECT completed",
-            data.command_data.as_ref().unwrap().tag
-        )
+        format!("{} OK [READ-WRITE] SELECT completed", command_data.tag)
     } else {
-        format!(
-            "{} OK [READ-ONLY] EXAMINE completed",
-            data.command_data.as_ref().unwrap().tag
-        )
+        format!("{} OK [READ-ONLY] EXAMINE completed", command_data.tag)
     };
     lines.feed(resp).await?;
     lines.flush().await?;
@@ -105,15 +100,17 @@ impl<S> Command<S> for Select<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> color_eyre::eyre::Result<()> {
+    async fn exec(
+        &mut self,
+        lines: &mut S,
+        config: Arc<Config>,
+        command_data: &CommandData,
+    ) -> color_eyre::eyre::Result<()> {
         if self.data.con_state.read().await.state == State::Authenticated {
-            select(self.data, lines, config, true).await?;
+            select(self.data, lines, config, true, command_data).await?;
         } else {
             lines
-                .send(format!(
-                    "{} NO invalid state",
-                    self.data.command_data.as_ref().unwrap().tag
-                ))
+                .send(format!("{} NO invalid state", command_data.tag))
                 .await?;
         }
         Ok(())
@@ -129,15 +126,17 @@ impl<S> Command<S> for Examine<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> color_eyre::eyre::Result<()> {
+    async fn exec(
+        &mut self,
+        lines: &mut S,
+        config: Arc<Config>,
+        command_data: &CommandData,
+    ) -> color_eyre::eyre::Result<()> {
         if self.data.con_state.read().await.state == State::Authenticated {
-            select(self.data, lines, config, false).await?;
+            select(self.data, lines, config, false, command_data).await?;
         } else {
             lines
-                .send(format!(
-                    "{} NO invalid state",
-                    self.data.command_data.as_ref().unwrap().tag
-                ))
+                .send(format!("{} NO invalid state", command_data.tag))
                 .await?;
         }
         Ok(())

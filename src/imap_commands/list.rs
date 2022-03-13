@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    imap_commands::{utils::get_flags, Command, Commands, Data},
+    imap_commands::{utils::get_flags, Command, CommandData, Commands, Data},
     servers::state::State,
 };
 use async_trait::async_trait;
@@ -10,28 +10,30 @@ use std::{path::Path, sync::Arc};
 use tracing::debug;
 
 #[allow(clippy::too_many_lines)]
-pub async fn basic<'a, S>(data: &'a Data, lines: &mut S, config: Arc<Config>) -> color_eyre::eyre::Result<()>
+pub async fn basic<'a, S>(
+    data: &'a Data,
+    lines: &mut S,
+    config: Arc<Config>,
+    command_data: &CommandData,
+) -> color_eyre::eyre::Result<()>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    if data.con_state.read().await.state == State::NotAuthenticated {
+    if matches!(data.con_state.read().await.state, State::NotAuthenticated) {
         lines
-            .send(format!(
-                "{} BAD Not Authenticated",
-                data.command_data.as_ref().unwrap().tag
-            ))
+            .send(format!("{} BAD Not Authenticated", command_data.tag))
             .await?;
         return Ok(());
     }
 
-    let command_resp = if data.command_data.as_ref().unwrap().command == Commands::LSub {
+    let command_resp = if matches!(command_data.command, Commands::LSub) {
         "LSUB"
     } else {
         "LIST"
     };
 
-    let arguments = &data.command_data.as_ref().unwrap().arguments;
-    debug_assert_eq!(arguments.len(), 2);
+    let arguments = &command_data.arguments;
+    assert!(arguments.len() == 2);
 
     // Cleanup args
     let mut reference_name = arguments[0].clone();
@@ -200,12 +202,7 @@ where
             ))
             .await?;
     }
-    lines
-        .feed(format!(
-            "{} OK done",
-            data.command_data.as_ref().unwrap().tag,
-        ))
-        .await?;
+    lines.feed(format!("{} OK done", command_data.tag,)).await?;
     lines.flush().await?;
     Ok(())
 }
@@ -217,20 +214,21 @@ impl List<'_> {
     // TODO parse all arguments
 
     // TODO setup
-    pub async fn extended<S>(&mut self, lines: &mut S, _config: Arc<Config>) -> color_eyre::eyre::Result<()>
+    pub async fn extended<S>(
+        &mut self,
+        lines: &mut S,
+        command_data: &CommandData,
+    ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         debug!("extended");
         if self.data.con_state.read().await.state == State::NotAuthenticated {
             lines
-                .send(format!(
-                    "{} BAD Not Authenticated",
-                    self.data.command_data.as_ref().unwrap().tag
-                ))
+                .send(format!("{} BAD Not Authenticated", command_data.tag))
                 .await?;
         } else {
-            let arguments = &self.data.command_data.as_ref().unwrap().arguments;
+            let arguments = &command_data.arguments;
             if arguments[0].starts_with('(') && arguments[0].ends_with(')') {
                 // TODO handle selection options
             } else {
@@ -241,10 +239,7 @@ impl List<'_> {
                 mailbox_patterns.remove_matches('"');
             }
             lines
-                .send(format!(
-                    "{} BAD LIST Not supported",
-                    self.data.command_data.as_ref().unwrap().tag
-                ))
+                .send(format!("{} BAD LIST Not supported", command_data.tag))
                 .await?;
         }
         Ok(())
@@ -256,18 +251,23 @@ impl<S> Command<S> for List<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> color_eyre::eyre::Result<()> {
-        let arguments = &self.data.command_data.as_ref().unwrap().arguments;
-        debug_assert_eq!(arguments.len(), 2);
+    async fn exec(
+        &mut self,
+        lines: &mut S,
+        config: Arc<Config>,
+        command_data: &CommandData,
+    ) -> color_eyre::eyre::Result<()> {
+        let arguments = &command_data.arguments;
+        assert!(arguments.len() >= 2);
         if arguments.len() == 2 {
-            basic(self.data, lines, config).await?;
+            basic(self.data, lines, config, command_data).await?;
         } else if arguments.len() == 4 {
-            self.extended(lines, config).await?;
+            self.extended(lines, command_data).await?;
         } else {
             lines
                 .send(format!(
                     "{} BAD [SERVERBUG] invalid arguments",
-                    self.data.command_data.as_ref().unwrap().tag
+                    command_data.tag
                 ))
                 .await?;
         }
@@ -284,16 +284,21 @@ impl<S> Command<S> for LSub<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> color_eyre::eyre::Result<()> {
-        let arguments = &self.data.command_data.as_ref().unwrap().arguments;
-        debug_assert_eq!(arguments.len(), 2);
+    async fn exec(
+        &mut self,
+        lines: &mut S,
+        config: Arc<Config>,
+        command_data: &CommandData,
+    ) -> color_eyre::eyre::Result<()> {
+        let arguments = &command_data.arguments;
+        assert!(arguments.len() == 2);
         if arguments.len() == 2 {
-            basic(self.data, lines, config).await?;
+            basic(self.data, lines, config, command_data).await?;
         } else {
             lines
                 .send(format!(
                     "{} BAD [SERVERBUG] invalid arguments",
-                    self.data.command_data.as_ref().unwrap().tag
+                    command_data.tag
                 ))
                 .await?;
         }

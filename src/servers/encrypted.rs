@@ -1,9 +1,12 @@
 use crate::{
     config::Config,
-    imap_commands::{capability::get_capabilities, Data, Parser},
+    imap_commands::{Data, Parser},
     line_codec::LinesCodec,
-    servers::state::{Connection, State},
     servers::Server,
+    servers::{
+        state::{Connection, State},
+        CAPABILITY_HELLO,
+    },
 };
 use async_trait::async_trait;
 use futures::SinkExt;
@@ -34,32 +37,34 @@ use tracing::{debug, error, info};
 pub struct Encrypted;
 
 impl Encrypted {
-    fn load_certs(path: &Path) -> Vec<Certificate> {
-        let certfile = fs::File::open(path).expect("cannot open certificate file");
+    // Loads the certfile from the filesystem
+    fn load_certs(path: &Path) -> color_eyre::eyre::Result<Vec<Certificate>> {
+        let certfile = fs::File::open(path)?;
         let mut reader = BufReader::new(certfile);
-        rustls_pemfile::certs(&mut reader)
-            .unwrap()
+        Ok(rustls_pemfile::certs(&mut reader)?
             .iter()
             .map(|v| rustls::Certificate(v.clone()))
-            .collect()
+            .collect())
     }
 
-    fn load_key(path: &Path) -> PrivateKey {
-        let keyfile = fs::File::open(path).expect("cannot open private key file");
+    fn load_key(path: &Path) -> color_eyre::eyre::Result<PrivateKey> {
+        let keyfile = fs::File::open(path)?;
         let mut reader = BufReader::new(keyfile);
 
         loop {
-            match rustls_pemfile::read_one(&mut reader).expect("cannot parse private key .pem file")
-            {
+            match rustls_pemfile::read_one(&mut reader)? {
                 Some(rustls_pemfile::Item::RSAKey(key) | rustls_pemfile::Item::PKCS8Key(key)) => {
-                    return rustls::PrivateKey(key)
+                    return Ok(rustls::PrivateKey(key))
                 }
                 None => break,
                 _ => {}
             }
         }
 
-        panic!("no keys found in {:?} (encrypted keys not supported)", path);
+        Err(color_eyre::eyre::eyre!(
+            "no keys found in {:?} (encrypted keys not supported)",
+            path
+        ))
     }
 }
 
@@ -75,8 +80,8 @@ impl Server for Encrypted {
         file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()> {
         // Load SSL Keys
-        let certs = Encrypted::load_certs(Path::new("certs/cert.pem"));
-        let key = Encrypted::load_key(Path::new("certs/key.pem"));
+        let certs = Encrypted::load_certs(Path::new("certs/cert.pem"))?;
+        let key = Encrypted::load_key(Path::new("certs/key.pem"))?;
 
         // Sets up the TLS acceptor.
         let server_config = rustls::ServerConfig::builder()
@@ -93,16 +98,19 @@ impl Server for Encrypted {
         info!("Listening on ecrypted Port");
         let mut stream = TcpListenerStream::new(listener);
 
-        // Looks for new peers
+        // This clone is needed but as it is an arc it is "cheap"
         let file_watcher = file_watcher.clone();
+        // Looks for new peers
         while let Some(Ok(tcp_stream)) = stream.next().await {
             debug!("Got new TLS peer: {:?}", tcp_stream.peer_addr());
             let peer = tcp_stream.peer_addr().expect("peer addr to exist");
 
-            // Start talking with new peer on new thread
-            let acceptor = acceptor.clone();
+            // We need to clone these as we move into a new thread
             let config = Arc::clone(&config);
             let file_watcher = file_watcher.clone();
+
+            // Start talking with new peer on new thread
+            let acceptor = acceptor.clone();
             tokio::spawn(async move {
                 // Accept TCP connection
                 let tls_stream = acceptor.accept(tcp_stream).await;
@@ -114,20 +122,18 @@ impl Server for Encrypted {
 
                         // Proceed as normal
                         let lines = Framed::new(stream, LinesCodec::new());
+                        // We split these as we handle the sink in a broadcast instead to be able to push non linear data over the socket
                         let (mut lines_sender, mut lines_reader) = lines.split();
-                        let capabilities = get_capabilities();
 
+                        // Greet the client with the capabilities we provide
                         lines_sender
-                            .send(format!("* OK [{}] IMAP4rev2 Service Ready", capabilities))
+                            .send(CAPABILITY_HELLO.to_string())
                             .await
                             .unwrap();
-                        let state = Arc::new(RwLock::new(Connection {
-                            state: State::NotAuthenticated,
-                            secure: true,
-                            username: None,
-                        }));
+                        // Create our Connection
+                        let connection = Connection::new(true);
 
-                        let mut file_watcher_subscriber = file_watcher.subscribe();
+                        // Prepare our custom return path
                         let (mut tx, mut rx) = mpsc::unbounded();
                         let cloned_tx = tx.clone();
                         tokio::spawn(async move {
@@ -135,30 +141,38 @@ impl Server for Encrypted {
                                 lines_sender.send(res).await.unwrap();
                             }
                         });
-                        let cloned_state = Arc::clone(&state);
+                        // Connection needed for the file watcher
+                        let cloned_connection = Arc::clone(&connection);
+
+                        // Start listening to file changes for this session
+                        let mut file_watcher_subscriber = file_watcher.subscribe();
+
+                        // Listen to file changes on another thread
                         tokio::spawn(async move {
-                            let cloned_state = Arc::clone(&cloned_state);
                             while let Ok(res) = file_watcher_subscriber.recv().await {
-                                check_changes(cloned_tx.clone(), Arc::clone(&cloned_state), res)
-                                    .await;
+                                check_changes(
+                                    cloned_tx.clone(),
+                                    Arc::clone(&cloned_connection),
+                                    res,
+                                )
+                                .await;
                             }
                         });
+
+                        // Read lines from the stream
                         while let Some(Ok(line)) = lines_reader.next().await {
-                            let data = Data {
-                                command_data: None,
-                                // TODO mutex?
-                                con_state: Arc::clone(&state),
+                            let mut data = Data {
+                                con_state: Arc::clone(&connection),
                             };
                             debug!("[{}] Got Command: {}", peer, line);
                             // TODO make sure to handle IDLE different as it needs us to stream lines
-                            // TODO pass lines and make it possible to not need new lines in responds but instead directly use `lines.send`
 
                             {
-                                let response = data.parse(&mut tx, Arc::clone(&config), line).await;
-                                match response {
-                                    Ok(response) => {
+                                let close = data.parse(&mut tx, Arc::clone(&config), line).await;
+                                match close {
+                                    Ok(close) => {
                                         // Cleanup timeout managers
-                                        if response {
+                                        if close {
                                             // Used for later session timer management
                                             debug!("Closing TLS connection");
                                             break;
@@ -192,8 +206,8 @@ async fn check_changes(
     state: Arc<RwLock<Connection>>,
     event: Event,
 ) {
-    let state = { state.read().await.state.clone() };
-    if state == State::Authenticated || matches!(state, State::Selected(_, _)) {
+    let state = { &state.read().await.state };
+    if matches!(state, State::Authenticated) || matches!(state, State::Selected(_, _)) {
         println!("{:?}", event);
     }
 }

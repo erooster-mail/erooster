@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    imap_commands::{Command, Data},
+    imap_commands::{Command, Data, CommandData},
     servers::state::{Access, State},
 };
 use async_trait::async_trait;
@@ -18,16 +18,18 @@ impl<S> Command<S> for Close<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> color_eyre::eyre::Result<()> {
+    async fn exec(
+        &mut self,
+        lines: &mut S,
+        config: Arc<Config>,
+        command_data: &CommandData,
+    ) -> color_eyre::eyre::Result<()> {
         let mut write_lock = self.data.con_state.write().await;
 
         if let State::Selected(folder, access) = &write_lock.state {
             if access == &Access::ReadOnly {
                 lines
-                    .send(format!(
-                        "{} NO in read-only mode",
-                        self.data.command_data.as_ref().unwrap().tag
-                    ))
+                    .send(format!("{} NO in read-only mode", command_data.tag))
                     .await?;
                 return Ok(());
             }
@@ -52,17 +54,11 @@ where
                 write_lock.state = State::Authenticated;
             };
             lines
-                .send(format!(
-                    "{} OK CLOSE completed",
-                    self.data.command_data.as_ref().unwrap().tag
-                ))
+                .send(format!("{} OK CLOSE completed", command_data.tag))
                 .await?;
         } else {
             lines
-                .send(format!(
-                    "{} NO invalid state",
-                    self.data.command_data.as_ref().unwrap().tag
-                ))
+                .send(format!("{} NO invalid state", command_data.tag))
                 .await?;
         }
 

@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    imap_commands::{utils::add_flag, Command, Data},
+    imap_commands::{utils::add_flag, Command, CommandData, Data},
 };
 use async_trait::async_trait;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
@@ -15,8 +15,14 @@ impl<S> Command<S> for Subscribe<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> color_eyre::eyre::Result<()> {
-        let arguments = &self.data.command_data.as_ref().unwrap().arguments;
+    async fn exec(
+        &mut self,
+        lines: &mut S,
+        config: Arc<Config>,
+        command_data: &CommandData,
+    ) -> color_eyre::eyre::Result<()> {
+        let arguments = &command_data.arguments;
+        assert!(arguments.len() == 1);
         if arguments.len() == 1 {
             let mut folder = arguments[0].replace('/', ".");
             folder.insert(0, '.');
@@ -26,16 +32,13 @@ where
                 .join(folder.clone());
             add_flag(&mailbox_path, "\\Subscribed")?;
             lines
-                .send(format!(
-                    "{} OK SUBSCRIBE completed",
-                    self.data.command_data.as_ref().unwrap().tag
-                ))
+                .send(format!("{} OK SUBSCRIBE completed", command_data.tag))
                 .await?;
         } else {
             lines
                 .send(format!(
                     "{} BAD [SERVERBUG] invalid arguments",
-                    self.data.command_data.as_ref().unwrap().tag
+                    command_data.tag
                 ))
                 .await?;
         }

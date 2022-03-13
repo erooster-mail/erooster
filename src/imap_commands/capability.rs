@@ -1,10 +1,10 @@
-use std::{ sync::Arc};
-use async_trait::async_trait;
-use futures::{Sink, SinkExt, channel::mpsc::SendError};
 use crate::{
-    imap_commands::{Command, Data},
     config::Config,
+    imap_commands::{Command, CommandData, Data},
 };
+use async_trait::async_trait;
+use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use std::sync::Arc;
 
 pub struct Capability<'a> {
     pub data: &'a Data,
@@ -15,20 +15,22 @@ impl<S> Command<S> for Capability<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, _config: Arc<Config>) -> color_eyre::eyre::Result<()> {
+    async fn exec(
+        &mut self,
+        lines: &mut S,
+        _config: Arc<Config>,
+        command_data: &CommandData,
+    ) -> color_eyre::eyre::Result<()> {
         let capabilities = get_capabilities();
         lines.feed(format!("* {}", capabilities)).await?;
         lines
-            .feed(format!(
-                "{} OK CAPABILITY completed",
-                self.data.command_data.as_ref().unwrap().tag
-            ))
+            .feed(format!("{} OK CAPABILITY completed", command_data.tag))
             .await?;
         lines.flush().await?;
         Ok(())
     }
 }
 
-pub fn get_capabilities() -> String {
-    String::from("CAPABILITY AUTH=PLAIN LOGINDISABLED IMAP4rev2")
+pub const fn get_capabilities() -> &'static str {
+    "CAPABILITY AUTH=PLAIN LOGINDISABLED IMAP4rev2"
 }

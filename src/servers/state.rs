@@ -1,5 +1,5 @@
-use std::net::IpAddr;
-
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use crate::imap_commands::auth::AuthenticationMethod;
 
 /// State of the connection session between us and the Client
@@ -8,6 +8,16 @@ pub struct Connection {
     pub state: State,
     pub secure: bool,
     pub username: Option<String>,
+}
+
+impl Connection {
+    pub fn new(secure: bool) -> Arc<RwLock<Self>> {
+        Arc::new(RwLock::new(Connection {
+            state: State::NotAuthenticated,
+            secure,
+            username: None,
+        }))
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

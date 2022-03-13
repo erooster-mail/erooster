@@ -48,7 +48,6 @@ mod subscribe;
 
 #[derive(Debug)]
 pub struct Data {
-    pub command_data: Option<CommandData>,
     pub con_state: Arc<RwLock<Connection>>,
 }
 
@@ -148,17 +147,14 @@ fn arguments(input: &str) -> Res<Vec<String>> {
 }
 
 impl Data {
-    fn parse_internal(&mut self, line: &str) -> color_eyre::eyre::Result<()> {
+    fn parse_internal(line: &str) -> color_eyre::eyre::Result<CommandData> {
         match context("parse", tuple((imaptag, command, arguments)))(line).map(
             |(_, (tag, command, arguments))| match command {
-                Ok(command) => {
-                    self.command_data = Some(CommandData {
-                        tag: tag.to_string(),
-                        command,
-                        arguments,
-                    });
-                    Ok(())
-                }
+                Ok(command) => Ok(CommandData {
+                    tag: tag.to_string(),
+                    command,
+                    arguments,
+                }),
                 Err(e) => Err(color_eyre::eyre::Report::msg(e)),
             },
         ) {
@@ -174,13 +170,14 @@ pub trait Command<Lines> {
         &mut self,
         lines: &mut Lines,
         config: Arc<Config>,
+        command_data: &CommandData,
     ) -> color_eyre::eyre::Result<()>;
 }
 
 #[async_trait]
 pub trait Parser<Lines, 'a> {
     async fn parse(
-        mut self,
+        &mut self,
         lines: &'a mut Lines,
         config: Arc<Config>,
         line: String,
@@ -192,8 +189,9 @@ impl<S, 'a> Parser<S, 'a> for Data
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
+    #[allow(clippy::too_many_lines)]
     async fn parse(
-        mut self,
+        &mut self,
         lines: &'a mut S,
         config: Arc<Config>,
         line: String,
@@ -203,81 +201,100 @@ where
         let con_clone = Arc::clone(&self.con_state);
         let state = { con_clone.read().await.state.clone() };
         if let State::Authenticating(AuthenticationMethod::Plain, ref tag) = state {
-            self.command_data = Some(CommandData {
+            let command_data = CommandData {
                 tag: tag.to_string(),
                 // This is unused but needed. We just assume Authenticate here
                 command: Commands::Authenticate,
                 arguments: vec![],
-            });
+            };
             Authenticate {
                 data: &mut self,
                 auth_data: line,
             }
-            .plain(lines, config)
+            .plain(lines, &command_data)
             .await?;
             // We are done here
             return Ok(false);
         };
-        let parse_result = self.parse_internal(&line);
+        let parse_result = Data::parse_internal(&line);
         match parse_result {
-            Ok(_) => {
-                if let Some(CommandData {
-                    command,
-                    ref arguments,
-                    ..
-                }) = self.command_data
-                {
-                    match command {
-                        Commands::Capability => {
-                            Capability { data: &self }.exec(lines, config).await?;
-                        }
-                        Commands::Login => {
-                            Login { data: &self }.exec(lines, config).await?;
-                        }
-                        Commands::Logout => {
-                            Logout { data: &self }.exec(lines, config).await?;
-                            // We return true here early as we want to make sure that this closes the connection
-                            return Ok(true);
-                        }
-                        Commands::Authenticate => {
-                            let auth_data = arguments.last().unwrap().to_string();
-                            Authenticate {
-                                data: &mut self,
-                                auth_data,
-                            }
-                            .exec(lines, config)
+            Ok(command_data) => {
+                match command_data.command {
+                    Commands::Capability => {
+                        Capability { data: self }
+                            .exec(lines, config, &command_data)
                             .await?;
+                    }
+                    Commands::Login => {
+                        Login { data: self }
+                            .exec(lines, config, &command_data)
+                            .await?;
+                    }
+                    Commands::Logout => {
+                        Logout { data: self }
+                            .exec(lines, config, &command_data)
+                            .await?;
+                        // We return true here early as we want to make sure that this closes the connection
+                        return Ok(true);
+                    }
+                    Commands::Authenticate => {
+                        let auth_data = command_data.arguments.last().unwrap().to_string();
+                        Authenticate {
+                            data: &mut self,
+                            auth_data,
                         }
-                        Commands::List => {
-                            List { data: &self }.exec(lines, config).await?;
-                        }
-                        Commands::LSub => {
-                            LSub { data: &self }.exec(lines, config).await?;
-                        }
-                        Commands::Select => {
-                            Select { data: &mut self }.exec(lines, config).await?;
-                        }
-                        Commands::Examine => {
-                            Examine { data: &mut self }.exec(lines, config).await?;
-                        }
-                        Commands::Create => {
-                            Create { data: &self }.exec(lines, config).await?;
-                        }
-                        Commands::Delete => {
-                            Delete { data: &self }.exec(lines, config).await?;
-                        }
-                        Commands::Subscribe => {
-                            Subscribe { data: &self }.exec(lines, config).await?;
-                        }
-                        Commands::Noop => {
-                            Noop { data: &self }.exec(lines, config).await?;
-                        }
-                        Commands::Check => {
-                            Check { data: &self }.exec(lines, config).await?;
-                        }
-                        Commands::Close => {
-                            Close { data: &self }.exec(lines, config).await?;
-                        }
+                        .exec(lines, config, &command_data)
+                        .await?;
+                    }
+                    Commands::List => {
+                        List { data: self }
+                            .exec(lines, config, &command_data)
+                            .await?;
+                    }
+                    Commands::LSub => {
+                        LSub { data: self }
+                            .exec(lines, config, &command_data)
+                            .await?;
+                    }
+                    Commands::Select => {
+                        Select { data: &mut self }
+                            .exec(lines, config, &command_data)
+                            .await?;
+                    }
+                    Commands::Examine => {
+                        Examine { data: &mut self }
+                            .exec(lines, config, &command_data)
+                            .await?;
+                    }
+                    Commands::Create => {
+                        Create { data: self }
+                            .exec(lines, config, &command_data)
+                            .await?;
+                    }
+                    Commands::Delete => {
+                        Delete { data: self }
+                            .exec(lines, config, &command_data)
+                            .await?;
+                    }
+                    Commands::Subscribe => {
+                        Subscribe { data: self }
+                            .exec(lines, config, &command_data)
+                            .await?;
+                    }
+                    Commands::Noop => {
+                        Noop { data: self }
+                            .exec(lines, config, &command_data)
+                            .await?;
+                    }
+                    Commands::Check => {
+                        Check { data: self }
+                            .exec(lines, config, &command_data)
+                            .await?;
+                    }
+                    Commands::Close => {
+                        Close { data: self }
+                            .exec(lines, config, &command_data)
+                            .await?;
                     }
                 }
             }
@@ -320,13 +337,8 @@ mod tests {
 
     #[test]
     fn test_parsing_authenticate_command() {
-        let mut con_state = super::Connection {
-            state: super::State::NotAuthenticated,
-            secure: true,
-            username: None,
-        };
+        let mut con_state = super::Connection::new(true);
         let mut data = Data {
-            command_data: None,
             con_state: &mut con_state,
         };
         let result = data.parse_internal("a AUTHENTICATE PLAIN abcde");
@@ -357,13 +369,8 @@ mod tests {
 
     #[test]
     fn test_parsing_capability_command() {
-        let mut con_state = super::Connection {
-            state: super::State::NotAuthenticated,
-            secure: true,
-            username: None,
-        };
+        let mut con_state = super::Connection::new(true);
         let mut data = Data {
-            command_data: None,
             con_state: &mut con_state,
         };
         let result = data.parse_internal("a CAPABILITY");
@@ -381,13 +388,8 @@ mod tests {
 
     #[test]
     fn test_parsing_list_command() {
-        let mut con_state = super::Connection {
-            state: super::State::Authenticated,
-            secure: true,
-            username: None,
-        };
+        let mut con_state = super::Connection::new(true);
         let mut data = Data {
-            command_data: None,
             con_state: &mut con_state,
         };
         let result = data.parse_internal("18 list \"\" \"*\"");

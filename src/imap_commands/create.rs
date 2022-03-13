@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    imap_commands::{utils::add_flag, Command, Data},
+    imap_commands::{utils::add_flag, Command, CommandData, Data},
 };
 use async_trait::async_trait;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
@@ -17,8 +17,14 @@ impl<S> Command<S> for Create<'_>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    async fn exec(&mut self, lines: &mut S, config: Arc<Config>) -> color_eyre::eyre::Result<()> {
-        let arguments = &self.data.command_data.as_ref().unwrap().arguments;
+    async fn exec(
+        &mut self,
+        lines: &mut S,
+        config: Arc<Config>,
+        command_data: &CommandData,
+    ) -> color_eyre::eyre::Result<()> {
+        let arguments = &command_data.arguments;
+        assert!(arguments.len() == 1);
         if arguments.len() == 1 {
             let mut folder = arguments[0].replace('/', ".");
             folder.insert(0, '.');
@@ -33,20 +39,14 @@ where
                         add_flag(&mailbox_path, "\\Trash")?;
                     }
                     lines
-                        .send(format!(
-                            "{} OK CREATE completed",
-                            self.data.command_data.as_ref().unwrap().tag
-                        ))
+                        .send(format!("{} OK CREATE completed", command_data.tag))
                         .await?;
                 }
                 Err(e) => {
                     error!("Failed to create folder: {}", e);
 
                     lines
-                        .send(format!(
-                            "{} NO CREATE failure",
-                            self.data.command_data.as_ref().unwrap().tag
-                        ))
+                        .send(format!("{} NO CREATE failure", command_data.tag))
                         .await?;
                 }
             }
@@ -54,7 +54,7 @@ where
             lines
                 .send(format!(
                     "{} BAD [SERVERBUG] invalid arguments",
-                    self.data.command_data.as_ref().unwrap().tag
+                    command_data.tag
                 ))
                 .await?;
         }

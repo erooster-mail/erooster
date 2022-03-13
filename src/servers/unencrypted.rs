@@ -13,10 +13,13 @@ use tracing::{debug, info};
 
 use crate::{
     config::Config,
-    imap_commands::{capability::get_capabilities, Data, Parser},
+    imap_commands::{Data, Parser},
     line_codec::LinesCodec,
-    servers::state::{Connection, State},
     servers::Server,
+    servers::{
+        state::{Connection, State},
+        CAPABILITY_HELLO,
+    },
 };
 
 /// An unencrypted imap Server
@@ -39,9 +42,8 @@ impl Server for Unencrypted {
             tokio::spawn(async move {
                 let lines = Framed::new(tcp_stream, LinesCodec::new());
                 let (mut lines_sender, mut lines_reader) = lines.split();
-                let capabilities = get_capabilities();
                 lines_sender
-                    .send(format!("* OK [{}] IMAP4rev2 Service Ready", capabilities))
+                    .send(CAPABILITY_HELLO.to_string())
                     .await
                     .unwrap();
                 let state = Arc::new(RwLock::new(Connection {
@@ -57,8 +59,7 @@ impl Server for Unencrypted {
                     }
                 });
                 while let Some(Ok(line)) = lines_reader.next().await {
-                    let data = Data {
-                        command_data: None,
+                    let mut data = Data {
                         con_state: Arc::clone(&state),
                     };
 

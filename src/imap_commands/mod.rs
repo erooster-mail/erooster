@@ -5,6 +5,7 @@ use crate::{
         capability::Capability,
         check::Check,
         create::Create,
+        delete::Delete,
         list::{LSub, List},
         login::Login,
         logout::Logout,
@@ -35,6 +36,7 @@ pub mod auth;
 pub mod capability;
 mod check;
 mod create;
+mod delete;
 mod list;
 mod login;
 mod logout;
@@ -68,6 +70,7 @@ pub enum Commands {
     Noop,
     Check,
     Create,
+    Delete,
     Subscribe,
 }
 
@@ -87,6 +90,7 @@ impl TryFrom<&str> for Commands {
             "noop" => Ok(Commands::Noop),
             "check" => Ok(Commands::Check),
             "create" => Ok(Commands::Create),
+            "delete" => Ok(Commands::Delete),
             "subscribe" => Ok(Commands::Subscribe),
             _ => {
                 warn!("Got unknown command: {}", i);
@@ -250,6 +254,9 @@ where
                         }
                         Commands::Create => {
                             Create { data: &self }.exec(lines, config).await?;
+                        }
+                        Commands::Delete => {
+                            Delete { data: &self }.exec(lines, config).await?;
                         }
                         Commands::Subscribe => {
                             Subscribe { data: &self }.exec(lines, config).await?;

@@ -4,6 +4,7 @@ use crate::{
         auth::{Authenticate, AuthenticationMethod},
         capability::Capability,
         check::Check,
+        close::Close,
         create::Create,
         delete::Delete,
         list::{LSub, List},
@@ -35,6 +36,7 @@ mod utils;
 pub mod auth;
 pub mod capability;
 mod check;
+mod close;
 mod create;
 mod delete;
 mod list;
@@ -72,6 +74,7 @@ pub enum Commands {
     Create,
     Delete,
     Subscribe,
+    Close,
 }
 
 impl TryFrom<&str> for Commands {
@@ -92,6 +95,7 @@ impl TryFrom<&str> for Commands {
             "create" => Ok(Commands::Create),
             "delete" => Ok(Commands::Delete),
             "subscribe" => Ok(Commands::Subscribe),
+            "close" => Ok(Commands::Close),
             _ => {
                 warn!("Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
@@ -166,7 +170,11 @@ impl Data {
 
 #[async_trait]
 pub trait Command<Lines> {
-    async fn exec(&mut self, lines: &mut Lines, config: Arc<Config>) -> color_eyre::eyre::Result<()>;
+    async fn exec(
+        &mut self,
+        lines: &mut Lines,
+        config: Arc<Config>,
+    ) -> color_eyre::eyre::Result<()>;
 }
 
 #[async_trait]
@@ -266,6 +274,9 @@ where
                         }
                         Commands::Check => {
                             Check { data: &self }.exec(lines, config).await?;
+                        }
+                        Commands::Close => {
+                            Close { data: &self }.exec(lines, config).await?;
                         }
                     }
                 }

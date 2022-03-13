@@ -123,7 +123,6 @@ impl Server for Encrypted {
                             .unwrap();
                         let state = Arc::new(RwLock::new(Connection {
                             state: State::NotAuthenticated,
-                            ip: peer.ip(),
                             secure: true,
                             username: None,
                         }));

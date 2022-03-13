@@ -202,7 +202,7 @@ where
 
         let con_clone = Arc::clone(&self.con_state);
         let state = { con_clone.read().await.state.clone() };
-        if let State::Authenticating((AuthenticationMethod::Plain, ref tag)) = state {
+        if let State::Authenticating(AuthenticationMethod::Plain, ref tag) = state {
             self.command_data = Some(CommandData {
                 tag: tag.to_string(),
                 // This is unused but needed. We just assume Authenticate here
@@ -322,7 +322,6 @@ mod tests {
     fn test_parsing_authenticate_command() {
         let mut con_state = super::Connection {
             state: super::State::NotAuthenticated,
-            ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             secure: true,
             username: None,
         };
@@ -360,7 +359,6 @@ mod tests {
     fn test_parsing_capability_command() {
         let mut con_state = super::Connection {
             state: super::State::NotAuthenticated,
-            ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             secure: true,
             username: None,
         };
@@ -385,7 +383,6 @@ mod tests {
     fn test_parsing_list_command() {
         let mut con_state = super::Connection {
             state: super::State::Authenticated,
-            ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             secure: true,
             username: None,
         };

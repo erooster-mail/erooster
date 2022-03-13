@@ -20,7 +20,11 @@ pub struct Authenticate<'a> {
 }
 
 impl Authenticate<'_> {
-    pub async fn plain<S>(&mut self, lines: &mut S, _config: Arc<Config>) -> color_eyre::eyre::Result<()>
+    pub async fn plain<S>(
+        &mut self,
+        lines: &mut S,
+        _config: Arc<Config>,
+    ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
@@ -111,10 +115,10 @@ where
             if args.len() == 1 {
                 if args.first().unwrap().to_lowercase() == "plain" {
                     {
-                        self.data.con_state.write().await.state = State::Authenticating((
+                        self.data.con_state.write().await.state = State::Authenticating(
                             AuthenticationMethod::Plain,
                             self.data.command_data.as_ref().unwrap().tag.clone(),
-                        ));
+                        );
                     };
                     lines.send(String::from("+ ")).await?;
                 } else {

@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    imap_commands::{Data, Parser},
+    imap_commands::Data,
     line_codec::LinesCodec,
     servers::Server,
     servers::{

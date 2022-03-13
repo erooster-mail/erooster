@@ -174,28 +174,17 @@ pub trait Command<Lines> {
     ) -> color_eyre::eyre::Result<()>;
 }
 
-#[async_trait]
-pub trait Parser<Lines, 'a> {
-    async fn parse(
-        &mut self,
-        lines: &'a mut Lines,
-        config: Arc<Config>,
-        line: String,
-    ) -> color_eyre::eyre::Result<bool>;
-}
-
-#[async_trait]
-impl<S, 'a> Parser<S, 'a> for Data
-where
-    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
-{
+impl<'a> Data {
     #[allow(clippy::too_many_lines)]
-    async fn parse(
+    pub async fn parse<S>(
         &mut self,
         lines: &'a mut S,
         config: Arc<Config>,
         line: String,
-    ) -> color_eyre::eyre::Result<bool> {
+    ) -> color_eyre::eyre::Result<bool>
+    where
+        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+    {
         debug!("Current state: {:?}", self.con_state.read().await.state);
 
         let con_clone = Arc::clone(&self.con_state);
@@ -208,7 +197,7 @@ where
                 arguments: vec![],
             };
             Authenticate {
-                data: &mut self,
+                data: self,
                 auth_data: line,
             }
             .plain(lines, &command_data)
@@ -240,7 +229,7 @@ where
                     Commands::Authenticate => {
                         let auth_data = command_data.arguments.last().unwrap().to_string();
                         Authenticate {
-                            data: &mut self,
+                            data: self,
                             auth_data,
                         }
                         .exec(lines, config, &command_data)
@@ -257,12 +246,12 @@ where
                             .await?;
                     }
                     Commands::Select => {
-                        Select { data: &mut self }
+                        Select { data: self }
                             .exec(lines, config, &command_data)
                             .await?;
                     }
                     Commands::Examine => {
-                        Examine { data: &mut self }
+                        Examine { data: self }
                             .exec(lines, config, &command_data)
                             .await?;
                     }

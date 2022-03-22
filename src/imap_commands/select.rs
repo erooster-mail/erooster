@@ -16,7 +16,7 @@ async fn select<S>(
     lines: &mut S,
     config: Arc<Config>,
     rw: bool,
-    command_data: &CommandData,
+    command_data: &CommandData<'_>,
 ) -> color_eyre::eyre::Result<()>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
@@ -24,8 +24,8 @@ where
     let args = &command_data.arguments;
 
     assert!(args.len() == 1);
-    let mut folder = args.first().expect("server selects a folder").to_string();
-    folder.remove_matches('"');
+    let folder = args.first().expect("server selects a folder");
+    let folder = folder.replace('"', "");
     let access = if rw {
         Access::ReadWrite
     } else {
@@ -54,7 +54,7 @@ async fn send_success<S>(
     folder: String,
     maildir: Maildir,
     rw: bool,
-    command_data: &CommandData,
+    command_data: &CommandData<'_>,
 ) -> color_eyre::eyre::Result<()>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
@@ -99,7 +99,7 @@ impl Select<'_> {
         &self,
         lines: &mut S,
         config: Arc<Config>,
-        command_data: &CommandData,
+        command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
@@ -124,7 +124,7 @@ impl Examine<'_> {
         &self,
         lines: &mut S,
         config: Arc<Config>,
-        command_data: &CommandData,
+        command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,

@@ -13,7 +13,7 @@ pub async fn basic<S>(
     data: &Data,
     lines: &mut S,
     config: Arc<Config>,
-    command_data: &CommandData,
+    command_data: &CommandData<'_>,
 ) -> color_eyre::eyre::Result<()>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
@@ -35,10 +35,10 @@ where
     assert!(arguments.len() == 2);
 
     // Cleanup args
-    let mut reference_name = arguments[0].clone();
-    reference_name.remove_matches('"');
-    let mut mailbox_patterns = arguments[1].clone();
-    mailbox_patterns.remove_matches('"');
+    let reference_name = arguments[0];
+    let reference_name = reference_name.replace('"', "");
+    let mailbox_patterns = arguments[1];
+    let mailbox_patterns = mailbox_patterns.replace('"', "");
 
     if mailbox_patterns.is_empty() {
         lines
@@ -216,7 +216,7 @@ impl List<'_> {
     pub async fn extended<S>(
         &self,
         lines: &mut S,
-        command_data: &CommandData,
+        command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
@@ -232,10 +232,10 @@ impl List<'_> {
                 // TODO handle selection options
             } else {
                 // Cleanup args
-                let mut reference_name = arguments[0].clone();
-                reference_name.remove_matches('"');
-                let mut mailbox_patterns = arguments[1].clone();
-                mailbox_patterns.remove_matches('"');
+                let reference_name = arguments[0];
+                let _reference_name = reference_name.replace('"', "");
+                let mailbox_patterns = arguments[1];
+                let _mailbox_patterns = mailbox_patterns.replace('"', "");
             }
             lines
                 .send(format!("{} BAD LIST Not supported", command_data.tag))
@@ -250,7 +250,7 @@ impl List<'_> {
         &self,
         lines: &mut S,
         config: Arc<Config>,
-        command_data: &CommandData,
+        command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
@@ -282,7 +282,7 @@ impl LSub<'_> {
         &self,
         lines: &mut S,
         config: Arc<Config>,
-        command_data: &CommandData,
+        command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,

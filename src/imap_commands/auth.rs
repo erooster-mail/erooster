@@ -15,14 +15,14 @@ pub enum AuthenticationMethod {
 
 pub struct Authenticate<'a> {
     pub data: &'a Data,
-    pub auth_data: String,
+    pub auth_data: &'a str,
 }
 
 impl Authenticate<'_> {
     pub async fn plain<S>(
         &self,
         lines: &mut S,
-        command_data: &CommandData,
+        command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
@@ -95,7 +95,7 @@ impl Authenticate<'_> {
         &self,
         lines: &mut S,
         _config: Arc<Config>,
-        command_data: &CommandData,
+        command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
@@ -109,7 +109,7 @@ impl Authenticate<'_> {
                         let command_data = command_data;
                         self.data.con_state.write().await.state = State::Authenticating(
                             AuthenticationMethod::Plain,
-                            command_data.tag.clone(),
+                            command_data.tag.to_string(),
                         );
                     };
                     lines.send(String::from("+ ")).await?;

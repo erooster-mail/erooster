@@ -51,10 +51,10 @@ pub struct Data {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct CommandData {
-    tag: String,
+pub struct CommandData<'a> {
+    tag: &'a str,
     command: Commands,
-    arguments: Vec<String>,
+    arguments: &'a [&'a str],
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -134,7 +134,7 @@ fn command(input: &str) -> Res<Result<Commands, String>> {
 }
 
 /// Gets the input minus the tag and minus the command
-fn arguments(input: &str) -> Res<Vec<String>> {
+fn arguments(input: &str) -> Res<Vec<&str>> {
     context(
         "arguments",
         many0(alt((
@@ -142,24 +142,12 @@ fn arguments(input: &str) -> Res<Vec<String>> {
             take_while1(|c: char| c != ' '),
         ))),
     )(input)
-    .map(|(x, y)| (x, y.iter().map(ToString::to_string).collect()))
+    .map(|(x, y)| (x, y))
 }
 
 impl Data {
-    fn parse_internal(line: &str) -> color_eyre::eyre::Result<CommandData> {
-        match context("parse", tuple((imaptag, command, arguments)))(line).map(
-            |(_, (tag, command, arguments))| match command {
-                Ok(command) => Ok(CommandData {
-                    tag: tag.to_string(),
-                    command,
-                    arguments,
-                }),
-                Err(e) => Err(color_eyre::eyre::Report::msg(e)),
-            },
-        ) {
-            Ok(v) => v,
-            Err(e) => Err(color_eyre::eyre::Report::msg(format!("{}", e))),
-        }
+    fn parse_internal(line: &str) -> Res<(&str, Result<Commands, String>, Vec<&str>)> {
+        context("parse", tuple((imaptag, command, arguments)))(line)
     }
 }
 
@@ -178,101 +166,116 @@ impl Data {
 
         let con_clone = Arc::clone(&self.con_state);
         let state = { con_clone.read().await.state.clone() };
-        if let State::Authenticating(AuthenticationMethod::Plain, ref tag) = state {
+        if let State::Authenticating(AuthenticationMethod::Plain, tag) = state {
             let command_data = CommandData {
-                tag: tag.to_string(),
+                tag: &tag,
                 // This is unused but needed. We just assume Authenticate here
                 command: Commands::Authenticate,
-                arguments: vec![],
+                arguments: &[],
             };
             Authenticate {
                 data: self,
-                auth_data: line,
+                auth_data: &line,
             }
             .plain(lines, &command_data)
             .await?;
             // We are done here
             return Ok(false);
         };
-        let parse_result = Data::parse_internal(&line);
-        match parse_result {
-            Ok(ref command_data) => {
+        match Data::parse_internal(&line) {
+            Ok((_, (tag, command, arguments))) => {
+                let command_data = match command {
+                    Ok(command) => CommandData {
+                        tag,
+                        command,
+                        arguments: &arguments,
+                    },
+                    Err(e) => {
+                        error!("Error parsing command: {}", e);
+                        lines
+                            .send(String::from("* BAD [SERVERBUG] unable to parse command"))
+                            .await?;
+                        return Ok(false);
+                    }
+                };
                 match command_data.command {
                     Commands::Capability => {
-                        Capability.exec(lines, command_data).await?;
+                        Capability.exec(lines, &command_data).await?;
                     }
                     Commands::Login => {
-                        Login.exec(lines, command_data).await?;
+                        Login.exec(lines, &command_data).await?;
                     }
                     Commands::Logout => {
-                        Logout.exec(lines, command_data).await?;
+                        Logout.exec(lines, &command_data).await?;
                         // We return true here early as we want to make sure that this closes the connection
                         return Ok(true);
                     }
                     Commands::Authenticate => {
-                        let auth_data = command_data.arguments.last().unwrap().to_string();
+                        let auth_data = command_data.arguments.last().unwrap();
                         Authenticate {
                             data: self,
                             auth_data,
                         }
-                        .exec(lines, config, command_data)
+                        .exec(lines, config, &command_data)
                         .await?;
                     }
                     Commands::List => {
                         List { data: self }
-                            .exec(lines, config, command_data)
+                            .exec(lines, config, &command_data)
                             .await?;
                     }
                     Commands::LSub => {
                         LSub { data: self }
-                            .exec(lines, config, command_data)
+                            .exec(lines, config, &command_data)
                             .await?;
                     }
                     Commands::Select => {
                         Select { data: self }
-                            .exec(lines, config, command_data)
+                            .exec(lines, config, &command_data)
                             .await?;
                     }
                     Commands::Examine => {
                         Examine { data: self }
-                            .exec(lines, config, command_data)
+                            .exec(lines, config, &command_data)
                             .await?;
                     }
                     Commands::Create => {
                         Create { data: self }
-                            .exec(lines, config, command_data)
+                            .exec(lines, config, &command_data)
                             .await?;
                     }
                     Commands::Delete => {
                         Delete { data: self }
-                            .exec(lines, config, command_data)
+                            .exec(lines, config, &command_data)
                             .await?;
                     }
                     Commands::Subscribe => {
                         Subscribe { data: self }
-                            .exec(lines, config, command_data)
+                            .exec(lines, config, &command_data)
                             .await?;
                     }
                     Commands::Noop => {
-                        Noop.exec(lines, command_data).await?;
+                        Noop.exec(lines, &command_data).await?;
                     }
                     Commands::Check => {
-                        Check { data: self }.exec(lines, command_data).await?;
+                        Check { data: self }.exec(lines, &command_data).await?;
                     }
                     Commands::Close => {
                         Close { data: self }
-                            .exec(lines, config, command_data)
+                            .exec(lines, config, &command_data)
                             .await?;
                     }
                 }
             }
-            Err(error) => {
-                error!("Error parsing command: {}", error);
+            Err(e) => {
+                error!("Error parsing command: {}", e);
                 lines
                     .send(String::from("* BAD [SERVERBUG] unable to parse command"))
                     .await?;
+                return Ok(false);
             }
         }
+
         Ok(false)
     }
 }

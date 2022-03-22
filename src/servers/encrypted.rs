@@ -161,7 +161,7 @@ impl Server for Encrypted {
 
                         // Read lines from the stream
                         while let Some(Ok(line)) = lines_reader.next().await {
-                            let mut data = Data {
+                            let data = Data {
                                 con_state: Arc::clone(&connection),
                             };
                             debug!("[{}] Got Command: {}", peer, line);
@@ -202,7 +202,7 @@ impl Server for Encrypted {
 }
 
 async fn check_changes(
-    lines: UnboundedSender<String>,
+    _lines: UnboundedSender<String>,
     state: Arc<RwLock<Connection>>,
     event: Event,
 ) {

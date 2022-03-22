@@ -4,7 +4,7 @@ pub struct Capability;
 
 impl Capability {
     pub async fn exec<S>(
-        &mut self,
+        &self,
         lines: &mut S,
         command_data: &CommandData,
     ) -> color_eyre::eyre::Result<()>

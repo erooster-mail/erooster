@@ -8,11 +8,11 @@ use maildir::Maildir;
 use std::{path::Path, sync::Arc};
 
 pub struct Select<'a> {
-    pub data: &'a mut Data,
+    pub data: &'a Data,
 }
 
 async fn select<S>(
-    data: &mut Data,
+    data: &Data,
     lines: &mut S,
     config: Arc<Config>,
     rw: bool,
@@ -96,7 +96,7 @@ where
 
 impl Select<'_> {
     pub async fn exec<S>(
-        &mut self,
+        &self,
         lines: &mut S,
         config: Arc<Config>,
         command_data: &CommandData,
@@ -116,12 +116,12 @@ impl Select<'_> {
 }
 
 pub struct Examine<'a> {
-    pub data: &'a mut Data,
+    pub data: &'a Data,
 }
 
 impl Examine<'_> {
     pub async fn exec<S>(
-        &mut self,
+        &self,
         lines: &mut S,
         config: Arc<Config>,
         command_data: &CommandData,

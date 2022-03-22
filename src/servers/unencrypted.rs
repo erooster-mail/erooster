@@ -59,7 +59,7 @@ impl Server for Unencrypted {
                     }
                 });
                 while let Some(Ok(line)) = lines_reader.next().await {
-                    let mut data = Data {
+                    let data = Data {
                         con_state: Arc::clone(&state),
                     };
 

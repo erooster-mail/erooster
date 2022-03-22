@@ -1,6 +1,6 @@
+use crate::imap_commands::auth::AuthenticationMethod;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use crate::imap_commands::auth::AuthenticationMethod;
 
 /// State of the connection session between us and the Client
 #[derive(Debug, PartialEq, Clone)]

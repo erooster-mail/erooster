@@ -163,11 +163,11 @@ impl Data {
     }
 }
 
-impl<'a> Data {
+impl Data {
     #[allow(clippy::too_many_lines)]
     pub async fn parse<S>(
-        &mut self,
-        lines: &'a mut S,
+        &self,
+        lines: &mut S,
         config: Arc<Config>,
         line: String,
     ) -> color_eyre::eyre::Result<bool>
@@ -196,16 +196,16 @@ impl<'a> Data {
         };
         let parse_result = Data::parse_internal(&line);
         match parse_result {
-            Ok(command_data) => {
+            Ok(ref command_data) => {
                 match command_data.command {
                     Commands::Capability => {
-                        Capability.exec(lines, &command_data).await?;
+                        Capability.exec(lines, command_data).await?;
                     }
                     Commands::Login => {
-                        Login.exec(lines, &command_data).await?;
+                        Login.exec(lines, command_data).await?;
                     }
                     Commands::Logout => {
-                        Logout.exec(lines, &command_data).await?;
+                        Logout.exec(lines, command_data).await?;
                         // We return true here early as we want to make sure that this closes the connection
                         return Ok(true);
                     }
@@ -215,53 +215,53 @@ impl<'a> Data {
                             data: self,
                             auth_data,
                         }
-                        .exec(lines, config, &command_data)
+                        .exec(lines, config, command_data)
                         .await?;
                     }
                     Commands::List => {
                         List { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, config, command_data)
                             .await?;
                     }
                     Commands::LSub => {
                         LSub { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, config, command_data)
                             .await?;
                     }
                     Commands::Select => {
                         Select { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, config, command_data)
                             .await?;
                     }
                     Commands::Examine => {
                         Examine { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, config, command_data)
                             .await?;
                     }
                     Commands::Create => {
                         Create { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, config, command_data)
                             .await?;
                     }
                     Commands::Delete => {
                         Delete { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, config, command_data)
                             .await?;
                     }
                     Commands::Subscribe => {
                         Subscribe { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, config, command_data)
                             .await?;
                     }
                     Commands::Noop => {
-                        Noop.exec(lines, &command_data).await?;
+                        Noop.exec(lines, command_data).await?;
                     }
                     Commands::Check => {
-                        Check { data: self }.exec(lines, &command_data).await?;
+                        Check { data: self }.exec(lines, command_data).await?;
                     }
                     Commands::Close => {
                         Close { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, config, command_data)
                             .await?;
                     }
                 }

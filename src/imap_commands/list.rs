@@ -9,8 +9,8 @@ use std::{path::Path, sync::Arc};
 use tracing::debug;
 
 #[allow(clippy::too_many_lines)]
-pub async fn basic<'a, S>(
-    data: &'a Data,
+pub async fn basic<S>(
+    data: &Data,
     lines: &mut S,
     config: Arc<Config>,
     command_data: &CommandData,
@@ -214,7 +214,7 @@ impl List<'_> {
 
     // TODO setup
     pub async fn extended<S>(
-        &mut self,
+        &self,
         lines: &mut S,
         command_data: &CommandData,
     ) -> color_eyre::eyre::Result<()>
@@ -247,7 +247,7 @@ impl List<'_> {
 
 impl List<'_> {
     pub async fn exec<S>(
-        &mut self,
+        &self,
         lines: &mut S,
         config: Arc<Config>,
         command_data: &CommandData,
@@ -279,7 +279,7 @@ pub struct LSub<'a> {
 
 impl LSub<'_> {
     pub async fn exec<S>(
-        &mut self,
+        &self,
         lines: &mut S,
         config: Arc<Config>,
         command_data: &CommandData,

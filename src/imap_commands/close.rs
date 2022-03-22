@@ -14,7 +14,7 @@ pub struct Close<'a> {
 
 impl Close<'_> {
     pub async fn exec<S>(
-        &mut self,
+        &self,
         lines: &mut S,
         config: Arc<Config>,
         command_data: &CommandData,

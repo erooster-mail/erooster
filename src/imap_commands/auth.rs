@@ -14,13 +14,13 @@ pub enum AuthenticationMethod {
 }
 
 pub struct Authenticate<'a> {
-    pub data: &'a mut Data,
+    pub data: &'a Data,
     pub auth_data: String,
 }
 
 impl Authenticate<'_> {
     pub async fn plain<S>(
-        &mut self,
+        &self,
         lines: &mut S,
         command_data: &CommandData,
     ) -> color_eyre::eyre::Result<()>
@@ -92,7 +92,7 @@ impl Authenticate<'_> {
 
 impl Authenticate<'_> {
     pub async fn exec<S>(
-        &mut self,
+        &self,
         lines: &mut S,
         _config: Arc<Config>,
         command_data: &CommandData,

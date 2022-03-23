@@ -11,6 +11,7 @@ use crate::{
         login::Login,
         logout::Logout,
         noop::Noop,
+        rename::Rename,
         select::{Examine, Select},
         subscribe::Subscribe,
     },
@@ -42,6 +43,7 @@ mod list;
 mod login;
 mod logout;
 mod noop;
+mod rename;
 mod select;
 mod subscribe;
 
@@ -73,6 +75,7 @@ pub enum Commands {
     Delete,
     Subscribe,
     Close,
+    Rename,
 }
 
 impl TryFrom<&str> for Commands {
@@ -94,6 +97,7 @@ impl TryFrom<&str> for Commands {
             "delete" => Ok(Commands::Delete),
             "subscribe" => Ok(Commands::Subscribe),
             "close" => Ok(Commands::Close),
+            "rename" => Ok(Commands::Rename),
             _ => {
                 warn!("Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
@@ -263,6 +267,11 @@ impl Data {
                     Commands::Close => {
                         Close { data: self }
                             .exec(lines, config, &command_data)
+                            .await?;
+                    }
+                    Commands::Rename => {
+                        Rename { data: self }
+                            .exec(lines, &command_data, config)
                             .await?;
                     }
                 }

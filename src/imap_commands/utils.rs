@@ -6,7 +6,7 @@ use std::{
 };
 
 pub fn get_flags(path: &Path) -> color_eyre::eyre::Result<Vec<String>> {
-    let flags_file = path.join(".erooster_folder_lags");
+    let flags_file = path.join(".erooster_folder_flags");
     if flags_file.exists() {
         let file = File::open(flags_file)?;
         let buf = BufReader::new(file);
@@ -17,7 +17,7 @@ pub fn get_flags(path: &Path) -> color_eyre::eyre::Result<Vec<String>> {
 }
 
 pub fn add_flag(path: &Path, flag: &str) -> color_eyre::eyre::Result<()> {
-    let flags_file = path.join(".erooster_folder_lags");
+    let flags_file = path.join(".erooster_folder_flags");
     let mut file = OpenOptions::new()
         .append(true)
         .create(true)
@@ -31,7 +31,7 @@ fn lines_from_file(filename: impl AsRef<Path>) -> std::io::Result<Vec<String>> {
 }
 
 pub fn remove_flag(path: &Path, flag: &str) -> color_eyre::eyre::Result<()> {
-    let flags_file = path.join(".erooster_folder_lags");
+    let flags_file = path.join(".erooster_folder_flags");
     let mut lines = lines_from_file(&flags_file)?;
 
     lines.retain(|x| x != flag);

@@ -37,7 +37,7 @@ pub fn remove_flag(path: &Path, flag: &str) -> color_eyre::eyre::Result<()> {
     lines.retain(|x| x != flag);
 
     let mut file = OpenOptions::new()
-        .append(true)
+        .write(true)
         .create(true)
         .open(flags_file)?;
 

@@ -13,7 +13,7 @@ use crate::{
         noop::Noop,
         rename::Rename,
         select::{Examine, Select},
-        subscribe::Subscribe,
+        subscribe::Subscribe, unsubscribe::Unsubscribe,
     },
     servers::state::{Connection, State},
 };
@@ -46,6 +46,7 @@ mod noop;
 mod rename;
 mod select;
 mod subscribe;
+mod unsubscribe;
 
 #[derive(Debug)]
 pub struct Data {
@@ -74,6 +75,7 @@ pub enum Commands {
     Create,
     Delete,
     Subscribe,
+    Unsubscribe,
     Close,
     Rename,
 }
@@ -96,6 +98,7 @@ impl TryFrom<&str> for Commands {
             "create" => Ok(Commands::Create),
             "delete" => Ok(Commands::Delete),
             "subscribe" => Ok(Commands::Subscribe),
+            "unsubscribe" => Ok(Commands::Unsubscribe),
             "close" => Ok(Commands::Close),
             "rename" => Ok(Commands::Rename),
             _ => {
@@ -255,6 +258,11 @@ impl Data {
                     }
                     Commands::Subscribe => {
                         Subscribe { data: self }
+                            .exec(lines, config, &command_data)
+                            .await?;
+                    }
+                    Commands::Unsubscribe => {
+                        Unsubscribe { data: self }
                             .exec(lines, config, &command_data)
                             .await?;
                     }

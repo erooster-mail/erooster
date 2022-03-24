@@ -25,3 +25,25 @@ pub fn add_flag(path: &Path, flag: &str) -> color_eyre::eyre::Result<()> {
     writeln!(file, "{}", flag)?;
     Ok(())
 }
+
+fn lines_from_file(filename: impl AsRef<Path>) -> std::io::Result<Vec<String>> {
+    BufReader::new(File::open(filename)?).lines().collect()
+}
+
+pub fn remove_flag(path: &Path, flag: &str) -> color_eyre::eyre::Result<()> {
+    let flags_file = path.join(".erooster_folder_lags");
+    let mut lines = lines_from_file(&flags_file)?;
+
+    lines.retain(|x| x != flag);
+
+    let mut file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(flags_file)?;
+
+    for line in lines {
+        writeln!(file, "{}", line)?;
+    }
+
+    Ok(())
+}

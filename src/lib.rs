@@ -29,9 +29,13 @@
 mod imap_commands;
 mod line_codec;
 
-/// The core server logic for the server.
-/// This is the tls and non tls variant of the server.
-pub mod servers;
+/// The core server logic for the imapserver.
+/// This is the tls and non tls variant of the imapserver.
+pub mod imap_servers;
+
+/// The core server logic for the smtpserver.
+/// This is the tls and non tls variant of the smtpserver.
+pub mod smtp_servers;
 
 /// The configuration file for the server
 pub mod config;

@@ -49,9 +49,7 @@ pub fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
     let config_clone = Arc::clone(&config);
     let tx_clone2 = tx_clone.clone();
     tokio::spawn(async move {
-        if let Err(e) =
-            unencrypted::Unencrypted::run(Arc::clone(&config_clone), tx_clone).await
-        {
+        if let Err(e) = unencrypted::Unencrypted::run(Arc::clone(&config_clone), tx_clone).await {
             panic!("Unable to start server: {:?}", e);
         }
     });

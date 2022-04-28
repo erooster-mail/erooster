@@ -14,12 +14,12 @@ use tracing::{debug, info};
 use crate::{
     config::Config,
     imap_commands::Data,
-    line_codec::LinesCodec,
-    servers::Server,
-    servers::{
+    imap_servers::Server,
+    imap_servers::{
         state::{Connection, State},
         CAPABILITY_HELLO,
     },
+    line_codec::LinesCodec,
 };
 
 /// An unencrypted imap Server
@@ -27,7 +27,7 @@ pub struct Unencrypted;
 
 #[async_trait]
 impl Server for Unencrypted {
-    async fn run_imap(
+    async fn run(
         config: Arc<Config>,
         mut _file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()> {

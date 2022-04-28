@@ -1,6 +1,6 @@
 use crate::{
     imap_commands::{CommandData, Data},
-    servers::state::State,
+    imap_servers::state::State,
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 

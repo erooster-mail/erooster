@@ -1,7 +1,7 @@
 use crate::{
     config::Config,
     imap_commands::{CommandData, Data},
-    servers::state::State,
+    imap_servers::state::State,
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use simdutf8::compat::from_utf8;

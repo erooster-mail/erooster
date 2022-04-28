@@ -1,12 +1,12 @@
 use crate::{
     config::Config,
     imap_commands::Data,
-    line_codec::LinesCodec,
-    servers::Server,
-    servers::{
+    imap_servers::Server,
+    imap_servers::{
         state::{Connection, State},
         CAPABILITY_HELLO,
     },
+    line_codec::LinesCodec,
 };
 use async_trait::async_trait;
 use futures::SinkExt;
@@ -75,7 +75,7 @@ impl Server for Encrypted {
     /// # Errors
     ///
     /// Returns an error if the cert setup fails
-    async fn run_imap(
+    async fn run(
         config: Arc<Config>,
         file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()> {

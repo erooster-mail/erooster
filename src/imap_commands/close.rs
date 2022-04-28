@@ -1,7 +1,7 @@
 use crate::{
     config::Config,
     imap_commands::{CommandData, Data},
-    servers::state::{Access, State},
+    imap_servers::state::{Access, State},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use maildir::Maildir;

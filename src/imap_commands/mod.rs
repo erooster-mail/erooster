@@ -13,9 +13,10 @@ use crate::{
         noop::Noop,
         rename::Rename,
         select::{Examine, Select},
-        subscribe::Subscribe, unsubscribe::Unsubscribe,
+        subscribe::Subscribe,
+        unsubscribe::Unsubscribe,
     },
-    servers::state::{Connection, State},
+    imap_servers::state::{Connection, State},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use nom::{
@@ -335,7 +336,7 @@ mod tests {
         assert_eq!(
             data.command_data.unwrap(),
             CommandData {
-                tag: String::from("a"),
+                tag: "a",
                 command: Commands::Authenticate,
                 arguments: vec![String::from("PLAIN"), String::from("abcde")],
             }
@@ -348,7 +349,7 @@ mod tests {
         assert_eq!(
             data.command_data.unwrap(),
             CommandData {
-                tag: String::from("a"),
+                tag: "a",
                 command: Commands::Authenticate,
                 arguments: vec![String::from("PLAIN")],
             }
@@ -363,11 +364,11 @@ mod tests {
         };
         let result = data.parse_internal("a CAPABILITY");
         assert!(result.is_ok());
-        assert!(data.command_data.is_some());
+        assert!(result.command_data.is_some());
         assert_eq!(
-            data.command_data.unwrap(),
+            result.command_data.unwrap(),
             CommandData {
-                tag: String::from("a"),
+                tag: "a",
                 command: Commands::Capability,
                 arguments: vec![],
             }
@@ -386,7 +387,7 @@ mod tests {
         assert_eq!(
             data.command_data.unwrap(),
             CommandData {
-                tag: String::from("18"),
+                tag: "18",
                 command: Commands::List,
                 arguments: vec![String::from("\"\""), String::from("\"*\"")],
             }
@@ -398,7 +399,7 @@ mod tests {
         assert_eq!(
             data.command_data.unwrap(),
             CommandData {
-                tag: String::from("18"),
+                tag: "18",
                 command: Commands::List,
                 arguments: vec![String::from("\"\""), String::from("\"\"")],
             }

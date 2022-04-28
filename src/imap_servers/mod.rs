@@ -18,7 +18,7 @@ pub const CAPABILITY_HELLO: &str =
 #[async_trait]
 pub trait Server {
     /// Start the server
-    async fn run_imap(
+    async fn run(
         config: Arc<Config>,
         file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()>;
@@ -29,7 +29,7 @@ pub trait Server {
 /// # Errors
 ///
 /// Returns an error if the server startup fails
-pub fn start_imap(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
+pub fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
     let (tx, _rx) = broadcast::channel(1);
     let tx_clone = tx.clone();
     let mut watcher = RecommendedWatcher::new(move |res: notify::Result<Event>| {
@@ -50,13 +50,13 @@ pub fn start_imap(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
     let tx_clone2 = tx_clone.clone();
     tokio::spawn(async move {
         if let Err(e) =
-            unencrypted::Unencrypted::run_imap(Arc::clone(&config_clone), tx_clone).await
+            unencrypted::Unencrypted::run(Arc::clone(&config_clone), tx_clone).await
         {
             panic!("Unable to start server: {:?}", e);
         }
     });
     tokio::spawn(async move {
-        if let Err(e) = encrypted::Encrypted::run_imap(Arc::clone(&config), tx_clone2).await {
+        if let Err(e) = encrypted::Encrypted::run(Arc::clone(&config), tx_clone2).await {
             panic!("Unable to start TLS server: {:?}", e);
         }
     });

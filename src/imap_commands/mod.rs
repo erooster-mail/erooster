@@ -356,24 +356,24 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_parsing_capability_command() {
-        let mut con_state = super::Connection::new(true);
-        let mut data = Data {
-            con_state: &mut con_state,
-        };
-        let result = data.parse_internal("a CAPABILITY");
-        assert!(result.is_ok());
-        assert!(result.command_data.is_some());
-        assert_eq!(
-            result.command_data.unwrap(),
-            CommandData {
-                tag: "a",
-                command: Commands::Capability,
-                arguments: vec![],
-            }
-        );
-    }
+    // #[test]
+    // fn test_parsing_capability_command() {
+    //     let mut con_state = super::Connection::new(true);
+    //     let mut data = Data {
+    //         con_state: &mut con_state,
+    //     };
+    //     let result = data.parse_internal("a CAPABILITY");
+    //     assert!(result.is_ok());
+    //     assert!(result.command_data.is_some());
+    //     assert_eq!(
+    //         result.command_data.unwrap(),
+    //         CommandData {
+    //             tag: "a",
+    //             command: Commands::Capability,
+    //             arguments: vec![],
+    //         }
+    //     );
+    // }
 
     #[test]
     fn test_parsing_list_command() {

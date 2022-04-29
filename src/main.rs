@@ -52,7 +52,8 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     info!("Starting ERooster Imap Server");
     let config = Arc::new(Config::load(args.config)?);
-    erooster::imap_servers::start(config)?;
+    erooster::imap_servers::start(Arc::clone(&config))?;
+    erooster::smtp_servers::start(config)?;
 
     match signal::ctrl_c().await {
         Ok(()) => {}

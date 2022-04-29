@@ -1,4 +1,6 @@
 tls:
-  cert_path: "./certs"
+  key_path: "./certs/key.pem"
+  cert_path: "./certs/cert.pem"
 mail:
   maildir_folders: "./maildir"
+  hostname: "localhost"

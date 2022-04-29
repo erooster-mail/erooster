@@ -1,30 +1,12 @@
-use crate::{
-    config::Config,
-    imap_commands::Data,
-    imap_servers::Server,
-    imap_servers::{
-        state::{Connection, State},
-        CAPABILITY_HELLO,
-    },
-    line_codec::LinesCodec,
-};
-use async_trait::async_trait;
-use futures::SinkExt;
-use futures::{
-    channel::mpsc::{self, UnboundedSender},
-    StreamExt,
-};
-use notify::Event;
 use std::{
-    fs::{self},
+    fs,
     io::{self, BufReader},
     path::Path,
     sync::Arc,
 };
-use tokio::{
-    net::TcpListener,
-    sync::{broadcast, RwLock},
-};
+
+use futures::{channel::mpsc, SinkExt, StreamExt};
+use tokio::net::TcpListener;
 use tokio_rustls::{
     rustls::{self, Certificate, PrivateKey},
     TlsAcceptor,
@@ -33,7 +15,11 @@ use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, info};
 
-/// An encrypted imap Server
+use crate::{
+    config::Config, line_codec::LinesCodec, smtp_commands::Data, smtp_servers::state::Connection,
+};
+
+/// An encrypted smtp Server
 pub struct Encrypted;
 
 impl Encrypted {
@@ -66,19 +52,13 @@ impl Encrypted {
             path
         ))
     }
-}
 
-#[async_trait]
-impl Server for Encrypted {
     /// Starts a TLS server
     ///
     /// # Errors
     ///
     /// Returns an error if the cert setup fails
-    async fn run(
-        config: Arc<Config>,
-        file_watcher: broadcast::Sender<Event>,
-    ) -> color_eyre::eyre::Result<()> {
+    pub(crate) async fn run(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         // Load SSL Keys
         let certs = Encrypted::load_certs(Path::new(&config.tls.cert_path))?;
         let key = Encrypted::load_key(Path::new(&config.tls.key_path))?;
@@ -94,20 +74,17 @@ impl Server for Encrypted {
         let acceptor = TlsAcceptor::from(Arc::new(server_config));
 
         // Opens the listener
-        let listener = TcpListener::bind("0.0.0.0:993").await.unwrap();
-        info!("[IMAP] Listening on ecrypted Port");
+        let listener = TcpListener::bind("0.0.0.0:465").await.unwrap();
+        info!("[SMTP] Listening on ecrypted Port");
         let mut stream = TcpListenerStream::new(listener);
 
-        // This clone is needed but as it is an arc it is "cheap"
-        let file_watcher = file_watcher.clone();
         // Looks for new peers
         while let Some(Ok(tcp_stream)) = stream.next().await {
-            debug!("[IMAP] Got new TLS peer: {:?}", tcp_stream.peer_addr());
+            debug!("[SMTP] Got new TLS peer: {:?}", tcp_stream.peer_addr());
             let peer = tcp_stream.peer_addr().expect("peer addr to exist");
 
             // We need to clone these as we move into a new thread
             let config = Arc::clone(&config);
-            let file_watcher = file_watcher.clone();
 
             // Start talking with new peer on new thread
             let acceptor = acceptor.clone();
@@ -118,7 +95,7 @@ impl Server for Encrypted {
                 // Continue if it worked
                 match tls_stream {
                     Ok(stream) => {
-                        debug!("[IMAP] TLS negotiation done");
+                        debug!("[SMTP] TLS negotiation done");
 
                         // Proceed as normal
                         let lines = Framed::new(stream, LinesCodec::new());
@@ -127,7 +104,7 @@ impl Server for Encrypted {
 
                         // Greet the client with the capabilities we provide
                         lines_sender
-                            .send(CAPABILITY_HELLO.to_string())
+                            .send(format!("220 {} SMTP Erooster", config.mail.hostname))
                             .await
                             .unwrap();
                         // Create our Connection
@@ -135,27 +112,9 @@ impl Server for Encrypted {
 
                         // Prepare our custom return path
                         let (mut tx, mut rx) = mpsc::unbounded();
-                        let cloned_tx = tx.clone();
                         tokio::spawn(async move {
                             while let Some(res) = rx.next().await {
                                 lines_sender.send(res).await.unwrap();
-                            }
-                        });
-                        // Connection needed for the file watcher
-                        let cloned_connection = Arc::clone(&connection);
-
-                        // Start listening to file changes for this session
-                        let mut file_watcher_subscriber = file_watcher.subscribe();
-
-                        // Listen to file changes on another thread
-                        tokio::spawn(async move {
-                            while let Ok(res) = file_watcher_subscriber.recv().await {
-                                check_changes(
-                                    cloned_tx.clone(),
-                                    Arc::clone(&cloned_connection),
-                                    res,
-                                )
-                                .await;
                             }
                         });
 
@@ -164,7 +123,7 @@ impl Server for Encrypted {
                             let data = Data {
                                 con_state: Arc::clone(&connection),
                             };
-                            debug!("[IMAP] [{}] Got Command: {}", peer, line);
+                            debug!("[SMTP] [{}] Got Command: {}", peer, line);
                             // TODO make sure to handle IDLE different as it needs us to stream lines
 
                             {
@@ -174,40 +133,26 @@ impl Server for Encrypted {
                                         // Cleanup timeout managers
                                         if close {
                                             // Used for later session timer management
-                                            debug!("[IMAP] Closing TLS connection");
+                                            debug!("[SMTP] Closing TLS connection");
                                             break;
                                         }
                                     }
                                     // We try a last time to do a graceful shutdown before closing
                                     Err(e) => {
-                                        tx.send(format!(
-                                            "* BAD [SERVERBUG] This should not happen: {}",
-                                            e
-                                        ))
-                                        .await
-                                        .unwrap();
-                                        debug!("[IMAP] Closing TLS connection");
+                                        tx.send(format!("500 This should not happen: {}", e))
+                                            .await
+                                            .unwrap();
+                                        debug!("[SMTP] Closing TLS connection");
                                         break;
                                     }
                                 }
                             };
                         }
                     }
-                    Err(e) => error!("[IMAP] Got error while accepting TLS: {}", e),
+                    Err(e) => error!("[SMTP] Got error while accepting TLS: {}", e),
                 }
             });
         }
         Ok(())
-    }
-}
-
-async fn check_changes(
-    _lines: UnboundedSender<String>,
-    state: Arc<RwLock<Connection>>,
-    event: Event,
-) {
-    let state = { &state.read().await.state };
-    if matches!(state, State::Authenticated) || matches!(state, State::Selected(_, _)) {
-        println!("{:?}", event);
     }
 }

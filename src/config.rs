@@ -12,7 +12,9 @@ pub struct Config {
 /// Configurations specific to the TLS part
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Tls {
-    /// Path to the certificate files
+    /// Path to the key file
+    pub key_path: String,
+    /// Path to the certificate file
     pub cert_path: String,
 }
 
@@ -21,6 +23,8 @@ pub struct Tls {
 pub struct Mail {
     /// Path where maildir style mailboxes are going to get created
     pub maildir_folders: String,
+    /// Hostname the SMTP server lives at.
+    pub hostname: String,
 }
 
 impl Config {

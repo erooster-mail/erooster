@@ -103,7 +103,7 @@ impl TryFrom<&str> for Commands {
             "close" => Ok(Commands::Close),
             "rename" => Ok(Commands::Rename),
             _ => {
-                warn!("Got unknown command: {}", i);
+                warn!("[IMAP] Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
             }
         }
@@ -152,14 +152,10 @@ fn arguments(input: &str) -> Res<Vec<&str>> {
     )(input)
     .map(|(x, y)| (x, y))
 }
-
 impl Data {
     fn parse_internal(line: &str) -> Res<(&str, Result<Commands, String>, Vec<&str>)> {
         context("parse", tuple((imaptag, command, arguments)))(line)
     }
-}
-
-impl Data {
     #[allow(clippy::too_many_lines)]
     pub async fn parse<S>(
         &self,
@@ -199,7 +195,7 @@ impl Data {
                         arguments: &arguments,
                     },
                     Err(e) => {
-                        error!("Error parsing command: {}", e);
+                        error!("[IMAP] Error parsing command: {}", e);
                         lines
                             .send(String::from("* BAD [SERVERBUG] unable to parse command"))
                             .await?;
@@ -286,7 +282,7 @@ impl Data {
                 }
             }
             Err(e) => {
-                error!("Error parsing command: {}", e);
+                error!("[IMAP] Error parsing command: {}", e);
                 lines
                     .send(String::from("* BAD [SERVERBUG] unable to parse command"))
                     .await?;

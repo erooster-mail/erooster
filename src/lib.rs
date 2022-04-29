@@ -28,6 +28,7 @@
 
 mod imap_commands;
 mod line_codec;
+mod smtp_commands;
 
 /// The core server logic for the imapserver.
 /// This is the tls and non tls variant of the imapserver.

@@ -79,6 +79,7 @@ impl Encrypted {
         } else {
             "0.0.0.0:465".to_string()
         };
+        info!("[SMTP] Trying to listen on {}", addr);
         let listener = TcpListener::bind(addr).await.unwrap();
         info!("[SMTP] Listening on ecrypted Port");
         let mut stream = TcpListenerStream::new(listener);

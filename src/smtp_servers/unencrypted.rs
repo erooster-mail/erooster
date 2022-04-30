@@ -23,6 +23,7 @@ impl Unencrypted {
         } else {
             "0.0.0.0:25".to_string()
         };
+        info!("[SMTP] Trying to listen on {}", addr);
         let listener = TcpListener::bind(addr).await?;
         info!("[SMTP] Listening on unecrypted Port");
         let mut stream = TcpListenerStream::new(listener);

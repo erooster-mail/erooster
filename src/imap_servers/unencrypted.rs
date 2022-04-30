@@ -36,6 +36,7 @@ impl Server for Unencrypted {
         } else {
             "0.0.0.0:143".to_string()
         };
+        info!("[IMAP] Trying to listen on {}", addr);
         let listener = TcpListener::bind(addr).await?;
         info!("[IMAP] Listening on unecrypted Port");
         let mut stream = TcpListenerStream::new(listener);

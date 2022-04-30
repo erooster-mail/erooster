@@ -99,6 +99,7 @@ impl Server for Encrypted {
         } else {
             "0.0.0.0:993".to_string()
         };
+        info!("[IMAP] Trying to listen on {}", addr);
         let listener = TcpListener::bind(addr).await.unwrap();
         info!("[IMAP] Listening on ecrypted Port");
         let mut stream = TcpListenerStream::new(listener);

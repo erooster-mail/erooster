@@ -84,7 +84,7 @@ impl Auth<'_> {
                         write_lock.state = State::Authenticated(username.to_string());
                     }
                 };
-                lines.send(String::from("334 UGFzc3dvcmQ6")).await?;
+                lines.send(String::from("235 ok")).await?;
             }
             Err(_) => {
                 lines

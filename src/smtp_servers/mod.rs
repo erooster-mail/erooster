@@ -1,10 +1,25 @@
 use std::sync::Arc;
 
+use futures::{channel::mpsc::SendError, Sink, SinkExt};
+
 use crate::config::Config;
 
 pub(crate) mod encrypted;
 pub(crate) mod state;
 pub(crate) mod unencrypted;
+
+pub(crate) async fn send_capabilities<S>(
+    config: Arc<Config>,
+    lines_sender: &mut S,
+) -> color_eyre::eyre::Result<()>
+where
+    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+{
+    lines_sender
+        .send(format!("220 {} ESMTP Erooster", config.mail.hostname))
+        .await?;
+    Ok(())
+}
 
 /// Starts the smtp server
 ///

@@ -17,7 +17,10 @@ use tokio_util::codec::Framed;
 use tracing::{debug, error, info};
 
 use crate::{
-    config::Config, line_codec::LinesCodec, smtp_commands::Data, smtp_servers::state::Connection,
+    config::Config,
+    line_codec::LinesCodec,
+    smtp_commands::Data,
+    smtp_servers::{send_capabilities, state::Connection},
 };
 
 /// An encrypted smtp Server
@@ -110,12 +113,6 @@ impl Encrypted {
                         let lines = Framed::new(stream, LinesCodec::new());
                         // We split these as we handle the sink in a broadcast instead to be able to push non linear data over the socket
                         let (mut lines_sender, mut lines_reader) = lines.split();
-
-                        // Greet the client with the capabilities we provide
-                        lines_sender
-                            .send(format!("220 {} SMTP Erooster", config.mail.hostname))
-                            .await
-                            .unwrap();
                         // Create our Connection
                         let connection = Connection::new(true);
 
@@ -126,6 +123,11 @@ impl Encrypted {
                                 lines_sender.send(res).await.unwrap();
                             }
                         });
+
+                        // Greet the client with the capabilities we provide
+                        send_capabilities(Arc::clone(&config), &mut tx)
+                            .await
+                            .unwrap();
 
                         // Read lines from the stream
                         while let Some(Ok(line)) = lines_reader.next().await {

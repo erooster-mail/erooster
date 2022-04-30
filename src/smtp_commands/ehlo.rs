@@ -7,7 +7,9 @@ impl Ehlo {
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
-        lines.send(format!("250 {}", hostname)).await?;
+        lines.feed(format!("250 {}", hostname)).await?;
+        lines.feed(String::from("250 AUTH LOGIN")).await?;
+        lines.flush().await?;
         Ok(())
     }
 }

@@ -15,10 +15,13 @@ use tracing::{debug, error, warn};
 
 use crate::{
     config::Config,
-    smtp_commands::{data::DataCommand, ehlo::Ehlo, mail::Mail, quit::Quit, rcpt::Rcpt},
-    smtp_servers::state::{Connection, State},
+    smtp_commands::{
+        auth::Auth, data::DataCommand, ehlo::Ehlo, mail::Mail, quit::Quit, rcpt::Rcpt,
+    },
+    smtp_servers::state::{AuthState, Connection, State},
 };
 
+mod auth;
 mod data;
 mod ehlo;
 mod mail;
@@ -44,6 +47,7 @@ pub enum Commands {
     MAILFROM,
     RCPTTO,
     DATA,
+    AUTH,
 }
 
 impl TryFrom<&str> for Commands {
@@ -56,6 +60,7 @@ impl TryFrom<&str> for Commands {
             "mail from" => Ok(Commands::MAILFROM),
             "rcpt to" => Ok(Commands::RCPTTO),
             "data" => Ok(Commands::DATA),
+            "auth" => Ok(Commands::AUTH),
             _ => {
                 warn!("[SMTP⦘ Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
@@ -117,6 +122,17 @@ impl Data {
             DataCommand { data: self }.receive(lines, &line).await?;
             // We are done here
             return Ok(false);
+        } else if let State::Authenticating(auth_state) = state {
+            match auth_state {
+                AuthState::Username => {
+                    Auth { data: self }.username(lines, &line).await?;
+                }
+                AuthState::Password(_) => {
+                    Auth { data: self }.password(lines, &line).await?;
+                }
+            }
+            // We are done here
+            return Ok(false);
         };
         match Data::parse_internal(&line) {
             Ok((_, (command, arguments))) => {
@@ -151,6 +167,9 @@ impl Data {
                     }
                     Commands::DATA => {
                         DataCommand { data: self }.exec(lines).await?;
+                    }
+                    Commands::AUTH => {
+                        Auth { data: self }.exec(lines, &command_data).await?;
                     }
                 }
             }

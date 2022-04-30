@@ -26,4 +26,15 @@ pub enum State {
     NotAuthenticated,
     /// DATA command issued
     ReceivingData,
+    /// Authentication in progress
+    Authenticating(AuthState),
+    /// Authentication done
+    Authenticated(String),
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum AuthState {
+    Username,
+    Password(String),
 }

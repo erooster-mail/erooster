@@ -10,7 +10,7 @@ use crate::{
     config::Config,
     line_codec::LinesCodec,
     smtp_commands::Data,
-    smtp_servers::state::{Connection, State},
+    smtp_servers::{state::{Connection, State}, send_capabilities},
 };
 
 /// An unencrypted smtp Server
@@ -38,10 +38,7 @@ impl Unencrypted {
             tokio::spawn(async move {
                 let lines = Framed::new(tcp_stream, LinesCodec::new());
                 let (mut lines_sender, mut lines_reader) = lines.split();
-                lines_sender
-                    .send(format!("220 {} SMTP Erooster", config.mail.hostname))
-                    .await
-                    .unwrap();
+
                 let state = Arc::new(RwLock::new(Connection {
                     secure: false,
                     state: State::NotAuthenticated,
@@ -54,6 +51,12 @@ impl Unencrypted {
                         lines_sender.send(res).await.unwrap();
                     }
                 });
+                    
+                // Greet the client with the capabilities we provide
+                send_capabilities(Arc::clone(&config), &mut tx)
+                    .await
+                    .unwrap();
+
                 while let Some(Ok(line)) = lines_reader.next().await {
                     let data = Data {
                         con_state: Arc::clone(&state),

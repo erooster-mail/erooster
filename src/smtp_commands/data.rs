@@ -1,5 +1,5 @@
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use tracing::info;
+use tracing::{debug, info};
 
 use crate::{smtp_commands::Data, smtp_servers::state::State};
 
@@ -39,7 +39,9 @@ impl DataCommand<'_> {
                 write_lock.state = State::NotAuthenticated;
             }
         };
+        debug!("line: {:#?}", line);
         if line == "." {
+            debug!("end");
             lines.send(String::from("250 OK")).await?;
         }
         Ok(())

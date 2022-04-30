@@ -7,6 +7,8 @@ pub struct Config {
     pub tls: Tls,
     /// Configurations specific to the mail concept itself
     pub mail: Mail,
+    /// IP the server should listen on instead of any
+    pub listen_ip: Option<String>,
 }
 
 /// Configurations specific to the TLS part

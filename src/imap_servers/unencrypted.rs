@@ -31,7 +31,12 @@ impl Server for Unencrypted {
         config: Arc<Config>,
         mut _file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()> {
-        let listener = TcpListener::bind("0.0.0.0:143").await?;
+        let addr = if let Some(listen_ip) = &config.listen_ip {
+            format!("{}:143", listen_ip)
+        } else {
+            "0.0.0.0:143".to_string()
+        };
+        let listener = TcpListener::bind(addr).await?;
         info!("[IMAP] Listening on unecrypted Port");
         let mut stream = TcpListenerStream::new(listener);
         while let Some(Ok(tcp_stream)) = stream.next().await {

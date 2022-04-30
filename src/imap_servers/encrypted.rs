@@ -94,7 +94,12 @@ impl Server for Encrypted {
         let acceptor = TlsAcceptor::from(Arc::new(server_config));
 
         // Opens the listener
-        let listener = TcpListener::bind("0.0.0.0:993").await.unwrap();
+        let addr = if let Some(listen_ip) = &config.listen_ip {
+            format!("{}:993", listen_ip)
+        } else {
+            "0.0.0.0:993".to_string()
+        };
+        let listener = TcpListener::bind(addr).await.unwrap();
         info!("[IMAP] Listening on ecrypted Port");
         let mut stream = TcpListenerStream::new(listener);
 

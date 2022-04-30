@@ -18,7 +18,12 @@ pub struct Unencrypted;
 
 impl Unencrypted {
     pub(crate) async fn run(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
-        let listener = TcpListener::bind("0.0.0.0:25").await?;
+        let addr = if let Some(listen_ip) = &config.listen_ip {
+            format!("{}:25", listen_ip)
+        } else {
+            "0.0.0.0:25".to_string()
+        };
+        let listener = TcpListener::bind(addr).await?;
         info!("[SMTP] Listening on unecrypted Port");
         let mut stream = TcpListenerStream::new(listener);
         while let Some(Ok(tcp_stream)) = stream.next().await {

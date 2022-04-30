@@ -74,7 +74,12 @@ impl Encrypted {
         let acceptor = TlsAcceptor::from(Arc::new(server_config));
 
         // Opens the listener
-        let listener = TcpListener::bind("0.0.0.0:465").await.unwrap();
+        let addr = if let Some(listen_ip) = &config.listen_ip {
+            format!("{}:465", listen_ip)
+        } else {
+            "0.0.0.0:465".to_string()
+        };
+        let listener = TcpListener::bind(addr).await.unwrap();
         info!("[SMTP] Listening on ecrypted Port");
         let mut stream = TcpListenerStream::new(listener);
 

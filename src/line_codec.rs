@@ -1,5 +1,6 @@
 use bytes::{Buf, BufMut, BytesMut};
 use simdutf8::compat::from_utf8;
+use tracing::debug;
 use std::{cmp, fmt, io, str, usize};
 use tokio_util::codec::{Decoder, Encoder};
 
@@ -192,6 +193,7 @@ impl Encoder<String> for LinesCodec {
         buf.put(line.as_bytes());
         buf.put_u8(b'\r');
         buf.put_u8(b'\n');
+        debug!("sending line: {:?}", buf);
         Ok(())
     }
 }

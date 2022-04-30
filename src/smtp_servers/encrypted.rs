@@ -39,7 +39,7 @@ impl Encrypted {
 
         loop {
             match rustls_pemfile::read_one(&mut reader)? {
-                Some(rustls_pemfile::Item::RSAKey(key) | rustls_pemfile::Item::PKCS8Key(key)) => {
+                Some(rustls_pemfile::Item::RSAKey(key) | rustls_pemfile::Item::PKCS8Key(key)| rustls_pemfile::Item::ECKey(key)) => {
                     return Ok(rustls::PrivateKey(key))
                 }
                 None => break,
@@ -47,10 +47,7 @@ impl Encrypted {
             }
         }
 
-        Err(color_eyre::eyre::eyre!(
-            "no keys found in {:?} (encrypted keys not supported)",
-            path
-        ))
+        color_eyre::eyre::bail!("no keys found in {:?} (encrypted keys not supported)", path)
     }
 
     /// Starts a TLS server

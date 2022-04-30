@@ -30,7 +30,7 @@
 #![warn(missing_docs)]
 #![allow(clippy::missing_panics_doc)]
 
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use clap::Parser;
 use color_eyre::eyre::Result;
@@ -51,7 +51,16 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let args = Args::parse();
     info!("Starting ERooster Imap Server");
-    let config = Arc::new(Config::load(args.config)?);
+    let config = if Path::new(&args.config).exists() {
+        Arc::new(Config::load(args.config)?)
+    } else if Path::new("/etc/erooster/config.yml").exists() {
+        Arc::new(Config::load("/etc/erooster/config.yml")?)
+    } else if Path::new("/etc/erooster/config.yaml").exists() {
+        Arc::new(Config::load("/etc/erooster/config.yaml")?)
+    } else {
+        error!("No config file found. Please follow the readme.");
+        color_eyre::eyre::bail!("No config file found");
+    };
     erooster::imap_servers::start(Arc::clone(&config))?;
     erooster::smtp_servers::start(config)?;
 

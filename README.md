@@ -8,9 +8,9 @@ Currently the setup is quite rough.
 
 You need some certificates for your server (pem format) and it currently has no user managment yet.
 
-To get started you need a `config.yml` like this:
+To get started you need a `config.yml` like this it can either be in /etc/erooster or the working dir:
 
-```
+```yaml
 tls:
   key_path: "./certs/key.pem"
   cert_path: "./certs/cert.pem"

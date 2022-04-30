@@ -1,6 +1,7 @@
 use std::{
     fs,
     io::{self, BufReader},
+    net::SocketAddr,
     path::Path,
     sync::Arc,
 };
@@ -39,9 +40,11 @@ impl Encrypted {
 
         loop {
             match rustls_pemfile::read_one(&mut reader)? {
-                Some(rustls_pemfile::Item::RSAKey(key) | rustls_pemfile::Item::PKCS8Key(key)| rustls_pemfile::Item::ECKey(key)) => {
-                    return Ok(rustls::PrivateKey(key))
-                }
+                Some(
+                    rustls_pemfile::Item::RSAKey(key)
+                    | rustls_pemfile::Item::PKCS8Key(key)
+                    | rustls_pemfile::Item::ECKey(key),
+                ) => return Ok(rustls::PrivateKey(key)),
                 None => break,
                 _ => {}
             }
@@ -71,13 +74,16 @@ impl Encrypted {
         let acceptor = TlsAcceptor::from(Arc::new(server_config));
 
         // Opens the listener
-        let addr = if let Some(listen_ip) = &config.listen_ip {
-            format!("{}:465", listen_ip)
+        let addr: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
+            listen_ips
+                .iter()
+                .map(|ip| format!("{}:465", ip).parse().unwrap())
+                .collect()
         } else {
-            "0.0.0.0:465".to_string()
+            vec!["0.0.0.0:465".parse()?]
         };
-        info!("[SMTP] Trying to listen on {}", addr);
-        let listener = TcpListener::bind(addr).await.unwrap();
+        info!("[SMTP] Trying to listen on {:?}", addr);
+        let listener = TcpListener::bind(&addr[..]).await.unwrap();
         info!("[SMTP] Listening on ecrypted Port");
         let mut stream = TcpListenerStream::new(listener);
 

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, net::SocketAddr};
 
 use async_trait::async_trait;
 use futures::{channel::mpsc, SinkExt, StreamExt};
@@ -31,13 +31,16 @@ impl Server for Unencrypted {
         config: Arc<Config>,
         mut _file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()> {
-        let addr = if let Some(listen_ip) = &config.listen_ip {
-            format!("{}:143", listen_ip)
+        let addr: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
+            listen_ips
+                .iter()
+                .map(|ip| format!("{}:143", ip).parse().unwrap())
+                .collect()
         } else {
-            "0.0.0.0:143".to_string()
+            vec!["0.0.0.0:143".parse()?]
         };
-        info!("[IMAP] Trying to listen on {}", addr);
-        let listener = TcpListener::bind(addr).await?;
+        info!("[IMAP] Trying to listen on {:?}", addr);
+        let listener = TcpListener::bind(&addr[..]).await?;
         info!("[IMAP] Listening on unecrypted Port");
         let mut stream = TcpListenerStream::new(listener);
         while let Some(Ok(tcp_stream)) = stream.next().await {

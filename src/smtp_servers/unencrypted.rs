@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
 use futures::{channel::mpsc, SinkExt, StreamExt};
 use tokio::{net::TcpListener, sync::RwLock};
@@ -18,13 +18,16 @@ pub struct Unencrypted;
 
 impl Unencrypted {
     pub(crate) async fn run(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
-        let addr = if let Some(listen_ip) = &config.listen_ip {
-            format!("{}:25", listen_ip)
+        let addr: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
+            listen_ips
+                .iter()
+                .map(|ip| format!("{}:25", ip).parse().unwrap())
+                .collect()
         } else {
-            "0.0.0.0:25".to_string()
+            vec!["0.0.0.0:25".parse()?]
         };
-        info!("[SMTP] Trying to listen on {}", addr);
-        let listener = TcpListener::bind(addr).await?;
+        info!("[SMTP] Trying to listen on {:?}", addr);
+        let listener = TcpListener::bind(&addr[..]).await?;
         info!("[SMTP] Listening on unecrypted Port");
         let mut stream = TcpListenerStream::new(listener);
         while let Some(Ok(tcp_stream)) = stream.next().await {

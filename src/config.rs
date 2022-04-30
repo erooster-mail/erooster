@@ -8,7 +8,7 @@ pub struct Config {
     /// Configurations specific to the mail concept itself
     pub mail: Mail,
     /// IP the server should listen on instead of any
-    pub listen_ip: Option<String>,
+    pub listen_ips: Option<Vec<String>>,
 }
 
 /// Configurations specific to the TLS part

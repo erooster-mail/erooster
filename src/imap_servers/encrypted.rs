@@ -18,6 +18,7 @@ use notify::Event;
 use std::{
     fs::{self},
     io::{self, BufReader},
+    net::SocketAddr,
     path::Path,
     sync::Arc,
 };
@@ -96,13 +97,17 @@ impl Server for Encrypted {
         let acceptor = TlsAcceptor::from(Arc::new(server_config));
 
         // Opens the listener
-        let addr = if let Some(listen_ip) = &config.listen_ip {
-            format!("{}:993", listen_ip)
+
+        let addr: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
+            listen_ips
+                .iter()
+                .map(|ip| format!("{}:993", ip).parse().unwrap())
+                .collect()
         } else {
-            "0.0.0.0:993".to_string()
+            vec!["0.0.0.0:993".parse()?]
         };
-        info!("[IMAP] Trying to listen on {}", addr);
-        let listener = TcpListener::bind(addr).await.unwrap();
+        info!("[IMAP] Trying to listen on {:?}", addr);
+        let listener = TcpListener::bind(&addr[..]).await.unwrap();
         info!("[IMAP] Listening on ecrypted Port");
         let mut stream = TcpListenerStream::new(listener);
 

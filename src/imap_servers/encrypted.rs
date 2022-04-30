@@ -53,9 +53,11 @@ impl Encrypted {
 
         loop {
             match rustls_pemfile::read_one(&mut reader)? {
-                Some(rustls_pemfile::Item::RSAKey(key) | rustls_pemfile::Item::PKCS8Key(key)) => {
-                    return Ok(rustls::PrivateKey(key))
-                }
+                Some(
+                    rustls_pemfile::Item::RSAKey(key)
+                    | rustls_pemfile::Item::PKCS8Key(key)
+                    | rustls_pemfile::Item::ECKey(key),
+                ) => return Ok(rustls::PrivateKey(key)),
                 None => break,
                 _ => {}
             }

@@ -41,6 +41,8 @@ pub fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         }
     })?;
 
+    std::fs::create_dir_all(&config.mail.maildir_folders)?;
+
     watcher.watch(
         Path::new(&config.mail.maildir_folders),
         RecursiveMode::Recursive,

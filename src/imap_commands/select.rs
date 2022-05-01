@@ -79,7 +79,10 @@ where
         .await?;
     let current_uid = get_uid_for_folder(&maildir)?;
     lines
-        .feed(format!("* OK [UIDNEXT {}] Predicted next UID", current_uid,))
+        .feed(format!(
+            "* OK [UIDNEXT {}] Predicted next UID",
+            current_uid + 1,
+        ))
         .await?;
     lines
         .feed(String::from(

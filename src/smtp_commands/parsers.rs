@@ -10,11 +10,16 @@ use nom::{
 type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
 
 // TODO parse relay vs no relay
+fn localpart(input: &str) -> Res<Vec<&str>> {
+    println!("localpart Input: {}", input);
+    context("localpart", many0(take_while1(|c: char| c != ',')))(input).map(|(x, y)| (x, y))
+}
+
 pub fn localpart_arguments(input: &str) -> Res<Vec<&str>> {
     println!("localpart_arguments Input: {}", input);
     context(
         "localpart_arguments",
-        delimited(char('<'), many0(take_while1(|c: char| c != ',')), char('>')),
+        delimited(char('<'), localpart, char('>')),
     )(input)
     .map(|(x, y)| (x, y))
 }

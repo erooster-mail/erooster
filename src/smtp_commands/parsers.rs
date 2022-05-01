@@ -1,5 +1,6 @@
 use nom::{
-    bytes::complete::{tag, take_while1},
+    bytes::complete::take_while1,
+    character::complete::char,
     error::{context, VerboseError},
     multi::many0,
     sequence::delimited,
@@ -13,7 +14,7 @@ pub fn localpart_arguments(input: &str) -> Res<Vec<&str>> {
     println!("localpart_arguments Input: {}", input);
     context(
         "localpart_arguments",
-        delimited(tag("<"), take_while1(|c: char| c != ','), tag(">")),
+        delimited(char('<'), many0(take_while1(|c: char| c != ',')), char('>')),
     )(input)
     .map(|(x, y)| (x, y))
 }

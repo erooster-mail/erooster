@@ -69,7 +69,8 @@ impl DataCommand<'_> {
                     } else {
                         color_eyre::eyre::bail!("No data")
                     };
-                    maildir.store_new(data.as_bytes())?;
+                    let message_id = maildir.store_new(data.as_bytes())?;
+                    info!("Stored message: {}", message_id);
                     // TODO cleanup after we are done
                     lines.send(String::from("250 OK")).await?;
                 }

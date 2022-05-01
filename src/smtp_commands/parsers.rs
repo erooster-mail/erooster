@@ -7,6 +7,8 @@ use nom::{
 };
 
 type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
+
+// TODO parse relay vs no relay
 pub fn localpart_arguments(input: &str) -> Res<Vec<&str>> {
     context(
         "localpart_arguments",

@@ -12,7 +12,11 @@ type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
 // TODO parse relay vs no relay
 fn localpart(input: &str) -> Res<Vec<&str>> {
     println!("localpart Input: {}", input);
-    context("localpart", many0(take_while1(|c: char| c != ',')))(input).map(|(x, y)| (x, y))
+    context(
+        "localpart",
+        many0(take_while1(|c: char| c != ',' && c != '>')),
+    )(input)
+    .map(|(x, y)| (x, y))
 }
 
 pub fn localpart_arguments(input: &str) -> Res<Vec<&str>> {

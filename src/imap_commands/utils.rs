@@ -10,7 +10,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 
 pub fn get_uid_for_folder(maildir: &Maildir) -> color_eyre::eyre::Result<u32> {
     let current_last_id: u32 = maildir.count_cur().try_into()?;
-    let new_last_id: u32 = maildir.count_cur().try_into()?;
+    let new_last_id: u32 = maildir.count_new().try_into()?;
     Ok(current_last_id + new_last_id)
 }
 

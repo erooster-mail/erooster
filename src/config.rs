@@ -35,10 +35,10 @@ impl Config {
     /// # Errors
     ///
     /// Does return io errors if something goes wrong
-    pub fn load<P: AsRef<std::path::Path> + std::fmt::Debug>(
+    pub async fn load<P: AsRef<std::path::Path> + std::fmt::Debug>(
         path: P,
     ) -> color_eyre::eyre::Result<Self> {
-        let contents = std::fs::read_to_string(path)?;
+        let contents = tokio::fs::read_to_string(path).await?;
         let config: Self = serde_yaml::from_str(&contents)?;
         Ok(config)
     }

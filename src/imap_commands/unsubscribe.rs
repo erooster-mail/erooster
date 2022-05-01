@@ -35,7 +35,7 @@ impl Unsubscribe<'_> {
                     .await?;
                 return Ok(());
             }
-            remove_flag(&mailbox_path, "\\Subscribed")?;
+            remove_flag(&mailbox_path, "\\Subscribed").await?;
             lines
                 .send(format!("{} OK UNSUBSCRIBE completed", command_data.tag))
                 .await?;

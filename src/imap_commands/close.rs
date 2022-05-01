@@ -5,7 +5,8 @@ use crate::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use maildir::Maildir;
-use std::{fs, path::Path, sync::Arc};
+use std::{path::Path, sync::Arc};
+use tokio::fs;
 use tracing::debug;
 
 pub struct Close<'a> {
@@ -44,7 +45,7 @@ impl Close<'_> {
                 debug!("Checking mails");
                 if mail.is_trashed() {
                     let path = mail.path();
-                    fs::remove_file(path)?;
+                    fs::remove_file(path).await?;
                 }
             }
 

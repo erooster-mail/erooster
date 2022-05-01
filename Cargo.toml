@@ -14,7 +14,7 @@ tokio = { version = "1", features = ["full"] }
 nom = "7.1.0"
 color-eyre = "0.6"
 tokio-util = { version = "0.7.0", features = ["full"] }
-tokio-stream = { version = "0.1.8", features = ["net"] }
+tokio-stream = { version = "0.1.8", features = ["net", "io-util"] }
 futures = { version = "0.3.0", features = ["thread-pool"]}
 rustls-pemfile = "1.0.0"
 tokio-rustls ={ version = "0.23.1", features = ["tls12"] }

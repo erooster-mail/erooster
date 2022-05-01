@@ -3,7 +3,8 @@ use crate::{
     imap_commands::{CommandData, Data},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use std::{fs, path::Path, sync::Arc};
+use std::{path::Path, sync::Arc};
+use tokio::fs;
 
 pub struct Delete<'a> {
     pub data: &'a Data,
@@ -30,7 +31,7 @@ impl Delete<'_> {
                 .join(folder.clone());
             // TODO error handling
             // TODO all the extra rules when to not delete
-            fs::remove_dir_all(mailbox_path)?;
+            fs::remove_dir_all(mailbox_path).await?;
             lines
                 .send(format!("{} OK DELETE completed", command_data.tag))
                 .await?;

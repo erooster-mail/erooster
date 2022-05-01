@@ -1,17 +1,19 @@
+use futures::TryStreamExt;
+use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::path::Path;
-use std::{
-    fs::{File, OpenOptions},
-    io::{BufRead, BufReader},
-};
+use tokio::fs::File;
+use tokio_stream::wrappers::LinesStream;
 
-pub fn get_flags(path: &Path) -> color_eyre::eyre::Result<Vec<String>> {
+use tokio::io::{AsyncBufReadExt, BufReader};
+
+pub async fn get_flags(path: &Path) -> std::io::Result<Vec<String>> {
     let flags_file = path.join(".erooster_folder_flags");
     if flags_file.exists() {
-        let file = File::open(flags_file)?;
+        let file = File::open(flags_file).await?;
         let buf = BufReader::new(file);
-        let flags: Vec<String> = buf.lines().flatten().collect();
-        return Ok(flags);
+        let flags = LinesStream::new(buf.lines()).try_collect().await;
+        return flags;
     }
     Ok(vec![])
 }
@@ -26,13 +28,15 @@ pub fn add_flag(path: &Path, flag: &str) -> color_eyre::eyre::Result<()> {
     Ok(())
 }
 
-fn lines_from_file(filename: impl AsRef<Path>) -> std::io::Result<Vec<String>> {
-    BufReader::new(File::open(filename)?).lines().collect()
+async fn lines_from_file(filename: impl AsRef<Path>) -> std::io::Result<Vec<String>> {
+    LinesStream::new(BufReader::new(File::open(filename).await?).lines())
+        .try_collect::<Vec<String>>()
+        .await
 }
 
-pub fn remove_flag(path: &Path, flag: &str) -> color_eyre::eyre::Result<()> {
+pub async fn remove_flag(path: &Path, flag: &str) -> color_eyre::eyre::Result<()> {
     let flags_file = path.join(".erooster_folder_flags");
-    let mut lines = lines_from_file(&flags_file)?;
+    let mut lines = lines_from_file(&flags_file).await?;
 
     lines.retain(|x| x != flag);
 

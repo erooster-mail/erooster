@@ -1,10 +1,11 @@
-use std::{fs, path::Path, sync::Arc};
+use std::{path::Path, sync::Arc};
 
 use crate::{
     config::Config,
     imap_commands::{CommandData, Data},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use tokio::fs;
 
 pub struct Rename<'a> {
     pub data: &'a Data,
@@ -34,7 +35,7 @@ impl Rename<'_> {
         let new_folder_path = Path::new(&config.mail.maildir_folders)
             .join(self.data.con_state.read().await.username.clone().unwrap())
             .join(new_folder.clone());
-        fs::rename(old_mailbox_path, new_folder_path)?;
+        fs::rename(old_mailbox_path, new_folder_path).await?;
         lines
             .send(format!("{} OK RENAME completed", command_data.tag))
             .await?;

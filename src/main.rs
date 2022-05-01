@@ -52,11 +52,11 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     info!("Starting ERooster Imap Server");
     let config = if Path::new(&args.config).exists() {
-        Arc::new(Config::load(args.config)?)
+        Arc::new(Config::load(args.config).await?)
     } else if Path::new("/etc/erooster/config.yml").exists() {
-        Arc::new(Config::load("/etc/erooster/config.yml")?)
+        Arc::new(Config::load("/etc/erooster/config.yml").await?)
     } else if Path::new("/etc/erooster/config.yaml").exists() {
-        Arc::new(Config::load("/etc/erooster/config.yaml")?)
+        Arc::new(Config::load("/etc/erooster/config.yaml").await?)
     } else {
         error!("No config file found. Please follow the readme.");
         color_eyre::eyre::bail!("No config file found");

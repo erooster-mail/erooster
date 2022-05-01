@@ -74,7 +74,7 @@ where
         }
         for sub_folder in sub_folders.flatten() {
             // TODO calc flags
-            let flags_raw = get_flags(sub_folder.path());
+            let flags_raw = get_flags(sub_folder.path()).await;
             let flags = if let Ok(flags_raw) = flags_raw {
                 flags_raw
             } else {
@@ -134,7 +134,7 @@ where
         }
         for sub_folder in sub_folders.flatten() {
             // TODO calc flags
-            let flags_raw = get_flags(sub_folder.path());
+            let flags_raw = get_flags(sub_folder.path()).await;
             let flags = if let Ok(flags_raw) = flags_raw {
                 flags_raw
             } else {
@@ -173,7 +173,7 @@ where
 
         // TODO check for folder existence
         // TODO calc flags
-        let flags_raw = get_flags(&folder);
+        let flags_raw = get_flags(&folder).await;
         let mut flags = if let Ok(flags_raw) = flags_raw {
             if folder.exists() {
                 flags_raw

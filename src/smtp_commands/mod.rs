@@ -16,7 +16,7 @@ use tracing::{debug, error, warn};
 use crate::{
     config::Config,
     smtp_commands::{
-        auth::Auth, data::DataCommand, ehlo::Ehlo, mail::Mail, quit::Quit, rcpt::Rcpt,
+        auth::Auth, data::DataCommand, ehlo::Ehlo, mail::Mail, quit::Quit, rcpt::Rcpt, noop::Noop,
     },
     smtp_servers::state::{AuthState, Connection, State},
 };
@@ -25,6 +25,7 @@ mod auth;
 mod data;
 mod ehlo;
 mod mail;
+mod noop;
 mod quit;
 mod rcpt;
 
@@ -48,6 +49,7 @@ pub enum Commands {
     RCPTTO,
     DATA,
     AUTH,
+    NOOP,
 }
 
 impl TryFrom<&str> for Commands {
@@ -61,6 +63,7 @@ impl TryFrom<&str> for Commands {
             "rcpt to" => Ok(Commands::RCPTTO),
             "data" => Ok(Commands::DATA),
             "auth" => Ok(Commands::AUTH),
+            "noop" => Ok(Commands::NOOP),
             _ => {
                 warn!("[SMTP⦘ Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
@@ -170,6 +173,9 @@ impl Data {
                     }
                     Commands::AUTH => {
                         Auth { data: self }.exec(lines, &command_data).await?;
+                    }
+                    Commands::NOOP => {
+                        Noop.exec(lines).await?;
                     }
                 }
             }

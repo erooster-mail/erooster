@@ -10,7 +10,10 @@ use crate::{
     config::Config,
     line_codec::LinesCodec,
     smtp_commands::Data,
-    smtp_servers::{state::{Connection, State}, send_capabilities},
+    smtp_servers::{
+        send_capabilities,
+        state::{Connection, State},
+    },
 };
 
 /// An unencrypted smtp Server
@@ -43,6 +46,7 @@ impl Unencrypted {
                     secure: false,
                     state: State::NotAuthenticated,
                     data: None,
+                    receivers: None,
                 }));
 
                 let (mut tx, mut rx) = mpsc::unbounded();
@@ -51,7 +55,7 @@ impl Unencrypted {
                         lines_sender.send(res).await.unwrap();
                     }
                 });
-                    
+
                 // Greet the client with the capabilities we provide
                 send_capabilities(Arc::clone(&config), &mut tx)
                     .await

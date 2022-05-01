@@ -26,9 +26,9 @@
 #![warn(missing_docs)]
 #![allow(clippy::missing_panics_doc)]
 
-mod imap_commands;
-mod line_codec;
-mod smtp_commands;
+pub(crate) mod imap_commands;
+pub(crate) mod line_codec;
+pub(crate) mod smtp_commands;
 
 /// The core server logic for the imapserver.
 /// This is the tls and non tls variant of the imapserver.

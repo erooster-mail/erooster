@@ -8,6 +8,7 @@ pub struct Connection {
     pub state: State,
     pub secure: bool,
     pub data: Option<String>,
+    pub receivers: Option<Vec<String>>,
 }
 
 impl Connection {
@@ -16,6 +17,7 @@ impl Connection {
             secure,
             state: State::NotAuthenticated,
             data: None,
+            receivers: None,
         }))
     }
 }

@@ -32,7 +32,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, warn};
 
-mod utils;
+pub mod utils;
 
 pub mod auth;
 pub mod capability;

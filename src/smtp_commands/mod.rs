@@ -16,7 +16,7 @@ use tracing::{debug, error, warn};
 use crate::{
     config::Config,
     smtp_commands::{
-        auth::Auth, data::DataCommand, ehlo::Ehlo, mail::Mail, quit::Quit, rcpt::Rcpt, noop::Noop,
+        auth::Auth, data::DataCommand, ehlo::Ehlo, mail::Mail, noop::Noop, quit::Quit, rcpt::Rcpt,
     },
     smtp_servers::state::{AuthState, Connection, State},
 };
@@ -122,7 +122,9 @@ impl Data {
         let con_clone = Arc::clone(&self.con_state);
         let state = { con_clone.read().await.state.clone() };
         if let State::ReceivingData = state {
-            DataCommand { data: self }.receive(lines, &line).await?;
+            DataCommand { data: self }
+                .receive(config, lines, &line)
+                .await?;
             // We are done here
             return Ok(false);
         } else if let State::Authenticating(auth_state) = state {

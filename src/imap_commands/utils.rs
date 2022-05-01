@@ -1,5 +1,6 @@
 use color_eyre::eyre::eyre;
 use futures::TryStreamExt;
+use maildir::Maildir;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::path::Path;
@@ -8,8 +9,8 @@ use tokio_stream::wrappers::LinesStream;
 
 use tokio::io::{AsyncBufReadExt, BufReader};
 
-pub async fn get_uid_for_folder(path: &Path) -> color_eyre::eyre::Result<u32> {
-    let uid_file = path.join(".current_uid");
+pub async fn get_uid_for_folder(maildir: Maildir) -> color_eyre::eyre::Result<u32> {
+    let uid_file = maildir.path().join(".current_uid");
     if uid_file.exists() {
         let file = File::open(uid_file).await?;
         let buf = BufReader::new(file);
@@ -20,9 +21,14 @@ pub async fn get_uid_for_folder(path: &Path) -> color_eyre::eyre::Result<u32> {
             .map(|x| x.parse::<u32>())
             .collect();
         return lines[0]
-            .clone().map_err(|_| eyre!("failed to parse to number"));
+            .clone()
+            .map_err(|_| eyre!("failed to parse to number"));
     }
-    Ok(0)
+
+    // If we have messages use those as fallback
+    let current_last_id: u32 = maildir.count_cur().try_into()?;
+    let new_last_id: u32 = maildir.count_cur().try_into()?;
+    Ok(current_last_id + new_last_id)
 }
 
 pub async fn get_flags(path: &Path) -> std::io::Result<Vec<String>> {

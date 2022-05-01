@@ -45,18 +45,18 @@ impl DataCommand<'_> {
                 write_lock.data = Some(line.to_string());
             }
             if line == "." {
-                let receivers = if let Some(receivers) = write_lock.receivers.clone() {
-                    receivers
+                let receipts = if let Some(receipts) = write_lock.receipts.clone() {
+                    receipts
                 } else {
-                    color_eyre::eyre::bail!("No receivers")
+                    color_eyre::eyre::bail!("No receipts")
                 };
                 write_lock.state = State::NotAuthenticated;
-                for receiver in receivers {
+                for receipt in receipts {
                     let mut folder = "INBOX".to_string();
                     folder.insert(0, '.');
                     folder.remove_matches('"');
                     let mailbox_path = Path::new(&config.mail.maildir_folders)
-                        .join(receiver)
+                        .join(receipt)
                         .join(folder.clone());
                     let maildir = Maildir::from(mailbox_path.clone());
                     if !mailbox_path.exists() {

@@ -26,6 +26,7 @@ mod data;
 mod ehlo;
 mod mail;
 mod noop;
+mod parsers;
 mod quit;
 mod rcpt;
 
@@ -165,10 +166,10 @@ impl Data {
                         return Ok(true);
                     }
                     Commands::MAILFROM => {
-                        Mail.exec(lines, &command_data).await?;
+                        Mail { data: self }.exec(lines, &command_data).await?;
                     }
                     Commands::RCPTTO => {
-                        Rcpt.exec(lines, &command_data).await?;
+                        Rcpt { data: self }.exec(lines, &command_data).await?;
                     }
                     Commands::DATA => {
                         DataCommand { data: self }.exec(lines).await?;

@@ -52,9 +52,7 @@ impl DataCommand<'_> {
                 };
                 write_lock.state = State::NotAuthenticated;
                 for receipt in receipts {
-                    let mut folder = "INBOX".to_string();
-                    folder.insert(0, '.');
-                    folder.remove_matches('"');
+                    let folder = "INBOX".to_string();
                     let mailbox_path = Path::new(&config.mail.maildir_folders)
                         .join(receipt)
                         .join(folder.clone());

@@ -70,6 +70,7 @@ impl DataCommand<'_> {
                         color_eyre::eyre::bail!("No data")
                     };
                     maildir.store_new(data.as_bytes())?;
+                    // TODO cleanup after we are done
                     lines.send(String::from("250 OK")).await?;
                 }
             }

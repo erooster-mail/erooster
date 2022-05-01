@@ -13,7 +13,7 @@ pub fn localpart_arguments(input: &str) -> Res<Vec<&str>> {
     println!("localpart_arguments Input: {}", input);
     context(
         "localpart_arguments",
-        delimited(tag("<"), many0(take_while1(|c: char| c != ',')), tag(">")),
+        delimited(tag("<"), take_while1(|c: char| c != ','), tag(">")),
     )(input)
     .map(|(x, y)| (x, y))
 }

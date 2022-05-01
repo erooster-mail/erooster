@@ -77,7 +77,7 @@ where
     lines
         .feed(format!("* OK [UIDVALIDITY {}] UIDs valid", timestamp))
         .await?;
-    let current_uid = get_uid_for_folder(maildir).await?;
+    let current_uid = get_uid_for_folder(&maildir)?;
     lines
         .feed(format!("* OK [UIDNEXT {}] Predicted next UID", current_uid,))
         .await?;

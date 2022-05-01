@@ -1,11 +1,18 @@
 use crate::{
     config::Config,
-    imap_commands::{utils::add_flag, CommandData, Data},
+    imap_commands::{
+        utils::{add_flag, get_uid_for_folder},
+        CommandData, Data,
+    },
     imap_servers::state::{Access, State},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use maildir::Maildir;
-use std::{path::Path, sync::Arc};
+use std::{
+    path::Path,
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 pub struct Select<'a> {
     pub data: &'a Data,
@@ -63,11 +70,16 @@ where
     // TODO UIDNEXT and UIDVALIDITY
     let count = maildir.count_cur() + maildir.count_new();
     lines.feed(format!("* {} EXISTS", count)).await?;
+    let current_time = SystemTime::now();
+    let unix_timestamp = current_time.duration_since(UNIX_EPOCH)?;
+    #[allow(clippy::cast_possible_truncation)]
+    let timestamp = unix_timestamp.as_millis() as u32;
     lines
-        .feed(String::from("* OK [UIDVALIDITY 3857529045] UIDs valid"))
+        .feed(format!("* OK [UIDVALIDITY {}] UIDs valid", timestamp))
         .await?;
+    let current_uid = get_uid_for_folder(maildir.path()).await?;
     lines
-        .feed(String::from("* OK [UIDNEXT 4392] Predicted next UID"))
+        .feed(format!("* OK [UIDNEXT {}] Predicted next UID", current_uid,))
         .await?;
     lines
         .feed(String::from(

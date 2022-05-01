@@ -1,3 +1,4 @@
+use color_eyre::eyre::eyre;
 use futures::TryStreamExt;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
@@ -6,6 +7,23 @@ use tokio::fs::File;
 use tokio_stream::wrappers::LinesStream;
 
 use tokio::io::{AsyncBufReadExt, BufReader};
+
+pub async fn get_uid_for_folder(path: &Path) -> color_eyre::eyre::Result<u32> {
+    let uid_file = path.join(".current_uid");
+    if uid_file.exists() {
+        let file = File::open(uid_file).await?;
+        let buf = BufReader::new(file);
+        let lines: Vec<_> = LinesStream::new(buf.lines())
+            .try_collect::<Vec<String>>()
+            .await?
+            .iter()
+            .map(|x| x.parse::<u32>())
+            .collect();
+        return lines[0]
+            .clone().map_err(|_| eyre!("failed to parse to number"));
+    }
+    Ok(0)
+}
 
 pub async fn get_flags(path: &Path) -> std::io::Result<Vec<String>> {
     let flags_file = path.join(".erooster_folder_flags");

@@ -32,6 +32,9 @@ pub(crate) mod imap_commands;
 pub mod line_codec;
 pub(crate) mod smtp_commands;
 
+/// The database logic of the server
+pub mod database;
+
 /// The core server logic for the imapserver.
 /// This is the tls and non tls variant of the imapserver.
 pub mod imap_servers;

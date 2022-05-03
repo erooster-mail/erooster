@@ -33,7 +33,10 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, warn};
 
-pub mod utils;
+#[cfg(feature = "postgres")]
+use crate::database::postgres::Postgres;
+#[cfg(feature = "sqlite")]
+use crate::database::sqlite::Sqlite;
 
 pub mod auth;
 pub mod capability;
@@ -50,6 +53,7 @@ mod select;
 mod subscribe;
 mod uid;
 mod unsubscribe;
+pub mod utils;
 
 #[derive(Debug)]
 pub struct Data {
@@ -165,6 +169,8 @@ impl Data {
         &self,
         lines: &mut S,
         config: Arc<Config>,
+        #[cfg(feature = "postgres")] database: Arc<Postgres>,
+        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
         line: String,
     ) -> color_eyre::eyre::Result<bool>
     where
@@ -185,7 +191,7 @@ impl Data {
                 data: self,
                 auth_data: &line,
             }
-            .plain(lines, &command_data)
+            .plain(lines, database, &command_data)
             .await?;
             // We are done here
             return Ok(false);
@@ -224,7 +230,7 @@ impl Data {
                             data: self,
                             auth_data,
                         }
-                        .exec(lines, config, &command_data)
+                        .exec(lines, database, &command_data)
                         .await?;
                     }
                     Commands::List => {

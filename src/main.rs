@@ -35,6 +35,7 @@ use std::{path::Path, sync::Arc};
 use clap::Parser;
 use color_eyre::eyre::Result;
 use erooster::config::Config;
+use erooster::database::get_database;
 use tokio::signal;
 use tracing::{error, info};
 
@@ -61,8 +62,9 @@ async fn main() -> Result<()> {
         error!("No config file found. Please follow the readme.");
         color_eyre::eyre::bail!("No config file found");
     };
-    erooster::imap_servers::start(Arc::clone(&config))?;
-    erooster::smtp_servers::start(config)?;
+    let database = Arc::new(get_database(Arc::clone(&config)));
+    erooster::imap_servers::start(Arc::clone(&config), Arc::clone(&database))?;
+    erooster::smtp_servers::start(config, database)?;
 
     match signal::ctrl_c().await {
         Ok(()) => {}

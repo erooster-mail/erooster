@@ -1,4 +1,4 @@
-use std::{sync::Arc, net::SocketAddr};
+use std::{net::SocketAddr, sync::Arc};
 
 use async_trait::async_trait;
 use futures::{channel::mpsc, SinkExt, StreamExt};
@@ -22,6 +22,11 @@ use crate::{
     line_codec::LinesCodec,
 };
 
+#[cfg(feature = "postgres")]
+use crate::database::postgres::Postgres;
+#[cfg(feature = "sqlite")]
+use crate::database::sqlite::Sqlite;
+
 /// An unencrypted imap Server
 pub struct Unencrypted;
 
@@ -29,6 +34,8 @@ pub struct Unencrypted;
 impl Server for Unencrypted {
     async fn run(
         config: Arc<Config>,
+        #[cfg(feature = "postgres")] database: Arc<Postgres>,
+        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
         mut _file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()> {
         let addr: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
@@ -48,6 +55,7 @@ impl Server for Unencrypted {
             debug!("[IMAP] Got new peer: {}", peer);
 
             let config = Arc::clone(&config);
+            let database = Arc::clone(&database);
             tokio::spawn(async move {
                 let lines = Framed::new(tcp_stream, LinesCodec::new());
                 let (mut lines_sender, mut lines_reader) = lines.split();
@@ -76,7 +84,9 @@ impl Server for Unencrypted {
 
                     // TODO make sure to handle IDLE different as it needs us to stream lines
                     // TODO pass lines and make it possible to not need new lines in responds but instead directly use `lines.send`
-                    let response = data.parse(&mut tx, Arc::clone(&config), line).await;
+                    let response = data
+                        .parse(&mut tx, Arc::clone(&config), Arc::clone(&database), line)
+                        .await;
 
                     match response {
                         Ok(response) => {

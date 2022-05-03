@@ -21,6 +21,11 @@ use crate::{
     smtp_servers::state::{AuthState, Connection, State},
 };
 
+#[cfg(feature = "postgres")]
+use crate::database::postgres::Postgres;
+#[cfg(feature = "sqlite")]
+use crate::database::sqlite::Sqlite;
+
 mod auth;
 mod data;
 mod ehlo;
@@ -113,6 +118,8 @@ impl Data {
         &self,
         lines: &mut S,
         config: Arc<Config>,
+        #[cfg(feature = "postgres")] database: Arc<Postgres>,
+        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
         line: String,
     ) -> color_eyre::eyre::Result<bool>
     where
@@ -134,7 +141,7 @@ impl Data {
                     Auth { data: self }.username(lines, &line).await?;
                 }
                 AuthState::Password(_) => {
-                    Auth { data: self }.password(lines, &line).await?;
+                    Auth { data: self }.password(lines, database, &line).await?;
                 }
             }
             // We are done here

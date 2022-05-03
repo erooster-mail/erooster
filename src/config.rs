@@ -9,6 +9,19 @@ pub struct Config {
     pub mail: Mail,
     /// IP the server should listen on instead of any
     pub listen_ips: Option<Vec<String>>,
+    /// Configurations specific to the Database
+    pub database: Database,
+}
+
+/// Configurations specific to the Database
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Database {
+    /// Path to the sqlite db
+    #[cfg(feature = "sqlite")]
+    pub sqlite_path: String,
+    /// Connection string for the postgres database
+    #[cfg(feature = "postgres")]
+    pub postgres_url: String,
 }
 
 /// Configurations specific to the TLS part

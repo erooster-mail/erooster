@@ -6,6 +6,11 @@ use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{path::Path, sync::Arc};
 use tokio::sync::broadcast;
 
+#[cfg(feature = "postgres")]
+use crate::database::postgres::Postgres;
+#[cfg(feature = "sqlite")]
+use crate::database::sqlite::Sqlite;
+
 pub(crate) mod encrypted;
 pub(crate) mod state;
 pub(crate) mod unencrypted;
@@ -20,6 +25,8 @@ pub trait Server {
     /// Start the server
     async fn run(
         config: Arc<Config>,
+        #[cfg(feature = "postgres")] database: Arc<Postgres>,
+        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
         file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()>;
 }
@@ -29,7 +36,11 @@ pub trait Server {
 /// # Errors
 ///
 /// Returns an error if the server startup fails
-pub fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
+pub fn start(
+    config: Arc<Config>,
+    #[cfg(feature = "postgres")] database: Arc<Postgres>,
+    #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
+) -> color_eyre::eyre::Result<()> {
     let (tx, _rx) = broadcast::channel(1);
     let tx_clone = tx.clone();
     let mut watcher = RecommendedWatcher::new(move |res: notify::Result<Event>| {
@@ -49,14 +60,23 @@ pub fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
     )?;
 
     let config_clone = Arc::clone(&config);
+    let db_clone = Arc::clone(&database);
     let tx_clone2 = tx_clone.clone();
     tokio::spawn(async move {
-        if let Err(e) = unencrypted::Unencrypted::run(Arc::clone(&config_clone), tx_clone).await {
+        if let Err(e) = unencrypted::Unencrypted::run(
+            Arc::clone(&config_clone),
+            Arc::clone(&db_clone),
+            tx_clone,
+        )
+        .await
+        {
             panic!("Unable to start server: {:?}", e);
         }
     });
     tokio::spawn(async move {
-        if let Err(e) = encrypted::Encrypted::run(Arc::clone(&config), tx_clone2).await {
+        if let Err(e) =
+            encrypted::Encrypted::run(Arc::clone(&config), Arc::clone(&database), tx_clone2).await
+        {
             panic!("Unable to start TLS server: {:?}", e);
         }
     });

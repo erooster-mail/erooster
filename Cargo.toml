@@ -29,11 +29,17 @@ serde_yaml = "0.8"
 clap = { version = "3.1.6", features = ["derive", "color", "suggestions","env"] }
 notify = "5.0.0-pre.13"
 const_format = "0.2.22"
+sqlx = { version = "0.5", features = [ "runtime-tokio-rustls"] }
 
 [dependencies.maildir]
 version = "0.6.1"
 #git = "https://github.com/soywod/maildir"
 #rev = "179625c3cc15212fb26eca5b819f7fe0d6f802e1"
+
+[features]
+default = ["postgres"]
+postgres = ["sqlx/postgres"]
+sqlite = ["sqlx/sqlite"]
 
 #[profile.release]
 #debug = true

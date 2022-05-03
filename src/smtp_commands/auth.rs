@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use simdutf8::compat::from_utf8;
 
@@ -5,6 +7,11 @@ use crate::{
     smtp_commands::{CommandData, Data},
     smtp_servers::state::{AuthState, State},
 };
+
+#[cfg(feature = "postgres")]
+use crate::database::postgres::Postgres;
+#[cfg(feature = "sqlite")]
+use crate::database::sqlite::Sqlite;
 
 pub struct Auth<'a> {
     pub data: &'a Data,
@@ -68,7 +75,13 @@ impl Auth<'_> {
         Ok(())
     }
 
-    pub async fn password<S>(&self, lines: &mut S, line: &str) -> color_eyre::eyre::Result<()>
+    pub async fn password<S>(
+        &self,
+        lines: &mut S,
+        #[cfg(feature = "postgres")] database: Arc<Postgres>,
+        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
+        line: &str,
+    ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {

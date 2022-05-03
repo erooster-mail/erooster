@@ -23,6 +23,11 @@ use crate::{
     smtp_servers::{send_capabilities, state::Connection},
 };
 
+#[cfg(feature = "postgres")]
+use crate::database::postgres::Postgres;
+#[cfg(feature = "sqlite")]
+use crate::database::sqlite::Sqlite;
+
 /// An encrypted smtp Server
 pub struct Encrypted;
 
@@ -61,7 +66,11 @@ impl Encrypted {
     /// # Errors
     ///
     /// Returns an error if the cert setup fails
-    pub(crate) async fn run(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
+    pub(crate) async fn run(
+        config: Arc<Config>,
+        #[cfg(feature = "postgres")] database: Arc<Postgres>,
+        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
+    ) -> color_eyre::eyre::Result<()> {
         // Load SSL Keys
         let certs = Encrypted::load_certs(Path::new(&config.tls.cert_path))?;
         let key = Encrypted::load_key(Path::new(&config.tls.key_path))?;
@@ -97,6 +106,7 @@ impl Encrypted {
 
             // We need to clone these as we move into a new thread
             let config = Arc::clone(&config);
+            let database = Arc::clone(&database);
 
             // Start talking with new peer on new thread
             let acceptor = acceptor.clone();
@@ -138,7 +148,14 @@ impl Encrypted {
                             // TODO make sure to handle IDLE different as it needs us to stream lines
 
                             {
-                                let close = data.parse(&mut tx, Arc::clone(&config), line).await;
+                                let close = data
+                                    .parse(
+                                        &mut tx,
+                                        Arc::clone(&config),
+                                        Arc::clone(&database),
+                                        line,
+                                    )
+                                    .await;
                                 match close {
                                     Ok(close) => {
                                         // Cleanup timeout managers

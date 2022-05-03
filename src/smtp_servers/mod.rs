@@ -4,6 +4,11 @@ use futures::{channel::mpsc::SendError, Sink, SinkExt};
 
 use crate::config::Config;
 
+#[cfg(feature = "postgres")]
+use crate::database::postgres::Postgres;
+#[cfg(feature = "sqlite")]
+use crate::database::sqlite::Sqlite;
+
 pub(crate) mod encrypted;
 pub(crate) mod state;
 // TODO make this only pub for benches and tests
@@ -28,15 +33,23 @@ where
 /// # Errors
 ///
 /// Returns an error if the server startup fails
-pub fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
+pub fn start(
+    config: Arc<Config>,
+    #[cfg(feature = "postgres")] database: Arc<Postgres>,
+    #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
+) -> color_eyre::eyre::Result<()> {
     let config_clone = Arc::clone(&config);
+    let db_clone = Arc::clone(&database);
     tokio::spawn(async move {
-        if let Err(e) = unencrypted::Unencrypted::run(Arc::clone(&config_clone)).await {
+        if let Err(e) =
+            unencrypted::Unencrypted::run(Arc::clone(&config_clone), Arc::clone(&db_clone)).await
+        {
             panic!("Unable to start server: {:?}", e);
         }
     });
     tokio::spawn(async move {
-        if let Err(e) = encrypted::Encrypted::run(Arc::clone(&config)).await {
+        if let Err(e) = encrypted::Encrypted::run(Arc::clone(&config), Arc::clone(&database)).await
+        {
             panic!("Unable to start TLS server: {:?}", e);
         }
     });

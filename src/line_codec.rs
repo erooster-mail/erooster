@@ -1,8 +1,8 @@
 use bytes::{Buf, BufMut, BytesMut};
 use simdutf8::compat::from_utf8;
-use tracing::debug;
 use std::{cmp, fmt, io, str, usize};
 use tokio_util::codec::{Decoder, Encoder};
+use tracing::debug;
 
 /// A simple [`Decoder`] and [`Encoder`] implementation that splits up data into lines.
 ///
@@ -37,6 +37,7 @@ impl LinesCodec {
     /// for information on why this could be a potential security risk.
     ///
     /// [`new_with_max_length`]: crate::codec::LinesCodec::new_with_max_length()
+    #[must_use]
     pub const fn new() -> LinesCodec {
         LinesCodec {
             next_index: 0,
@@ -64,6 +65,7 @@ impl LinesCodec {
     ///
     /// [`LinesCodecError`]: crate::codec::LinesCodecError
     #[allow(dead_code)]
+    #[must_use]
     pub const fn new_with_max_length(max_length: usize) -> Self {
         LinesCodec {
             max_length,
@@ -87,6 +89,7 @@ impl LinesCodec {
     /// assert_eq!(codec.max_length(), 256);
     /// ```
     #[allow(dead_code)]
+    #[must_use]
     pub const fn max_length(&self) -> usize {
         self.max_length
     }

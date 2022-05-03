@@ -34,6 +34,11 @@ use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, info};
 
+#[cfg(feature = "postgres")]
+use crate::database::postgres::Postgres;
+#[cfg(feature = "sqlite")]
+use crate::database::sqlite::Sqlite;
+
 /// An encrypted imap Server
 pub struct Encrypted;
 
@@ -80,6 +85,8 @@ impl Server for Encrypted {
     /// Returns an error if the cert setup fails
     async fn run(
         config: Arc<Config>,
+        #[cfg(feature = "postgres")] database: Arc<Postgres>,
+        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
         file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()> {
         // Load SSL Keys
@@ -120,6 +127,7 @@ impl Server for Encrypted {
 
             // We need to clone these as we move into a new thread
             let config = Arc::clone(&config);
+            let database = Arc::clone(&database);
             let file_watcher = file_watcher.clone();
 
             // Start talking with new peer on new thread
@@ -181,7 +189,14 @@ impl Server for Encrypted {
                             // TODO make sure to handle IDLE different as it needs us to stream lines
 
                             {
-                                let close = data.parse(&mut tx, Arc::clone(&config), line).await;
+                                let close = data
+                                    .parse(
+                                        &mut tx,
+                                        Arc::clone(&config),
+                                        Arc::clone(&database),
+                                        line,
+                                    )
+                                    .await;
                                 match close {
                                     Ok(close) => {
                                         // Cleanup timeout managers

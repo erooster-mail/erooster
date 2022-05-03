@@ -7,14 +7,17 @@ use tokio::runtime;
 use tokio_util::codec::Framed;
 use tracing::{error, info};
 
+// Warning: This seems to fail on windows but works on linux fine
 async fn login() {
     let stream = TcpStream::connect("127.0.0.1:25").await.unwrap();
 
     let stream_codec = Framed::new(stream, LinesCodec::new());
     let (mut sender, mut reader) = stream_codec.split();
     sender.send(String::from("EHLO localhost")).await;
-    let resp = reader.next().await;
-    let resp = reader.next().await;
+    let resp = reader.next().await.unwrap().unwrap();
+    assert_eq!(resp, String::from("220 localhost ESMTP Erooster"));
+    let resp = reader.next().await.unwrap().unwrap();
+    assert_eq!(resp, String::from("250-localhost"));
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {

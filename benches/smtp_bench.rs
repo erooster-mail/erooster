@@ -17,6 +17,7 @@ fn login() {
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
+    tracing_subscriber::fmt::init();
     c.bench_function("login", |b| {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.spawn(async {
@@ -34,8 +35,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             if let Err(e) = erooster::smtp_servers::unencrypted::Unencrypted::run(config).await {
                 panic!("Unable to start server: {:?}", e);
             }
-            thread::sleep(Duration::from_millis(500));
         });
+        thread::sleep(Duration::from_millis(500));
         b.iter(|| login())
     });
 }

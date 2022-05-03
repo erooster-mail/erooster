@@ -18,6 +18,15 @@ async fn login() {
     assert_eq!(resp, String::from("220 localhost ESMTP Erooster"));
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("250-localhost"));
+    sender.send(String::from("AUTH LOGIN")).await;
+    let resp = reader.next().await.unwrap().unwrap();
+    assert_eq!(resp, String::from("334 VXNlcm5hbWU6"));
+    sender.send(String::from("Ymx1Yg==")).await;
+    let resp = reader.next().await.unwrap().unwrap();
+    assert_eq!(resp, String::from("334 UGFzc3dvcmQ6"));
+    sender.send(String::from("Ymx1Yg==")).await;
+    let resp = reader.next().await.unwrap().unwrap();
+    assert_eq!(resp, String::from("235 ok"));
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {

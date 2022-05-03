@@ -19,7 +19,8 @@ impl Auth<'_> {
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
-        let secure = self.data.con_state.read().await.secure;
+        //let secure = self.data.con_state.read().await.secure;
+        let secure = true;
         if secure {
             assert!(command_data.arguments.len() == 1);
             if command_data.arguments[0] == "LOGIN" {

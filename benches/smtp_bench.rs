@@ -17,7 +17,7 @@ fn login() {
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
-    tracing_subscriber::fmt::init();
+    //tracing_subscriber::fmt::init();
     c.bench_function("login", |b| {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.spawn(async {

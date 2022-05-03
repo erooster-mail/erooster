@@ -8,7 +8,6 @@ use std::{thread, time::Duration};
 use tracing::{error, info};
 
 async fn login() {
-    tracing_subscriber::fmt::init();
     info!("Starting ERooster Server");
     let config = if Path::new("./config.yml").exists() {
         Arc::new(Config::load("./config.yml").await.unwrap())

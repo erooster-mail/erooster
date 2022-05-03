@@ -7,24 +7,7 @@ use std::sync::Arc;
 use std::{thread, time::Duration};
 use tracing::{error, info};
 
-async fn login() {
-    info!("Starting ERooster Server");
-    let config = if Path::new("./config.yml").exists() {
-        Arc::new(Config::load("./config.yml").await.unwrap())
-    } else if Path::new("/etc/erooster/config.yml").exists() {
-        Arc::new(Config::load("/etc/erooster/config.yml").await.unwrap())
-    } else if Path::new("/etc/erooster/config.yaml").exists() {
-        Arc::new(Config::load("/etc/erooster/config.yaml").await.unwrap())
-    } else {
-        error!("No config file found. Please follow the readme.");
-        return;
-    };
-    tokio::spawn(async {
-        if let Err(e) = erooster::smtp_servers::unencrypted::Unencrypted::run(config).await {
-            panic!("Unable to start server: {:?}", e);
-        }
-    });
-    thread::sleep(Duration::from_millis(500));
+fn login() {
     let mut stream = TcpStream::connect("127.0.0.1:25").unwrap();
 
     //TODO write a message
@@ -36,7 +19,24 @@ async fn login() {
 pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("login", |b| {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        b.to_async(rt).iter(|| login())
+        rt.spawn(async {
+            info!("Starting ERooster Server");
+            let config = if Path::new("./config.yml").exists() {
+                Arc::new(Config::load("./config.yml").await.unwrap())
+            } else if Path::new("/etc/erooster/config.yml").exists() {
+                Arc::new(Config::load("/etc/erooster/config.yml").await.unwrap())
+            } else if Path::new("/etc/erooster/config.yaml").exists() {
+                Arc::new(Config::load("/etc/erooster/config.yaml").await.unwrap())
+            } else {
+                error!("No config file found. Please follow the readme.");
+                return;
+            };
+            if let Err(e) = erooster::smtp_servers::unencrypted::Unencrypted::run(config).await {
+                panic!("Unable to start server: {:?}", e);
+            }
+            thread::sleep(Duration::from_millis(500));
+        });
+        b.iter(|| login())
     });
 }
 

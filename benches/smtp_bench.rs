@@ -1,37 +1,38 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use std::net::TcpStream;
 use erooster::config::Config;
-use std::sync::Arc;
-use std::path::Path;
-use tokio::runtime::Runtime;
 use std::io::{Read, Write};
-use tracing::{info,error};
+use std::net::TcpStream;
+use std::path::Path;
+use std::sync::Arc;
+use tracing::{error, info};
+
+async fn login() {
+    info!("Starting ERooster Server");
+    let config = if Path::new("./config.yml").exists() {
+        Arc::new(Config::load("./config.yml").await.unwrap())
+    } else if Path::new("/etc/erooster/config.yml").exists() {
+        Arc::new(Config::load("/etc/erooster/config.yml").await.unwrap())
+    } else if Path::new("/etc/erooster/config.yaml").exists() {
+        Arc::new(Config::load("/etc/erooster/config.yaml").await.unwrap())
+    } else {
+        error!("No config file found. Please follow the readme.");
+        return;
+    };
+    if let Err(e) = erooster::smtp_servers::unencrypted::Unencrypted::run(config).await {
+        panic!("Unable to start server: {:?}", e);
+    }
+    let mut stream = TcpStream::connect("127.0.0.1:25").unwrap();
+
+    //TODO write a message
+    stream.write(&[1]).unwrap();
+    //TODO verify and continue
+    stream.read(&mut [0; 128]).unwrap();
+}
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("login", |b| {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            info!("Starting ERooster Server");
-            let config = if Path::new("./config.yml").exists() {
-                Arc::new(Config::load("./config.yml").await.unwrap())
-            } else if Path::new("/etc/erooster/config.yml").exists() {
-                Arc::new(Config::load("/etc/erooster/config.yml").await.unwrap())
-            } else if Path::new("/etc/erooster/config.yaml").exists() {
-                Arc::new(Config::load("/etc/erooster/config.yaml").await.unwrap())
-            } else {
-                error!("No config file found. Please follow the readme.");
-                return;
-            };
-            erooster::smtp_servers::start(config).unwrap();
-        });
-        b.iter(|| {
-            let mut stream = TcpStream::connect("127.0.0.1:25").unwrap();
-
-            //TODO write a message
-            stream.write(&[1]).unwrap();
-            //TODO verify and continue
-            stream.read(&mut [0; 128]).unwrap();
-        })
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        b.to_async(rt).iter(|| login())
     });
 }
 

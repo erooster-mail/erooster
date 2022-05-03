@@ -6,7 +6,7 @@ use crate::config::Config;
 
 pub(crate) mod encrypted;
 pub(crate) mod state;
-pub(crate) mod unencrypted;
+pub mod unencrypted;
 
 pub(crate) async fn send_capabilities<S>(
     config: Arc<Config>,

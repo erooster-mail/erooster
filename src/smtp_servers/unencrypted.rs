@@ -20,7 +20,7 @@ use crate::{
 pub struct Unencrypted;
 
 impl Unencrypted {
-    pub(crate) async fn run(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
+    pub async fn run(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         let addr: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
                 .iter()

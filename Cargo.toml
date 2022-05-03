@@ -39,7 +39,7 @@ version = "0.6.1"
 #debug = true
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = {version = "0.3", features = ["async_tokio"]}
 
 [[bench]]
 name = "smtp_bench"

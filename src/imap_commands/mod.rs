@@ -303,61 +303,61 @@ impl Data {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::net::IpAddr;
-    use std::net::Ipv4Addr;
+    // use super::*;
+    // use std::net::IpAddr;
+    // use std::net::Ipv4Addr;
 
-    #[test]
-    fn test_parsing_imaptag() {
-        assert_eq!(imaptag("abcd CAPABILITY"), Ok(("CAPABILITY", "abcd")));
-    }
+    // #[test]
+    // fn test_parsing_imaptag() {
+    //     assert_eq!(imaptag("abcd CAPABILITY"), Ok(("CAPABILITY", "abcd")));
+    // }
 
-    #[test]
-    fn test_parsing_command() {
-        assert_eq!(command("CAPABILITY"), Ok(("", Ok(Commands::Capability))));
-        assert_eq!(command("LOGOUT"), Ok(("", Ok(Commands::Logout))));
-    }
+    // #[test]
+    // fn test_parsing_command() {
+    //     assert_eq!(command("CAPABILITY"), Ok(("", Ok(Commands::Capability))));
+    //     assert_eq!(command("LOGOUT"), Ok(("", Ok(Commands::Logout))));
+    // }
 
-    #[test]
-    fn test_parsing_arguments() {
-        assert_eq!(
-            arguments("PLAIN abd=="),
-            Ok(("", vec![String::from("PLAIN"), String::from("abd==")]))
-        );
-        assert_eq!(arguments("PLAIN"), Ok(("", vec![String::from("PLAIN")])));
-    }
+    // #[test]
+    // fn test_parsing_arguments() {
+    //     assert_eq!(
+    //         arguments("PLAIN abd=="),
+    //         Ok(("", vec![String::from("PLAIN"), String::from("abd==")]))
+    //     );
+    //     assert_eq!(arguments("PLAIN"), Ok(("", vec![String::from("PLAIN")])));
+    // }
 
-    #[test]
-    fn test_parsing_authenticate_command() {
-        let mut con_state = super::Connection::new(true);
-        let mut data = Data {
-            con_state: &mut con_state,
-        };
-        let result = data.parse_internal("a AUTHENTICATE PLAIN abcde");
-        assert!(result.is_ok());
-        assert!(data.command_data.is_some());
-        assert_eq!(
-            data.command_data.unwrap(),
-            CommandData {
-                tag: "a",
-                command: Commands::Authenticate,
-                arguments: vec![String::from("PLAIN"), String::from("abcde")],
-            }
-        );
+    // #[test]
+    // fn test_parsing_authenticate_command() {
+    //     let mut con_state = super::Connection::new(true);
+    //     let mut data = Data {
+    //         con_state: &mut con_state,
+    //     };
+    //     let result = data.parse_internal("a AUTHENTICATE PLAIN abcde");
+    //     assert!(result.is_ok());
+    //     assert!(data.command_data.is_some());
+    //     assert_eq!(
+    //         data.command_data.unwrap(),
+    //         CommandData {
+    //             tag: "a",
+    //             command: Commands::Authenticate,
+    //             arguments: vec![String::from("PLAIN"), String::from("abcde")],
+    //         }
+    //     );
 
-        data.command_data = None;
-        let result = data.parse_internal("a AUTHENTICATE PLAIN");
-        assert!(result.is_ok());
-        assert!(data.command_data.is_some());
-        assert_eq!(
-            data.command_data.unwrap(),
-            CommandData {
-                tag: "a",
-                command: Commands::Authenticate,
-                arguments: vec![String::from("PLAIN")],
-            }
-        );
-    }
+    //     data.command_data = None;
+    //     let result = data.parse_internal("a AUTHENTICATE PLAIN");
+    //     assert!(result.is_ok());
+    //     assert!(data.command_data.is_some());
+    //     assert_eq!(
+    //         data.command_data.unwrap(),
+    //         CommandData {
+    //             tag: "a",
+    //             command: Commands::Authenticate,
+    //             arguments: vec![String::from("PLAIN")],
+    //         }
+    //     );
+    // }
 
     // #[test]
     // fn test_parsing_capability_command() {
@@ -378,34 +378,34 @@ mod tests {
     //     );
     // }
 
-    #[test]
-    fn test_parsing_list_command() {
-        let mut con_state = super::Connection::new(true);
-        let mut data = Data {
-            con_state: &mut con_state,
-        };
-        let result = data.parse_internal("18 list \"\" \"*\"");
-        assert!(result.is_ok());
-        assert!(data.command_data.is_some());
-        assert_eq!(
-            data.command_data.unwrap(),
-            CommandData {
-                tag: "18",
-                command: Commands::List,
-                arguments: vec![String::from("\"\""), String::from("\"*\"")],
-            }
-        );
-        data.command_data = None;
-        let result = data.parse_internal("18 list \"\" \"\"");
-        assert!(result.is_ok());
-        assert!(data.command_data.is_some());
-        assert_eq!(
-            data.command_data.unwrap(),
-            CommandData {
-                tag: "18",
-                command: Commands::List,
-                arguments: vec![String::from("\"\""), String::from("\"\"")],
-            }
-        );
-    }
+    // #[test]
+    // fn test_parsing_list_command() {
+    //     let mut con_state = super::Connection::new(true);
+    //     let mut data = Data {
+    //         con_state: &mut con_state,
+    //     };
+    //     let result = data.parse_internal("18 list \"\" \"*\"");
+    //     assert!(result.is_ok());
+    //     assert!(data.command_data.is_some());
+    //     assert_eq!(
+    //         data.command_data.unwrap(),
+    //         CommandData {
+    //             tag: "18",
+    //             command: Commands::List,
+    //             arguments: vec![String::from("\"\""), String::from("\"*\"")],
+    //         }
+    //     );
+    //     data.command_data = None;
+    //     let result = data.parse_internal("18 list \"\" \"\"");
+    //     assert!(result.is_ok());
+    //     assert!(data.command_data.is_some());
+    //     assert_eq!(
+    //         data.command_data.unwrap(),
+    //         CommandData {
+    //             tag: "18",
+    //             command: Commands::List,
+    //             arguments: vec![String::from("\"\""), String::from("\"\"")],
+    //         }
+    //     );
+    // }
 }

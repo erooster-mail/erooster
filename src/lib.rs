@@ -27,7 +27,9 @@
 #![allow(clippy::missing_panics_doc)]
 
 pub(crate) mod imap_commands;
-pub(crate) mod line_codec;
+// TODO make this only pub for benches and tests
+#[allow(missing_docs)]
+pub mod line_codec;
 pub(crate) mod smtp_commands;
 
 /// The core server logic for the imapserver.

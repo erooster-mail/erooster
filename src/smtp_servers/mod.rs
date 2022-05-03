@@ -6,6 +6,8 @@ use crate::config::Config;
 
 pub(crate) mod encrypted;
 pub(crate) mod state;
+// TODO make this only pub for benches and tests
+#[allow(missing_docs)]
 pub mod unencrypted;
 
 pub(crate) async fn send_capabilities<S>(

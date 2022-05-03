@@ -1,25 +1,29 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use erooster::config::Config;
-use std::io::{Read, Write};
-use std::net::TcpStream;
-use std::path::Path;
-use std::sync::Arc;
-use std::{thread, time::Duration};
+use criterion::{criterion_group, criterion_main, Criterion};
+use erooster::{config::Config, line_codec::LinesCodec};
+use futures::{SinkExt, StreamExt};
+use std::{path::Path, sync::Arc, thread, time::Duration};
+use tokio::net::TcpStream;
+use tokio::runtime;
+use tokio_util::codec::Framed;
 use tracing::{error, info};
 
-fn login() {
-    let mut stream = TcpStream::connect("127.0.0.1:25").unwrap();
+async fn login() {
+    let stream = TcpStream::connect("127.0.0.1:25").await.unwrap();
 
-    //TODO write a message
-    stream.write(b"EHLO localhost").unwrap();
-    //TODO verify and continue
-    stream.read(&mut [0; 128]).unwrap();
+    let stream_codec = Framed::new(stream, LinesCodec::new());
+    let (mut sender, mut reader) = stream_codec.split();
+    sender.send(String::from("EHLO localhost")).await;
+    let resp = reader.next().await;
+    let resp = reader.next().await;
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     //tracing_subscriber::fmt::init();
     c.bench_function("login", |b| {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap();
         rt.spawn(async {
             info!("Starting ERooster Server");
             let config = if Path::new("./config.yml").exists() {
@@ -37,7 +41,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             }
         });
         thread::sleep(Duration::from_millis(500));
-        b.iter(|| login())
+        b.to_async(rt).iter(|| login())
     });
 }
 

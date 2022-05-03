@@ -4,7 +4,7 @@ use futures::{channel::mpsc, SinkExt, StreamExt};
 use tokio::{net::TcpListener, sync::RwLock};
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use crate::{
     config::Config,
@@ -20,6 +20,9 @@ use crate::{
 pub struct Unencrypted;
 
 impl Unencrypted {
+    // TODO make this only pub for benches and tests
+    #[allow(missing_docs)]
+    #[allow(clippy::missing_errors_doc)]
     pub async fn run(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         let addr: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
@@ -53,7 +56,9 @@ impl Unencrypted {
                 let (mut tx, mut rx) = mpsc::unbounded();
                 tokio::spawn(async move {
                     while let Some(res) = rx.next().await {
-                        lines_sender.send(res).await.unwrap();
+                        if let Err(e) = lines_sender.send(res).await {
+                            error!("[SMTP] Error sending response: {:?}", e);
+                        }
                     }
                 });
 
@@ -84,9 +89,11 @@ impl Unencrypted {
                         }
                         // We try a last time to do a graceful shutdown before closing
                         Err(e) => {
-                            tx.send(format!("500 This should not happen: {}", e))
-                                .await
-                                .unwrap();
+                            if let Err(e) =
+                                tx.send(format!("500 This should not happen: {}", e)).await
+                            {
+                                error!("[SMTP] Error sending response: {:?}", e);
+                            }
                             debug!("Closing connection");
                             break;
                         }

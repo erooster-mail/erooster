@@ -4,9 +4,11 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::Path;
 use std::sync::Arc;
+use std::{thread, time::Duration};
 use tracing::{error, info};
 
 async fn login() {
+    tracing_subscriber::fmt::init();
     info!("Starting ERooster Server");
     let config = if Path::new("./config.yml").exists() {
         Arc::new(Config::load("./config.yml").await.unwrap())
@@ -18,9 +20,12 @@ async fn login() {
         error!("No config file found. Please follow the readme.");
         return;
     };
-    if let Err(e) = erooster::smtp_servers::unencrypted::Unencrypted::run(config).await {
-        panic!("Unable to start server: {:?}", e);
-    }
+    tokio::spawn(async {
+        if let Err(e) = erooster::smtp_servers::unencrypted::Unencrypted::run(config).await {
+            panic!("Unable to start server: {:?}", e);
+        }
+    });
+    thread::sleep(Duration::from_millis(500));
     let mut stream = TcpStream::connect("127.0.0.1:25").unwrap();
 
     //TODO write a message

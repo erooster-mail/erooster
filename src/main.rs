@@ -50,7 +50,7 @@ async fn main() -> Result<()> {
     color_eyre::install()?;
     tracing_subscriber::fmt::init();
     let args = Args::parse();
-    info!("Starting ERooster Imap Server");
+    info!("Starting ERooster Server");
     let config = if Path::new(&args.config).exists() {
         Arc::new(Config::load(args.config).await?)
     } else if Path::new("/etc/erooster/config.yml").exists() {

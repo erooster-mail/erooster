@@ -38,5 +38,12 @@ version = "0.6.1"
 #[profile.release]
 #debug = true
 
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "smtp_bench"
+harness = false
+
 [profile.dev.package.backtrace]
 opt-level = 3

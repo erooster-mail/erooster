@@ -11,7 +11,7 @@ fn login() {
     let mut stream = TcpStream::connect("127.0.0.1:25").unwrap();
 
     //TODO write a message
-    stream.write(&[1]).unwrap();
+    stream.write(b"EHLO localhost").unwrap();
     //TODO verify and continue
     stream.read(&mut [0; 128]).unwrap();
 }

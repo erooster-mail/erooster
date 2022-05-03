@@ -14,6 +14,7 @@ use crate::{
         rename::Rename,
         select::{Examine, Select},
         subscribe::Subscribe,
+        uid::Uid,
         unsubscribe::Unsubscribe,
     },
     imap_servers::state::{Connection, State},
@@ -47,6 +48,7 @@ mod noop;
 mod rename;
 mod select;
 mod subscribe;
+mod uid;
 mod unsubscribe;
 
 #[derive(Debug)]
@@ -79,6 +81,7 @@ pub enum Commands {
     Unsubscribe,
     Close,
     Rename,
+    Uid,
 }
 
 impl TryFrom<&str> for Commands {
@@ -102,6 +105,7 @@ impl TryFrom<&str> for Commands {
             "unsubscribe" => Ok(Commands::Unsubscribe),
             "close" => Ok(Commands::Close),
             "rename" => Ok(Commands::Rename),
+            "uid" => Ok(Commands::Uid),
             _ => {
                 warn!("[IMAP] Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
@@ -278,6 +282,9 @@ impl Data {
                         Rename { data: self }
                             .exec(lines, &command_data, config)
                             .await?;
+                    }
+                    Commands::Uid => {
+                        Uid.exec(lines, &command_data, config).await?;
                     }
                 }
             }

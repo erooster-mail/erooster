@@ -6,3 +6,4 @@
 /maildir
 /flamegraph*.svg
 /perf.data*
+/db.sqlite

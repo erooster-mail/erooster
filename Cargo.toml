@@ -30,6 +30,8 @@ clap = { version = "3.1.6", features = ["derive", "color", "suggestions","env"] 
 notify = "5.0.0-pre.13"
 const_format = "0.2.22"
 sqlx = { version = "0.5", features = [ "runtime-tokio-rustls"] }
+argon2 = "0.3"
+rand_core = { version = "0.6", features = ["std"] }
 
 [dependencies.maildir]
 version = "0.6.1"

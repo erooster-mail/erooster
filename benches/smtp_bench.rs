@@ -1,4 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
+use erooster::database::get_database;
 use erooster::{config::Config, line_codec::LinesCodec};
 use futures::{SinkExt, StreamExt};
 use std::{path::Path, sync::Arc, thread, time::Duration};
@@ -50,7 +51,12 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 error!("No config file found. Please follow the readme.");
                 return;
             };
-            if let Err(e) = erooster::smtp_servers::unencrypted::Unencrypted::run(config).await {
+
+            let database = Arc::new(get_database(Arc::clone(&config)));
+
+            if let Err(e) =
+                erooster::smtp_servers::unencrypted::Unencrypted::run(config, database).await
+            {
                 panic!("Unable to start server: {:?}", e);
             }
         });

@@ -1,4 +1,4 @@
-use crate::database::DB;
+use crate::database::{Database, DB};
 use crate::{
     imap_commands::{CommandData, Data},
     imap_servers::state::State,
@@ -48,7 +48,15 @@ impl Authenticate<'_> {
                 assert!(auth_data_vec.len() == 2);
                 if auth_data_vec.len() == 2 {
                     let username = auth_data_vec[0];
-                    let _password = auth_data_vec[1];
+                    let password = auth_data_vec[1];
+
+                    let db_response = database.verify_user(username, password).await;
+                    if !db_response {
+                        lines
+                            .send(format!("{} NO Invalid user or password", command_data.tag))
+                            .await?;
+                        return Ok(());
+                    }
 
                     // TODO check against DB
                     {

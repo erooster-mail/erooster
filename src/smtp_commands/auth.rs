@@ -1,4 +1,4 @@
-use crate::database::DB;
+use crate::database::{Database, DB};
 use crate::{
     smtp_commands::{CommandData, Data},
     smtp_servers::state::{AuthState, State},
@@ -79,11 +79,27 @@ impl Auth<'_> {
         let bytes = base64::decode(line.as_bytes());
         match bytes {
             Ok(bytes) => {
-                let _password = from_utf8(&bytes)?;
+                let password = from_utf8(&bytes)?;
 
-                // TODO check if valid
                 {
                     let mut write_lock = self.data.con_state.write().await;
+                    if let State::Authenticating(AuthState::Password(username)) = &write_lock.state
+                    {
+                        let valid = database.verify_user(username, password).await;
+                        if !valid {
+                            write_lock.state = State::NotAuthenticated;
+                            lines
+                                .send(String::from(
+                                    "535 5.7.8  Authentication credentials invalid",
+                                ))
+                                .await?;
+                        }
+                    } else {
+                        write_lock.state = State::NotAuthenticated;
+                        lines
+                            .send(String::from("503 Bad sequence of commands"))
+                            .await?;
+                    }
                     if let State::Authenticating(AuthState::Password(username)) = &write_lock.state
                     {
                         write_lock.state = State::Authenticated(username.to_string());

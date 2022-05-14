@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
 use crate::{config::Config, database::Database};
+use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use rand_core::OsRng;
 use sqlx::PgPool;
 use tracing::error;
 
@@ -29,8 +31,50 @@ impl Database<sqlx::Postgres> for Postgres {
                 .fetch_one(self.get_pool())
                 .await;
 
-        // TODO hash password and compare
-        return false;
+        match hash {
+            Ok(hash) => {
+                let hash = hash.0;
+                match PasswordHash::new(&hash) {
+                    Ok(parsed_hash) => Argon2::default()
+                        .verify_password(password.as_bytes(), &parsed_hash)
+                        .is_ok(),
+                    Err(e) => {
+                        error!("[DB] Error verifying user: {}", e);
+                        false
+                    }
+                }
+            }
+            Err(e) => {
+                error!("[DB]Error verifying user: {}", e);
+                false
+            }
+        }
+    }
+
+    async fn change_password(
+        &self,
+        username: &str,
+        password: &str,
+    ) -> color_eyre::eyre::Result<()> {
+        let salt = SaltString::generate(&mut OsRng);
+        let argon2 = Argon2::default();
+        let password_hash = argon2
+            .hash_password(password.as_bytes(), &salt)?
+            .to_string();
+        sqlx::query("UPDATE users SET hash = ? WHERE username = ?")
+            .bind(password_hash)
+            .bind(username)
+            .execute(self.get_pool())
+            .await?;
+        Ok(())
+    }
+
+    async fn add_user(&self, username: &str) -> color_eyre::eyre::Result<()> {
+        sqlx::query("INSERT INTO users (username, hash) VALUES (?, NULL)")
+            .bind(username)
+            .execute(self.get_pool())
+            .await?;
+        Ok(())
     }
 
     async fn user_exists(&self, username: &str) -> bool {

@@ -10,9 +10,11 @@ pub mod postgres;
 #[cfg(feature = "sqlite")]
 pub mod sqlite;
 
+/// Wrapper to simplify the Database types
 #[cfg(feature = "postgres")]
 pub type DB = Arc<postgres::Postgres>;
 
+/// Wrapper to simplify the Database types
 #[cfg(feature = "sqlite")]
 pub type DB = Arc<sqlite::Sqlite>;
 
@@ -32,6 +34,13 @@ pub trait Database<S: sqlx::Database> {
 
     /// Checks if the user exists
     async fn user_exists(&self, username: &str) -> bool;
+
+    /// Saves a users password
+    async fn change_password(&self, username: &str, password: &str)
+        -> color_eyre::eyre::Result<()>;
+
+    /// Adds a new user without password
+    async fn add_user(&self, username: &str) -> color_eyre::eyre::Result<()>;
 }
 
 #[cfg(feature = "postgres")]

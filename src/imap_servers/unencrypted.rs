@@ -11,6 +11,7 @@ use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
 use tracing::{debug, info};
 
+use crate::database::DB;
 use crate::{
     config::Config,
     imap_commands::Data,
@@ -22,11 +23,6 @@ use crate::{
     line_codec::LinesCodec,
 };
 
-#[cfg(feature = "postgres")]
-use crate::database::postgres::Postgres;
-#[cfg(feature = "sqlite")]
-use crate::database::sqlite::Sqlite;
-
 /// An unencrypted imap Server
 pub struct Unencrypted;
 
@@ -34,8 +30,7 @@ pub struct Unencrypted;
 impl Server for Unencrypted {
     async fn run(
         config: Arc<Config>,
-        #[cfg(feature = "postgres")] database: Arc<Postgres>,
-        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
+        database: DB,
         mut _file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()> {
         let addr: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {

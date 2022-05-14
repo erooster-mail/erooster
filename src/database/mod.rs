@@ -1,7 +1,6 @@
-use std::sync::Arc;
-
 use crate::config::Config;
 use sqlx::Pool;
+use std::sync::Arc;
 
 /// Postgres specific database implementation
 #[cfg(feature = "postgres")]
@@ -11,7 +10,14 @@ pub mod postgres;
 #[cfg(feature = "sqlite")]
 pub mod sqlite;
 
+#[cfg(feature = "postgres")]
+pub type DB = Arc<postgres::Postgres>;
+
+#[cfg(feature = "sqlite")]
+pub type DB = Arc<sqlite::Sqlite>;
+
 /// A uniform interface for database access
+#[async_trait::async_trait]
 pub trait Database<S: sqlx::Database> {
     /// Creates the new database connection pool
     fn new(config: Arc<Config>) -> Self
@@ -20,6 +26,12 @@ pub trait Database<S: sqlx::Database> {
 
     /// Returns the database connection pool
     fn get_pool(&self) -> &Pool<S>;
+
+    /// Checks if the user and password are correct
+    async fn verify_user(&self, username: &str, password: &str) -> bool;
+
+    /// Checks if the user exists
+    async fn user_exists(&self, username: &str) -> bool;
 }
 
 #[cfg(feature = "postgres")]

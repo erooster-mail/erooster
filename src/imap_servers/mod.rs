@@ -1,15 +1,11 @@
 use crate::config::Config;
+use crate::database::DB;
 use crate::imap_commands::capability::get_capabilities;
 use async_trait::async_trait;
 use const_format::formatcp;
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{path::Path, sync::Arc};
 use tokio::sync::broadcast;
-
-#[cfg(feature = "postgres")]
-use crate::database::postgres::Postgres;
-#[cfg(feature = "sqlite")]
-use crate::database::sqlite::Sqlite;
 
 pub(crate) mod encrypted;
 pub(crate) mod state;
@@ -25,8 +21,7 @@ pub trait Server {
     /// Start the server
     async fn run(
         config: Arc<Config>,
-        #[cfg(feature = "postgres")] database: Arc<Postgres>,
-        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
+        database: DB,
         file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()>;
 }
@@ -36,11 +31,7 @@ pub trait Server {
 /// # Errors
 ///
 /// Returns an error if the server startup fails
-pub fn start(
-    config: Arc<Config>,
-    #[cfg(feature = "postgres")] database: Arc<Postgres>,
-    #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
-) -> color_eyre::eyre::Result<()> {
+pub fn start(config: Arc<Config>, database: DB) -> color_eyre::eyre::Result<()> {
     let (tx, _rx) = broadcast::channel(1);
     let tx_clone = tx.clone();
     let mut watcher = RecommendedWatcher::new(move |res: notify::Result<Event>| {

@@ -16,17 +16,13 @@ use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, info};
 
+use crate::database::DB;
 use crate::{
     config::Config,
     line_codec::LinesCodec,
     smtp_commands::Data,
     smtp_servers::{send_capabilities, state::Connection},
 };
-
-#[cfg(feature = "postgres")]
-use crate::database::postgres::Postgres;
-#[cfg(feature = "sqlite")]
-use crate::database::sqlite::Sqlite;
 
 /// An encrypted smtp Server
 pub struct Encrypted;
@@ -66,11 +62,7 @@ impl Encrypted {
     /// # Errors
     ///
     /// Returns an error if the cert setup fails
-    pub(crate) async fn run(
-        config: Arc<Config>,
-        #[cfg(feature = "postgres")] database: Arc<Postgres>,
-        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
-    ) -> color_eyre::eyre::Result<()> {
+    pub(crate) async fn run(config: Arc<Config>, database: DB) -> color_eyre::eyre::Result<()> {
         // Load SSL Keys
         let certs = Encrypted::load_certs(Path::new(&config.tls.cert_path))?;
         let key = Encrypted::load_key(Path::new(&config.tls.key_path))?;

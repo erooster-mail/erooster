@@ -1,13 +1,7 @@
-use std::sync::Arc;
-
-use futures::{channel::mpsc::SendError, Sink, SinkExt};
-
 use crate::config::Config;
-
-#[cfg(feature = "postgres")]
-use crate::database::postgres::Postgres;
-#[cfg(feature = "sqlite")]
-use crate::database::sqlite::Sqlite;
+use crate::database::DB;
+use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use std::sync::Arc;
 
 pub(crate) mod encrypted;
 pub(crate) mod state;
@@ -33,11 +27,7 @@ where
 /// # Errors
 ///
 /// Returns an error if the server startup fails
-pub fn start(
-    config: Arc<Config>,
-    #[cfg(feature = "postgres")] database: Arc<Postgres>,
-    #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
-) -> color_eyre::eyre::Result<()> {
+pub fn start(config: Arc<Config>, database: DB) -> color_eyre::eyre::Result<()> {
     let config_clone = Arc::clone(&config);
     let db_clone = Arc::clone(&database);
     tokio::spawn(async move {

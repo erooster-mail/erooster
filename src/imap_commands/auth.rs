@@ -1,16 +1,11 @@
+use crate::database::DB;
 use crate::{
     imap_commands::{CommandData, Data},
     imap_servers::state::State,
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use simdutf8::compat::from_utf8;
-use std::sync::Arc;
 use tracing::error;
-
-#[cfg(feature = "postgres")]
-use crate::database::postgres::Postgres;
-#[cfg(feature = "sqlite")]
-use crate::database::sqlite::Sqlite;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum AuthenticationMethod {
@@ -26,8 +21,7 @@ impl Authenticate<'_> {
     pub async fn plain<S>(
         &self,
         lines: &mut S,
-        #[cfg(feature = "postgres")] database: Arc<Postgres>,
-        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
+        database: DB,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -100,8 +94,7 @@ impl Authenticate<'_> {
     pub async fn exec<S>(
         &self,
         lines: &mut S,
-        #[cfg(feature = "postgres")] database: Arc<Postgres>,
-        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
+        database: DB,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where

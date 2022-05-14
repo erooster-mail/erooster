@@ -6,6 +6,7 @@ use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, info};
 
+use crate::database::DB;
 use crate::{
     config::Config,
     line_codec::LinesCodec,
@@ -16,11 +17,6 @@ use crate::{
     },
 };
 
-#[cfg(feature = "postgres")]
-use crate::database::postgres::Postgres;
-#[cfg(feature = "sqlite")]
-use crate::database::sqlite::Sqlite;
-
 /// An unencrypted smtp Server
 pub struct Unencrypted;
 
@@ -28,11 +24,7 @@ impl Unencrypted {
     // TODO make this only pub for benches and tests
     #[allow(missing_docs)]
     #[allow(clippy::missing_errors_doc)]
-    pub async fn run(
-        config: Arc<Config>,
-        #[cfg(feature = "postgres")] database: Arc<Postgres>,
-        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
-    ) -> color_eyre::eyre::Result<()> {
+    pub async fn run(config: Arc<Config>, database: DB) -> color_eyre::eyre::Result<()> {
         let addr: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
                 .iter()

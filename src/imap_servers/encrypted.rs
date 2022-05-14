@@ -1,3 +1,4 @@
+use crate::database::DB;
 use crate::{
     config::Config,
     imap_commands::Data,
@@ -33,11 +34,6 @@ use tokio_rustls::{
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, info};
-
-#[cfg(feature = "postgres")]
-use crate::database::postgres::Postgres;
-#[cfg(feature = "sqlite")]
-use crate::database::sqlite::Sqlite;
 
 /// An encrypted imap Server
 pub struct Encrypted;
@@ -85,8 +81,7 @@ impl Server for Encrypted {
     /// Returns an error if the cert setup fails
     async fn run(
         config: Arc<Config>,
-        #[cfg(feature = "postgres")] database: Arc<Postgres>,
-        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
+        database: DB,
         file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()> {
         // Load SSL Keys

@@ -1,7 +1,10 @@
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use tracing::info;
 
-use crate::smtp_commands::{parsers::localpart_arguments, CommandData, Data};
+use crate::{
+    database::{Database, DB},
+    smtp_commands::{parsers::localpart_arguments, CommandData, Data},
+};
 
 pub struct Rcpt<'a> {
     pub data: &'a Data,
@@ -11,6 +14,7 @@ impl Rcpt<'_> {
     pub async fn exec<S>(
         &self,
         lines: &mut S,
+        database: DB,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -25,6 +29,12 @@ impl Rcpt<'_> {
             .map(ToString::to_string)
             .collect();
 
+        for receipt in &receipts {
+            if !database.user_exists(receipt).await {
+                lines.send(String::from("550 No such user here")).await?;
+                return Ok(());
+            }
+        }
         {
             let mut write_lock = self.data.con_state.write().await;
             write_lock.receipts = Some(receipts);

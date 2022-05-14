@@ -13,6 +13,7 @@ use nom::{
 use tokio::sync::RwLock;
 use tracing::{debug, error, warn};
 
+use crate::database::DB;
 use crate::{
     config::Config,
     smtp_commands::{
@@ -20,11 +21,6 @@ use crate::{
     },
     smtp_servers::state::{AuthState, Connection, State},
 };
-
-#[cfg(feature = "postgres")]
-use crate::database::postgres::Postgres;
-#[cfg(feature = "sqlite")]
-use crate::database::sqlite::Sqlite;
 
 mod auth;
 mod data;
@@ -118,8 +114,7 @@ impl Data {
         &self,
         lines: &mut S,
         config: Arc<Config>,
-        #[cfg(feature = "postgres")] database: Arc<Postgres>,
-        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
+        database: DB,
         line: String,
     ) -> color_eyre::eyre::Result<bool>
     where
@@ -176,7 +171,9 @@ impl Data {
                         Mail { data: self }.exec(lines, &command_data).await?;
                     }
                     Commands::RCPTTO => {
-                        Rcpt { data: self }.exec(lines, &command_data).await?;
+                        Rcpt { data: self }
+                            .exec(lines, database, &command_data)
+                            .await?;
                     }
                     Commands::DATA => {
                         DataCommand { data: self }.exec(lines).await?;

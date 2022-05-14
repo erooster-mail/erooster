@@ -1,3 +1,4 @@
+use crate::database::DB;
 use crate::{
     config::Config,
     imap_commands::{
@@ -32,11 +33,6 @@ use nom::{
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, warn};
-
-#[cfg(feature = "postgres")]
-use crate::database::postgres::Postgres;
-#[cfg(feature = "sqlite")]
-use crate::database::sqlite::Sqlite;
 
 pub mod auth;
 pub mod capability;
@@ -169,8 +165,7 @@ impl Data {
         &self,
         lines: &mut S,
         config: Arc<Config>,
-        #[cfg(feature = "postgres")] database: Arc<Postgres>,
-        #[cfg(feature = "sqlite")] database: Arc<Sqlite>,
+        database: DB,
         line: String,
     ) -> color_eyre::eyre::Result<bool>
     where

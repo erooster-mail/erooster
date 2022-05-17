@@ -9,6 +9,18 @@ repository = "https://github.com/MTRNord/erooster/"
 keywords = ["email","imap","smtp","simple","fast"]
 categories = ["email", "network-programming"]
 
+[[bin]]
+name = "erooster"
+path = "src/cmds/erooster.rs"
+
+[[bin]]
+name = "eroosterctl"
+path = "src/cmds/eroosterctl.rs"
+
+[lib]
+name = "erooster"
+path = "src/lib.rs"
+
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 nom = "7.1.0"
@@ -33,7 +45,7 @@ sqlx = { version = "0.5", features = [ "runtime-tokio-rustls"] }
 argon2 = { version = "0.4", features = ["std"] }
 rand_core = { version = "0.6", features = ["std"] }
 sqlxmq = { version = "0.3.4", default-features = false, features = [ "runtime-tokio-rustls"] }
-bunt = "0.2.6"
+owo-colors = "3"
 
 [build-dependencies]
 clap_mangen = "0.1"

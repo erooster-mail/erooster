@@ -4,3 +4,5 @@ tls:
 mail:
   maildir_folders: "./maildir"
   hostname: "localhost"
+database:
+  postgres_url: ""

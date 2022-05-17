@@ -161,28 +161,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4a45a46ab1f2412e53d3a0ade76ffad2025804294569aae387231a0cd6e0899"
 
 [[package]]
-name = "bunt"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "192bac6c13e04373feb683e4438cbc156e6bbe432f614a9d6247445108fc5551"
-dependencies = [
- "bunt-macros",
- "termcolor",
-]
-
-[[package]]
-name = "bunt-macros"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "181ae31bbb8b46f840a70dc1323ad938f2cd7a504e7adc98d6fe58094900a680"
-dependencies = [
- "litrs",
- "proc-macro2",
- "quote",
- "unicode-xid",
-]
-
-[[package]]
 name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -559,7 +537,6 @@ dependencies = [
  "argon2",
  "async-trait",
  "base64",
- "bunt",
  "bytes",
  "clap 3.1.12",
  "clap_mangen",
@@ -570,6 +547,7 @@ dependencies = [
  "maildir",
  "nom",
  "notify",
+ "owo-colors",
  "rand_core",
  "rustls-pemfile",
  "serde",
@@ -959,15 +937,6 @@ name = "linked-hash-map"
 version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
-
-[[package]]
-name = "litrs"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9275e0933cf8bb20f008924c0cb07a0692fe54d8064996520bf998de9eb79aa"
-dependencies = [
- "proc-macro2",
-]
 
 [[package]]
 name = "lock_api"

@@ -24,7 +24,14 @@
     clippy::clone_on_ref_ptr
 )]
 #![warn(missing_docs)]
-#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::missing_panics_doc, clippy::missing_errors_doc)]
+
+use std::{path::Path, sync::Arc};
+
+use color_eyre::Result;
+use tracing::error;
+
+use crate::config::Config;
 
 pub(crate) mod imap_commands;
 // TODO make this only pub for benches and tests
@@ -45,3 +52,18 @@ pub mod smtp_servers;
 
 /// The configuration file for the server
 pub mod config;
+
+/// Returns the config struct from the provided location or defaults
+pub async fn get_config(config_path: String) -> Result<Arc<Config>> {
+    let config = if Path::new(&config_path).exists() {
+        Arc::new(Config::load(config_path).await?)
+    } else if Path::new("/etc/erooster/config.yml").exists() {
+        Arc::new(Config::load("/etc/erooster/config.yml").await?)
+    } else if Path::new("/etc/erooster/config.yaml").exists() {
+        Arc::new(Config::load("/etc/erooster/config.yaml").await?)
+    } else {
+        error!("No config file found. Please follow the readme.");
+        color_eyre::eyre::bail!("No config file found");
+    };
+    Ok(config)
+}

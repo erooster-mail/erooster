@@ -30,11 +30,10 @@
 #![warn(missing_docs)]
 #![allow(clippy::missing_panics_doc)]
 
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 
 use clap::Parser;
 use color_eyre::eyre::Result;
-use erooster::config::Config;
 use erooster::database::get_database;
 use tokio::signal;
 use tracing::{error, info};
@@ -52,16 +51,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let args = Args::parse();
     info!("Starting ERooster Server");
-    let config = if Path::new(&args.config).exists() {
-        Arc::new(Config::load(args.config).await?)
-    } else if Path::new("/etc/erooster/config.yml").exists() {
-        Arc::new(Config::load("/etc/erooster/config.yml").await?)
-    } else if Path::new("/etc/erooster/config.yaml").exists() {
-        Arc::new(Config::load("/etc/erooster/config.yaml").await?)
-    } else {
-        error!("No config file found. Please follow the readme.");
-        color_eyre::eyre::bail!("No config file found");
-    };
+    let config = erooster::get_config(args.config).await?;
     let database = Arc::new(get_database(Arc::clone(&config)));
     erooster::imap_servers::start(Arc::clone(&config), Arc::clone(&database))?;
     erooster::smtp_servers::start(config, database)?;

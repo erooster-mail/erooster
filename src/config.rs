@@ -16,11 +16,7 @@ pub struct Config {
 /// Configurations specific to the Database
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Database {
-    /// Path to the sqlite db
-    #[cfg(feature = "sqlite")]
-    pub sqlite_path: String,
     /// Connection string for the postgres database
-    #[cfg(feature = "postgres")]
     pub postgres_url: String,
 }
 

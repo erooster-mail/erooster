@@ -28,10 +28,21 @@ fn main() -> std::io::Result<()> {
         .version("0.1.0")
         .author("MTRNord <mtrnord@nordgedanken.dev>")
         .about("An IMAP4v2 compatible mail server")
+        .propagate_version(true)
+        .subcommand_required(true)
+        .arg_required_else_help(false)
         .arg(clap::arg!(-c --config <CONFIG>).help("The config file location for the server. Defaults to config.yml or config.yaml at workspace or /etc/erooster")
                 .required(false)
                 .takes_value(true)
-                .default_value("config.yml"));
+                .default_value("config.yml"))
+        .subcommand(
+            clap::Command::new("status")
+                .about("Checks the server status"),
+        )
+        .subcommand(
+            clap::Command::new("register")
+                .about("Register a new User to the server"),
+        );
 
     let man = clap_mangen::Man::new(cmd);
     let mut buffer: Vec<u8> = Default::default();

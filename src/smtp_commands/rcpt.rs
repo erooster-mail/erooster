@@ -3,7 +3,7 @@ use tracing::info;
 
 use crate::{
     database::{Database, DB},
-    smtp_commands::{parsers::localpart_arguments, CommandData, Data},
+    smtp_commands::{parsers::localpart_arguments, CommandData, Data}, smtp_servers::state::State,
 };
 
 pub struct Rcpt<'a> {
@@ -29,14 +29,17 @@ impl Rcpt<'_> {
             .map(ToString::to_string)
             .collect();
 
-        for receipt in &receipts {
-            if !database.user_exists(receipt).await {
-                lines.send(String::from("550 No such user here")).await?;
-                return Ok(());
-            }
-        }
         {
             let mut write_lock = self.data.con_state.write().await;
+            if matches!(&write_lock.state, State::NotAuthenticated) {
+                for receipt in &receipts {
+                    if !database.user_exists(receipt).await {
+                        lines.send(String::from("550 No such user here")).await?;
+                        return Ok(());
+                    }
+                }
+            }
+
             write_lock.receipts = Some(receipts);
         };
 

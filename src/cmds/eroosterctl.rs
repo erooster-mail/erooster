@@ -43,6 +43,7 @@ use owo_colors::{
     colors::{BrightCyan, BrightGreen, BrightRed, BrightWhite},
     DynColors, OwoColorize,
 };
+use std::io::Write;
 use tracing::error;
 
 #[derive(Parser, Debug)]
@@ -197,8 +198,9 @@ async fn register(username: Option<String>, password: Option<String>, config: &C
         let mut username = String::new();
         print!(
             "{}",
-            "Please enter the email address of the new user:".fg::<BrightCyan>()
+            "Please enter the email address of the new user: ".fg::<BrightCyan>()
         );
+        io::stdout().flush().expect("Couldn't flush stdout");
         io::stdin()
             .read_line(&mut username)
             .expect("Couldn't read line");
@@ -295,8 +297,9 @@ async fn change_password(
         let mut username = String::new();
         print!(
             "{}",
-            "Please enter the email address of the user:".fg::<BrightCyan>()
+            "Please enter the email address of the user: ".fg::<BrightCyan>()
         );
+        io::stdout().flush().expect("Couldn't flush stdout");
         io::stdin()
             .read_line(&mut username)
             .expect("Couldn't read line");
@@ -398,7 +401,6 @@ async fn verify_password(username: String, current_password: String, config: &Co
             false
         }
     }
-    
 }
 
 async fn actual_change_password(

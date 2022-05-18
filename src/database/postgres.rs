@@ -89,7 +89,9 @@ impl Database<sqlx::Postgres> for Postgres {
         match exists {
             Ok(exists) => exists,
             Err(e) => {
-                error!("[DB] Error checking if user exists: {}", e);
+                if !matches!(e, sqlx::Error::RowNotFound) {
+                    error!("[DB] Error checking if user exists: {}", e);
+                }
                 false
             }
         }

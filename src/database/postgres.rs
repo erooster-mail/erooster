@@ -29,7 +29,7 @@ impl Database<sqlx::Postgres> for Postgres {
 
     async fn verify_user(&self, username: &str, password: &str) -> bool {
         let hash: std::result::Result<(String,), sqlx::Error> =
-            sqlx::query_as("SELECT hash FROM users WHERE username = ?")
+            sqlx::query_as("SELECT hash FROM users WHERE username = $1")
                 .bind(username)
                 .fetch_one(self.get_pool())
                 .await;
@@ -48,7 +48,7 @@ impl Database<sqlx::Postgres> for Postgres {
                 }
             }
             Err(e) => {
-                error!("[DB]Error verifying user: {}", e);
+                error!("[DB] Error verifying user: {}", e);
                 false
             }
         }

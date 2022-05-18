@@ -64,7 +64,7 @@ impl Database<sqlx::Postgres> for Postgres {
         let password_hash = argon2
             .hash_password(password.as_bytes(), &salt)?
             .to_string();
-        sqlx::query("UPDATE users SET hash = ? WHERE username = ?")
+        sqlx::query("UPDATE users SET hash = $1 WHERE username = $2")
             .bind(password_hash)
             .bind(username)
             .execute(self.get_pool())
@@ -73,7 +73,7 @@ impl Database<sqlx::Postgres> for Postgres {
     }
 
     async fn add_user(&self, username: &str) -> color_eyre::eyre::Result<()> {
-        sqlx::query("INSERT INTO users (username, hash) VALUES (?, NULL)")
+        sqlx::query("INSERT INTO users (username) VALUES ($1)")
             .bind(username)
             .execute(self.get_pool())
             .await?;
@@ -82,7 +82,7 @@ impl Database<sqlx::Postgres> for Postgres {
 
     async fn user_exists(&self, username: &str) -> bool {
         let exists: std::result::Result<(bool,), sqlx::Error> =
-            sqlx::query_as("SELECT EXISTS(SELECT 1 FROM users WHERE username = ?)")
+            sqlx::query_as("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)")
                 .bind(username)
                 .fetch_one(self.get_pool())
                 .await;

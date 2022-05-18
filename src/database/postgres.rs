@@ -81,13 +81,13 @@ impl Database<sqlx::Postgres> for Postgres {
     }
 
     async fn user_exists(&self, username: &str) -> bool {
-        let exists: std::result::Result<(bool,), sqlx::Error> =
-            sqlx::query_as("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)")
+        let exists: std::result::Result<bool, sqlx::Error> =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)")
                 .bind(username)
                 .fetch_one(self.get_pool())
                 .await;
         match exists {
-            Ok(exists) => exists.0,
+            Ok(exists) => exists,
             Err(e) => {
                 error!("[DB] Error checking if user exists: {}", e);
                 false

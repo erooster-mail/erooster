@@ -263,7 +263,7 @@ async fn register(username: Option<String>, password: Option<String>, config: &C
 }
 
 async fn actual_register(username: String, password: String, config: &Config) -> Result<()> {
-    let database = get_database(Arc::new(config.clone()));
+    let database = get_database(Arc::new(config.clone())).await?;
     database.add_user(&username).await?;
     database.change_password(&username, &password).await?;
     Ok(())
@@ -391,8 +391,14 @@ async fn change_password(
 }
 
 async fn verify_password(username: String, current_password: String, config: &Config) -> bool {
-    let database = get_database(Arc::new(config.clone()));
-    database.verify_user(&username, &current_password).await
+    match get_database(Arc::new(config.clone())).await {
+        Ok(database) => database.verify_user(&username, &current_password).await,
+        Err(e) => {
+            error!("Failed to verify password: {}", e);
+            false
+        }
+    }
+    
 }
 
 async fn actual_change_password(
@@ -400,7 +406,7 @@ async fn actual_change_password(
     new_password: String,
     config: &Config,
 ) -> Result<()> {
-    let database = get_database(Arc::new(config.clone()));
+    let database = get_database(Arc::new(config.clone())).await?;
     database.change_password(&username, &new_password).await?;
     Ok(())
 }

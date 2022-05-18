@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::{config::Config, database::Database};
 use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use color_eyre::Result;
 use rand_core::OsRng;
 use sqlx::PgPool;
 use tracing::error;
@@ -14,10 +15,12 @@ pub struct Postgres {
 
 #[async_trait::async_trait]
 impl Database<sqlx::Postgres> for Postgres {
-    fn new(config: Arc<Config>) -> Self {
+    async fn new(config: Arc<Config>) -> Result<Self> {
         let pool = PgPool::connect_lazy(&config.database.postgres_url)
             .expect("Failed to connect to postgres");
-        Self { pool }
+
+        sqlx::migrate!().run(&pool).await?;
+        Ok(Self { pool })
     }
 
     fn get_pool(&self) -> &PgPool {

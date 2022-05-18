@@ -1,4 +1,5 @@
 use crate::config::Config;
+use color_eyre::Result;
 use sqlx::Pool;
 use std::sync::Arc;
 
@@ -12,7 +13,7 @@ pub type DB = Arc<postgres::Postgres>;
 #[async_trait::async_trait]
 pub trait Database<S: sqlx::Database> {
     /// Creates the new database connection pool
-    fn new(config: Arc<Config>) -> Self
+    async fn new(config: Arc<Config>) -> Result<Self>
     where
         Self: Sized;
 
@@ -34,8 +35,7 @@ pub trait Database<S: sqlx::Database> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[must_use]
 /// Get a postgres database connection pool and the higher level wrapper
-pub fn get_database(config: Arc<Config>) -> postgres::Postgres {
-    postgres::Postgres::new(config)
+pub async fn get_database(config: Arc<Config>) -> Result<postgres::Postgres> {
+    postgres::Postgres::new(config).await
 }

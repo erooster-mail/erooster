@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     info!("Starting ERooster Server");
     let config = erooster::get_config(args.config).await?;
-    let database = Arc::new(get_database(Arc::clone(&config)));
+    let database = Arc::new(get_database(Arc::clone(&config)).await?);
     erooster::imap_servers::start(Arc::clone(&config), Arc::clone(&database))?;
     erooster::smtp_servers::start(config, database)?;
 

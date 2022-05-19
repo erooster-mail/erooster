@@ -1,5 +1,11 @@
-use std::sync::Arc;
-
+use crate::database::DB;
+use crate::{
+    config::Config,
+    smtp_commands::{
+        auth::Auth, data::DataCommand, ehlo::Ehlo, mail::Mail, noop::Noop, quit::Quit, rcpt::Rcpt,
+    },
+    smtp_servers::state::{AuthState, Connection, State},
+};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use nom::{
     branch::alt,
@@ -10,17 +16,12 @@ use nom::{
     sequence::{terminated, tuple},
     IResult,
 };
+use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, warn};
 
-use crate::database::DB;
-use crate::{
-    config::Config,
-    smtp_commands::{
-        auth::Auth, data::DataCommand, ehlo::Ehlo, mail::Mail, noop::Noop, quit::Quit, rcpt::Rcpt,
-    },
-    smtp_servers::state::{AuthState, Connection, State},
-};
+#[cfg(test)]
+use std::fmt::Display;
 
 mod auth;
 mod data;
@@ -42,8 +43,18 @@ pub struct CommandData<'a> {
     arguments: &'a [&'a str],
 }
 
-#[derive(Debug)]
 #[allow(clippy::upper_case_acronyms)]
+#[derive(Debug)]
+#[cfg_attr(
+    test,
+    derive(
+        enum_iterator::IntoEnumIterator,
+        enum_display_derive::Display,
+        Clone,
+        Copy,
+        PartialEq
+    )
+)]
 pub enum Commands {
     EHLO,
     QUIT,
@@ -195,5 +206,79 @@ impl Data {
             }
         }
         Ok(false)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use convert_case::{Case, Casing};
+    use enum_iterator::IntoEnumIterator;
+
+    #[test]
+    fn test_parsing_commands() {
+        for command_variant in Commands::into_enum_iter() {
+            if let Commands::MAILFROM = command_variant {
+                // This command has a space
+                assert_eq!(
+                    command(&"MAIL FROM:".to_string().to_uppercase()),
+                    Ok(("", Ok(command_variant)))
+                );
+                assert_eq!(
+                    command(&"MAIL FROM:".to_string().to_lowercase()),
+                    Ok(("", Ok(command_variant)))
+                );
+                assert_eq!(
+                    command(
+                        &"MAIL FROM:"
+                            .to_string()
+                            .to_lowercase()
+                            .to_case(Case::Alternating)
+                    ),
+                    Ok(("", Ok(command_variant)))
+                );
+            } else if let Commands::RCPTTO = command_variant {
+                // This command has a space
+                assert_eq!(
+                    command(&"rcpt to:".to_string().to_uppercase()),
+                    Ok(("", Ok(command_variant)))
+                );
+                assert_eq!(
+                    command(&"rcpt to:".to_string().to_lowercase()),
+                    Ok(("", Ok(command_variant)))
+                );
+                assert_eq!(
+                    command(
+                        &"rcpt to:"
+                            .to_string()
+                            .to_lowercase()
+                            .to_case(Case::Alternating)
+                    ),
+                    Ok(("", Ok(command_variant)))
+                );
+            } else {
+                assert_eq!(
+                    command(&command_variant.to_string().to_uppercase()),
+                    Ok(("", Ok(command_variant)))
+                );
+                assert_eq!(
+                    command(&command_variant.to_string().to_lowercase()),
+                    Ok(("", Ok(command_variant)))
+                );
+                assert_eq!(
+                    command(
+                        &command_variant
+                            .to_string()
+                            .to_lowercase()
+                            .to_case(Case::Alternating)
+                    ),
+                    Ok(("", Ok(command_variant)))
+                );
+            }
+        }
+        assert_eq!(
+            command("beeeeep"),
+            Ok(("", Err(String::from("no other commands supported"))))
+        );
     }
 }

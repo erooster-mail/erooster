@@ -5,7 +5,7 @@ use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, Pa
 use color_eyre::Result;
 use rand_core::OsRng;
 use sqlx::PgPool;
-use tracing::error;
+use tracing::{error, debug};
 
 /// Postgres specific database implementation
 /// Holds data to connect to the database

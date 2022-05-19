@@ -12,14 +12,17 @@ categories = ["email", "network-programming"]
 [[bin]]
 name = "erooster"
 path = "src/cmds/erooster.rs"
+bench = false
 
 [[bin]]
 name = "eroosterctl"
 path = "src/cmds/eroosterctl.rs"
+bench = false
 
 [lib]
 name = "erooster"
 path = "src/lib.rs"
+bench = false
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }

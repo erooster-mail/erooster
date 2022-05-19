@@ -85,12 +85,21 @@ impl Auth<'_> {
                     let mut write_lock = self.data.con_state.write().await;
                     if let State::Authenticating(AuthState::Password(username)) = &write_lock.state
                     {
-                        let valid = database.verify_user(username, password).await;
-                        if !valid {
+                        if database.user_exists(username).await {
+                            let valid = database.verify_user(username, password).await;
+                            if !valid {
+                                write_lock.state = State::NotAuthenticated;
+                                lines
+                                    .send(String::from(
+                                        "535 5.7.8 Authentication credentials invalid",
+                                    ))
+                                    .await?;
+                            }
+                        } else {
                             write_lock.state = State::NotAuthenticated;
                             lines
                                 .send(String::from(
-                                    "535 5.7.8  Authentication credentials invalid",
+                                    "535 5.7.8 Authentication credentials invalid",
                                 ))
                                 .await?;
                         }

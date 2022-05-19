@@ -3,7 +3,8 @@ use tracing::info;
 
 use crate::{
     database::{Database, DB},
-    smtp_commands::{parsers::localpart_arguments, CommandData, Data}, smtp_servers::state::State,
+    smtp_commands::{parsers::localpart_arguments, CommandData, Data},
+    smtp_servers::state::State,
 };
 
 pub struct Rcpt<'a> {

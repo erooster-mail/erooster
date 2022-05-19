@@ -50,27 +50,34 @@ impl Authenticate<'_> {
                     let username = auth_data_vec[0];
                     let password = auth_data_vec[1];
 
-                    let db_response = database.verify_user(username, password).await;
-                    if !db_response {
+                    if database.user_exists(username).await {
+                        let db_response = database.verify_user(username, password).await;
+                        if !db_response {
+                            lines
+                                .send(format!("{} NO Invalid user or password", command_data.tag))
+                                .await?;
+                            return Ok(());
+                        }
+                        {
+                            write_lock.username = Some(username.to_string());
+                            write_lock.state = State::Authenticated;
+                        };
+                        let secure = write_lock.secure;
+                        if secure {
+                            lines
+                                .send(format!("{} OK Success (tls protection)", command_data.tag))
+                                .await?;
+                        } else {
+                            lines
+                                .send(format!("{} OK Success (unprotected)", command_data.tag))
+                                .await?;
+                        }
+                    } else {
+                        {
+                            write_lock.state = State::NotAuthenticated;
+                        };
                         lines
                             .send(format!("{} NO Invalid user or password", command_data.tag))
-                            .await?;
-                        return Ok(());
-                    }
-
-                    // TODO check against DB
-                    {
-                        write_lock.username = Some(username.to_string());
-                        write_lock.state = State::Authenticated;
-                    };
-                    let secure = write_lock.secure;
-                    if secure {
-                        lines
-                            .send(format!("{} OK Success (tls protection)", command_data.tag))
-                            .await?;
-                    } else {
-                        lines
-                            .send(format!("{} OK Success (unprotected)", command_data.tag))
                             .await?;
                     }
                 } else {
@@ -90,7 +97,6 @@ impl Authenticate<'_> {
                 lines
                     .send(format!("{} BAD Invalid arguments", command_data.tag))
                     .await?;
-                return Ok(());
             }
         }
 

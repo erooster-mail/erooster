@@ -187,11 +187,11 @@ impl Data {
         debug!("Current state: {:?}", self.con_state.read().await.state);
 
         let con_clone = Arc::clone(&self.con_state);
-        let state = { &con_clone.read().await.state };
+        let state = { con_clone.read().await.state.clone() };
         if let State::Authenticating(AuthenticationMethod::Plain, tag) = state {
             debug!("Second auth stage");
             let command_data = CommandData {
-                tag,
+                tag: &tag,
                 // This is unused but needed. We just assume Authenticate here
                 command: Commands::Authenticate,
                 arguments: &[],

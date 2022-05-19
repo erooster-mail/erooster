@@ -20,7 +20,7 @@ impl Connection {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum State {
     /// Initial State
     NotAuthenticated,
@@ -32,7 +32,7 @@ pub enum State {
     Selected(String, Access),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Access {
     ReadOnly,
     ReadWrite,

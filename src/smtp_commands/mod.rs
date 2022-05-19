@@ -134,7 +134,7 @@ impl Data {
         debug!("Current state: {:?}", self.con_state.read().await.state);
 
         let con_clone = Arc::clone(&self.con_state);
-        let state = { &con_clone.read().await.state };
+        let state = { con_clone.read().await.state.clone() };
         if let State::ReceivingData = state {
             DataCommand { data: self }
                 .receive(config, lines, &line)

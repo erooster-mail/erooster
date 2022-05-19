@@ -24,7 +24,7 @@ impl Connection {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum State {
     /// Initial State
     NotAuthenticated,
@@ -37,7 +37,7 @@ pub enum State {
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AuthState {
     Username,
     Password(String),

@@ -1,5 +1,7 @@
 # Erooster
 
+[![codecov](https://codecov.io/gh/MTRNord/erooster/branch/main/graph/badge.svg?token=ieNQlSkDTF)](https://codecov.io/gh/MTRNord/erooster)
+
 A mail suite written in rust meant to be easy to use.
 
 ## Getting started

@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use erooster::database::get_database;
+use erooster::database::{get_database, Database};
 use erooster::{config::Config, line_codec::LinesCodec};
 use futures::{SinkExt, StreamExt};
 use std::{path::Path, sync::Arc, thread, time::Duration};
@@ -24,10 +24,10 @@ async fn login() {
     sender.send(String::from("AUTH LOGIN")).await;
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("334 VXNlcm5hbWU6"));
-    sender.send(String::from("Ymx1Yg==")).await;
+    sender.send(String::from("dGVzdEBsb2NhbGhvc3Q=")).await;
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("334 UGFzc3dvcmQ6"));
-    sender.send(String::from("Ymx1Yg==")).await;
+    sender.send(String::from("dGVzdA==")).await;
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("235 ok"));
 }
@@ -55,6 +55,11 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             match get_database(Arc::clone(&config)).await {
                 Ok(db) => {
                     let database = Arc::new(db);
+                    database.add_user("test@localhost").await.unwrap();
+                    database
+                        .change_password("test@localhost", "test")
+                        .await
+                        .unwrap();
 
                     if let Err(e) =
                         erooster::smtp_servers::unencrypted::Unencrypted::run(config, database)

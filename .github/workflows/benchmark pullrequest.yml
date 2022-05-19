@@ -34,7 +34,7 @@ jobs:
           echo '  maildir_folders: "./maildir"' >> config.yml
           echo '  hostname: "localhost"' >> config.yml
           echo 'database:' >> config.yml
-          echo '  postgres_url: "postgres://postgres@localhost/erooster"' >> config.yml
+          echo '  postgres_url: "postgres://postgres:postgres@localhost/erooster"' >> config.yml
       - uses: boa-dev/criterion-compare-action@v3.0.0
         with:
           branchName: ${{ github.base_ref }}

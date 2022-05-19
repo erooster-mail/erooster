@@ -5,7 +5,7 @@ jobs:
     name: Run Benchmark
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:latest
+      image: rust:latest
       options: --user root
     # Service containers to run with `runner-job`
     services:

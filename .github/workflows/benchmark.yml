@@ -28,13 +28,13 @@ jobs:
       - name: Setup Config
         run: |
           echo 'tls:' > config.yml
-          echo '  key_path: ""' > config.yml
-          echo '  cert_path: ""' > config.yml
-          echo 'mail:' > config.yml
-          echo '  maildir_folders: "./maildir"' > config.yml
-          echo '  hostname: "localhost"' > config.yml
-          echo 'database:' > config.yml
-          echo '  postgres_url: "postgres://postgres@localhost/erooster"' > config.yml
+          echo '  key_path: ""' >> config.yml
+          echo '  cert_path: ""' >> config.yml
+          echo 'mail:' >> config.yml
+          echo '  maildir_folders: "./maildir"' >> config.yml
+          echo '  hostname: "localhost"' >> config.yml
+          echo 'database:' >> config.yml
+          echo '  postgres_url: "postgres://postgres@localhost/erooster"' >> config.yml
       - uses: boa-dev/criterion-compare-action@v3.0.0
         with:
           branchName: ${{ github.ref_name }}

@@ -204,6 +204,7 @@ impl Data {
             // We are done here
             return Ok(false);
         };
+        debug!("Starting to parse");
         match Data::parse_internal(&line) {
             Ok((_, (tag, command, arguments))) => {
                 let command_data = match command {

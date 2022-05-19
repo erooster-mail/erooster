@@ -34,6 +34,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, warn};
 
+#[cfg(test)]
+use std::fmt::Display;
+
 pub mod auth;
 pub mod capability;
 mod check;
@@ -56,14 +59,24 @@ pub struct Data {
     pub con_state: Arc<RwLock<Connection>>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug)]
 pub struct CommandData<'a> {
     tag: &'a str,
     command: Commands,
     arguments: &'a [&'a str],
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug)]
+#[cfg_attr(
+    test,
+    derive(
+        enum_iterator::IntoEnumIterator,
+        enum_display_derive::Display,
+        Clone,
+        Copy,
+        PartialEq
+    )
+)]
 pub enum Commands {
     Capability,
     Login,
@@ -174,10 +187,10 @@ impl Data {
         debug!("Current state: {:?}", self.con_state.read().await.state);
 
         let con_clone = Arc::clone(&self.con_state);
-        let state = { con_clone.read().await.state.clone() };
+        let state = { &con_clone.read().await.state };
         if let State::Authenticating(AuthenticationMethod::Plain, tag) = state {
             let command_data = CommandData {
-                tag: &tag,
+                tag,
                 // This is unused but needed. We just assume Authenticate here
                 command: Commands::Authenticate,
                 arguments: &[],
@@ -305,6 +318,8 @@ impl Data {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use convert_case::{Case, Casing};
+    use enum_iterator::IntoEnumIterator;
 
     #[test]
     fn test_parsing_imaptag() {
@@ -312,9 +327,30 @@ mod tests {
     }
 
     #[test]
-    fn test_parsing_command() {
-        assert_eq!(command("CAPABILITY"), Ok(("", Ok(Commands::Capability))));
-        assert_eq!(command("LOGOUT"), Ok(("", Ok(Commands::Logout))));
+    fn test_parsing_commands() {
+        for command_variant in Commands::into_enum_iter() {
+            assert_eq!(
+                command(&command_variant.to_string().to_uppercase()),
+                Ok(("", Ok(command_variant)))
+            );
+            assert_eq!(
+                command(&command_variant.to_string().to_lowercase()),
+                Ok(("", Ok(command_variant)))
+            );
+            assert_eq!(
+                command(
+                    &command_variant
+                        .to_string()
+                        .to_lowercase()
+                        .to_case(Case::Alternating)
+                ),
+                Ok(("", Ok(command_variant)))
+            );
+        }
+        assert_eq!(
+            command("beeeeep"),
+            Ok(("", Err(String::from("no other commands supported"))))
+        );
     }
 
     #[test]

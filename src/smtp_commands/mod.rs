@@ -36,13 +36,13 @@ pub struct Data {
     pub con_state: Arc<RwLock<Connection>>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug)]
 pub struct CommandData<'a> {
     command: Commands,
     arguments: &'a [&'a str],
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum Commands {
     EHLO,
@@ -123,7 +123,7 @@ impl Data {
         debug!("Current state: {:?}", self.con_state.read().await.state);
 
         let con_clone = Arc::clone(&self.con_state);
-        let state = { con_clone.read().await.state.clone() };
+        let state = { &con_clone.read().await.state };
         if let State::ReceivingData = state {
             DataCommand { data: self }
                 .receive(config, lines, &line)

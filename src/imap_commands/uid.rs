@@ -10,7 +10,7 @@ impl Uid {
         &self,
         lines: &mut S,
         command_data: &CommandData<'_>,
-        config: Arc<Config>,
+        _config: Arc<Config>,
     ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,

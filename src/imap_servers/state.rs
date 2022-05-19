@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// State of the connection session between us and the Client
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug)]
 pub struct Connection {
     pub state: State,
     pub secure: bool,
@@ -20,7 +20,7 @@ impl Connection {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq)]
 pub enum State {
     /// Initial State
     NotAuthenticated,
@@ -32,7 +32,7 @@ pub enum State {
     Selected(String, Access),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq)]
 pub enum Access {
     ReadOnly,
     ReadWrite,

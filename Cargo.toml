@@ -66,6 +66,9 @@ version = "0.6.1"
 
 [dev-dependencies]
 criterion = {version = "0.3", features = ["async_tokio"]}
+enum-iterator = "0.8.1"
+enum-display-derive = "0.1.1"
+convert_case = "0.5.0"
 
 [[bench]]
 name = "smtp_bench"

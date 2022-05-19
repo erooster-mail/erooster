@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// State of the connection session between us and the Client
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug)]
 pub struct Connection {
     pub state: State,
     pub secure: bool,
@@ -24,7 +24,7 @@ impl Connection {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug)]
 pub enum State {
     /// Initial State
     NotAuthenticated,
@@ -37,7 +37,7 @@ pub enum State {
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug)]
 pub enum AuthState {
     Username,
     Password(String),

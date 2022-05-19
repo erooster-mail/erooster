@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// The config for the mailserver
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     /// Configurations specific to the TLS part
     pub tls: Tls,
@@ -14,14 +14,14 @@ pub struct Config {
 }
 
 /// Configurations specific to the Database
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Database {
     /// Connection string for the postgres database
     pub postgres_url: String,
 }
 
 /// Configurations specific to the TLS part
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Tls {
     /// Path to the key file
     pub key_path: String,
@@ -30,7 +30,7 @@ pub struct Tls {
 }
 
 /// Configurations specific to the mail concept itself
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Mail {
     /// Path where maildir style mailboxes are going to get created
     pub maildir_folders: String,

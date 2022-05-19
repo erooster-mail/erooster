@@ -5,7 +5,7 @@ use crate::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use simdutf8::compat::from_utf8;
-use tracing::error;
+use tracing::{debug, error};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum AuthenticationMethod {
@@ -50,12 +50,17 @@ impl Authenticate<'_> {
                     let username = auth_data_vec[0];
                     let password = auth_data_vec[1];
 
+                    debug!("[IMAP] Making sure user exists");
                     if database.user_exists(username).await {
-                        let db_response = database.verify_user(username, password).await;
-                        if !db_response {
+                        debug!("[IMAP] Verify credentials");
+                        if !database.verify_user(username, password).await {
+                            {
+                                write_lock.state = State::NotAuthenticated;
+                            };
                             lines
                                 .send(format!("{} NO Invalid user or password", command_data.tag))
                                 .await?;
+                            debug!("[IMAP] Invalid user or password");
                             return Ok(());
                         }
                         {

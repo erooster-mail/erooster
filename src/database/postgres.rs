@@ -86,6 +86,7 @@ impl Database<sqlx::Postgres> for Postgres {
                 .bind(username)
                 .fetch_one(self.get_pool())
                 .await;
+        debug!("[POSTGRES] [user_exists] {:?}", exists);
         match exists {
             Ok(exists) => exists,
             Err(e) => {

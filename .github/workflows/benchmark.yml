@@ -25,6 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: rustup default nightly
+      - uses: Swatinem/rust-cache@v1
       - name: Setup Config
         run: |
           echo 'tls:' > config.yml

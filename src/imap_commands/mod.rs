@@ -326,6 +326,8 @@ mod tests {
     #[test]
     fn test_parsing_imaptag() {
         assert_eq!(imaptag("abcd CAPABILITY"), Ok(("CAPABILITY", "abcd")));
+        assert_eq!(imaptag("12345 CAPABILITY"), Ok(("CAPABILITY", "12345")));
+        assert_eq!(imaptag("abd124 CAPABILITY"), Ok(("CAPABILITY", "abd124")));
     }
 
     #[test]
@@ -369,7 +371,7 @@ mod tests {
         assert!(command.is_ok());
         assert_eq!(tag, "a");
         assert_eq!(command.unwrap(), Commands::Authenticate);
-        assert_eq!(arguments, vec!["PLAIN", "abcde"]);
+        assert_eq!(arguments, &["PLAIN", "abcde"]);
 
         let result = Data::parse_internal("a AUTHENTICATE PLAIN");
         assert!(result.is_ok());

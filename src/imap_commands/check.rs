@@ -58,7 +58,7 @@ mod tests {
         };
         let cmd_data = CommandData {
             tag: "1",
-            command: Commands::Capability,
+            command: Commands::Check,
             arguments: &[],
         };
         let (mut tx, mut rx) = mpsc::unbounded();
@@ -80,7 +80,7 @@ mod tests {
         };
         let cmd_data = CommandData {
             tag: "1",
-            command: Commands::Capability,
+            command: Commands::Check,
             arguments: &[],
         };
         let (mut tx, mut rx) = mpsc::unbounded();

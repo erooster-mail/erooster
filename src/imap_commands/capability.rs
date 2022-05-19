@@ -24,3 +24,29 @@ impl Capability {
 pub const fn get_capabilities() -> &'static str {
     "CAPABILITY AUTH=PLAIN LOGINDISABLED IMAP4rev2"
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::imap_commands::{CommandData, Commands};
+    use futures::{channel::mpsc, StreamExt};
+
+    #[tokio::test]
+    async fn test_get_capabilities() {
+        let caps = Capability {};
+        let cmd_data = CommandData {
+            tag: "",
+            command: Commands::Capability,
+            arguments: &[],
+        };
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = caps.exec(&mut tx, &cmd_data).await;
+        assert!(res.is_ok());
+        assert_eq!(
+            rx.next().await,
+            Some(String::from(
+                "* CAPABILITY AUTH=PLAIN LOGINDISABLED IMAP4rev2"
+            ))
+        );
+    }
+}

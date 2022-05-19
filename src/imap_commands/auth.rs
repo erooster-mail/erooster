@@ -124,6 +124,7 @@ impl Authenticate<'_> {
             assert!(args.len() == 1);
             if args.len() == 1 {
                 if args.first().unwrap().to_lowercase() == "plain" {
+                    debug!("[IMAP] Update state to Authenticating");
                     {
                         let command_data = command_data;
                         self.data.con_state.write().await.state = State::Authenticating(
@@ -131,6 +132,7 @@ impl Authenticate<'_> {
                             command_data.tag.to_string(),
                         );
                     };
+                    debug!("[IMAP] Sending continuation request");
                     lines.send(String::from("+ ")).await?;
                 } else {
                     self.plain(lines, database, command_data).await?;

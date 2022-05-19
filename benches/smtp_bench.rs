@@ -52,12 +52,18 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 return;
             };
 
-            let database = Arc::new(get_database(Arc::clone(&config)));
+            match get_database(Arc::clone(&config)).await {
+                Ok(db) => {
+                    let database = Arc::new(db);
 
-            if let Err(e) =
-                erooster::smtp_servers::unencrypted::Unencrypted::run(config, database).await
-            {
-                panic!("Unable to start server: {:?}", e);
+                    if let Err(e) =
+                        erooster::smtp_servers::unencrypted::Unencrypted::run(config, database)
+                            .await
+                    {
+                        panic!("Unable to start server: {:?}", e);
+                    }
+                }
+                Err(e) => panic!("Unable to connect to database server: {:?}", e),
             }
         });
         thread::sleep(Duration::from_millis(500));

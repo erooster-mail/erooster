@@ -21,11 +21,43 @@ jobs:
   test:
     name: Coverage
     runs-on: ubuntu-latest
+    container:
+      image: rust:latest
+      options: --user root
+    # Service containers to run with `runner-job`
+    services:
+      # Label used to access the service container
+      postgres:
+        # Docker Hub image
+        image: postgres
+        # Provide the password for postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: erooster
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps tcp port 5432 on service container to the host
+          - 5432:5432
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust
         run: rustup toolchain install nightly --component llvm-tools-preview
       - uses: Swatinem/rust-cache@v1
+      - name: Setup Config
+        run: |
+          echo 'tls:' > config.yml
+          echo '  key_path: ""' >> config.yml
+          echo '  cert_path: ""' >> config.yml
+          echo 'mail:' >> config.yml
+          echo '  maildir_folders: "./maildir"' >> config.yml
+          echo '  hostname: "localhost"' >> config.yml
+          echo 'database:' >> config.yml
+          echo '  postgres_url: "postgres://postgres:postgres@postgres/erooster"' >> config.yml
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage

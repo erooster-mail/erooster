@@ -34,3 +34,58 @@ impl Check<'_> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::imap_commands::{CommandData, Commands};
+    use crate::imap_servers::state::{Access, Connection};
+    use futures::{channel::mpsc, StreamExt};
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    #[tokio::test]
+    async fn test_successfull_check() {
+        let caps = Check {
+            data: &Data {
+                con_state: Arc::new(RwLock::new(Connection {
+                    state: State::Selected("INBOX".to_string(), Access::ReadWrite),
+                    secure: true,
+                    // TODO this may be invalid actuallly
+                    username: None,
+                })),
+            },
+        };
+        let cmd_data = CommandData {
+            tag: "1",
+            command: Commands::Capability,
+            arguments: &[],
+        };
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = caps.exec(&mut tx, &cmd_data).await;
+        assert!(res.is_ok());
+        assert_eq!(rx.next().await, Some(String::from("1 OK CHECK completed")));
+    }
+
+    #[tokio::test]
+    async fn test_unsuccessfull_check() {
+        let caps = Check {
+            data: &Data {
+                con_state: Arc::new(RwLock::new(Connection {
+                    state: State::NotAuthenticated,
+                    secure: true,
+                    username: None,
+                })),
+            },
+        };
+        let cmd_data = CommandData {
+            tag: "1",
+            command: Commands::Capability,
+            arguments: &[],
+        };
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = caps.exec(&mut tx, &cmd_data).await;
+        assert!(res.is_ok());
+        assert_eq!(rx.next().await, Some(String::from("1 NO invalid state")));
+    }
+}

@@ -1,4 +1,4 @@
-on: [push]
+on: [pull_request]
 name: Benchmark
 jobs:
   runBenchmark:
@@ -9,5 +9,5 @@ jobs:
       - run: rustup default nightly
       - uses: boa-dev/criterion-compare-action@v3.0.0
         with:
-          branchName: ${{ github.ref_name }}
+          branchName: ${{ github.base_ref }}
           token: ${{ github.token }}

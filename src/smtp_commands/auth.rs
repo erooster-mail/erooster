@@ -98,9 +98,7 @@ impl Auth<'_> {
                         } else {
                             write_lock.state = State::NotAuthenticated;
                             lines
-                                .send(String::from(
-                                    "535 5.7.8 Authentication credentials invalid",
-                                ))
+                                .send(String::from("535 5.7.8 Authentication credentials invalid"))
                                 .await?;
                         }
                     } else {

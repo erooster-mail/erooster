@@ -17,7 +17,7 @@ impl Close<'_> {
     pub async fn exec<S>(
         &self,
         lines: &mut S,
-        config: Arc<Config>,
+        #[cfg(not(test))] config: Arc<Config>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -32,20 +32,27 @@ impl Close<'_> {
                     .await?;
                 return Ok(());
             }
-            let mut folder = folder.replace('/', ".");
-            folder.insert(0, '.');
-            let mailbox_path = Path::new(&config.mail.maildir_folders)
-                .join(self.data.con_state.read().await.username.clone().unwrap())
-                .join(folder.clone());
-            let maildir = Maildir::from(mailbox_path.clone());
 
-            // We need to check all messages it seems?
-            let mails = maildir.list_cur().chain(maildir.list_new()).flatten();
-            for mail in mails {
-                debug!("Checking mails");
-                if mail.is_trashed() {
-                    let path = mail.path();
-                    fs::remove_file(path).await?;
+            // We dont want actual file access in tests for now hence this is not included in tests
+            // TODO setup tests to actually do file actions
+            cfg_if::cfg_if! {
+                if #[cfg(not(test))] {
+                    let mut folder = folder.replace('/', ".");
+                folder.insert(0, '.');
+                let mailbox_path = Path::new(&config.mail.maildir_folders)
+                    .join(self.data.con_state.read().await.username.clone().unwrap())
+                    .join(folder.clone());
+                let maildir = Maildir::from(mailbox_path.clone());
+
+                // We need to check all messages it seems?
+                let mails = maildir.list_cur().chain(maildir.list_new()).flatten();
+                for mail in mails {
+                    debug!("Checking mails");
+                    if mail.is_trashed() {
+                        let path = mail.path();
+                        fs::remove_file(path).await?;
+                    }
+                }
                 }
             }
 
@@ -62,5 +69,86 @@ impl Close<'_> {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::imap_commands::{CommandData, Commands};
+    use crate::imap_servers::state::{Access, Connection};
+    use futures::{channel::mpsc, StreamExt};
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    #[tokio::test]
+    async fn test_select_rw() {
+        let caps = Close {
+            data: &Data {
+                con_state: Arc::new(RwLock::new(Connection {
+                    state: State::Selected("INBOX".to_string(), Access::ReadWrite),
+                    secure: true,
+                    // TODO this may be invalid actuallly
+                    username: None,
+                })),
+            },
+        };
+        let cmd_data = CommandData {
+            tag: "1",
+            command: Commands::Close,
+            arguments: &[],
+        };
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = caps.exec(&mut tx, &cmd_data).await;
+        assert!(res.is_ok());
+        assert_eq!(rx.next().await, Some(String::from("1 OK CLOSE completed")));
+    }
+
+    #[tokio::test]
+    async fn test_selected_ro() {
+        let caps = Close {
+            data: &Data {
+                con_state: Arc::new(RwLock::new(Connection {
+                    state: State::Selected("INBOX".to_string(), Access::ReadOnly),
+                    secure: true,
+                    // TODO this may be invalid actuallly
+                    username: None,
+                })),
+            },
+        };
+        let cmd_data = CommandData {
+            tag: "1",
+            command: Commands::Close,
+            arguments: &[],
+        };
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = caps.exec(&mut tx, &cmd_data).await;
+        assert!(res.is_ok());
+        assert_eq!(
+            rx.next().await,
+            Some(String::from("1 NO in read-only mode"))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_invalid_state() {
+        let caps = Close {
+            data: &Data {
+                con_state: Arc::new(RwLock::new(Connection {
+                    state: State::NotAuthenticated,
+                    secure: true,
+                    username: None,
+                })),
+            },
+        };
+        let cmd_data = CommandData {
+            tag: "1",
+            command: Commands::Close,
+            arguments: &[],
+        };
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = caps.exec(&mut tx, &cmd_data).await;
+        assert!(res.is_ok());
+        assert_eq!(rx.next().await, Some(String::from("1 NO invalid state")));
     }
 }

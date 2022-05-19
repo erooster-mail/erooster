@@ -290,9 +290,14 @@ impl Data {
                         Check { data: self }.exec(lines, &command_data).await?;
                     }
                     Commands::Close => {
-                        Close { data: self }
-                            .exec(lines, config, &command_data)
-                            .await?;
+                        // See why in the command itself
+                        cfg_if::cfg_if! {
+                            if #[cfg(not(test))] {
+                                    Close { data: self }
+                                        .exec(lines, config, &command_data)
+                                        .await?;
+                            }
+                        }
                     }
                     Commands::Rename => {
                         Rename { data: self }

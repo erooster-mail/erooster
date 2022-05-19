@@ -52,6 +52,7 @@ owo-colors = "3"
 rpassword = "6.0.1"
 indicatif = "0.16.2"
 clearscreen = "1.0.9"
+cfg-if = "1.0.0"
 
 [build-dependencies]
 clap_mangen = "0.1"

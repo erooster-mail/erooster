@@ -62,7 +62,9 @@ pub async fn start(config: Arc<Config>, database: DB) -> color_eyre::eyre::Resul
     // Construct a job registry from our job.
     let mut registry = JobRegistry::new(&[send_email_job]);
     // Here is where you can configure the registry
-    // registry.set_error_handler(...)
+    registry.set_error_handler(|name: &str, error: Box<dyn Error + Send + 'static>| {
+        tracing::error!("Job `{}` failed: {}", name, error);
+    });
 
     // And add context
     registry.set_context("");

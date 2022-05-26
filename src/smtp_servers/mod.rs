@@ -246,7 +246,7 @@ pub async fn send_email_job(
                 .await
                 .ok_or("Server did not respond")??;
             debug!("[{}] Got {}", current_job.id(), line);
-            if !line.starts_with("354") {
+            if !line.starts_with("250") {
                 lines_sender.send(String::from("RSET")).await?;
                 lines_sender.send(String::from("QUIT")).await?;
                 return Err("Server did not accept data command".into());

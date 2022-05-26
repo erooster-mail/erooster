@@ -32,6 +32,7 @@ impl DataCommand<'_> {
             };
             self.data.con_state.write().await.state = State::ReceivingData(username);
         };
+        debug!("Updated state");
         lines
             .send(String::from("354 Start mail input; end with <CRLF>.<CRLF>"))
             .await?;

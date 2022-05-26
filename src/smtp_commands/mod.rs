@@ -132,6 +132,7 @@ impl Data {
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         debug!("Current state: {:?}", self.con_state.read().await.state);
+        debug!("Current request: {}", line);
 
         let con_clone = Arc::clone(&self.con_state);
         let state = { con_clone.read().await.state.clone() };

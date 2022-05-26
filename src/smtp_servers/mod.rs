@@ -239,8 +239,6 @@ pub async fn send_email_job(
             }
 
             lines_sender.send(email.body.clone()).await?;
-            // send body end
-            lines_sender.send(String::from(".")).await?;
             debug!("[{}] Sent body and ending", current_job.id());
 
             let line = lines_reader

@@ -134,17 +134,18 @@ pub async fn send_email_job(
 
             debug!("[{}] Got {} for {}", current_job.id(), address, target);
 
-            let connector = TlsConnector::from(Arc::new(config.clone()));
+            //let connector = TlsConnector::from(Arc::new(config.clone()));
 
-            let stream = TcpStream::connect(&(address, 465)).await?;
+            // let stream = TcpStream::connect(&(address, 465)).await?;
+            let stream = TcpStream::connect(&(address, 25)).await?;
             debug!("[{}] Connected to {} via tcp", current_job.id(), target);
 
-            let domain = rustls::ServerName::try_from(target.as_str()).map_err(|_| {
+            /*let domain = rustls::ServerName::try_from(target.as_str()).map_err(|_| {
                 std::io::Error::new(std::io::ErrorKind::InvalidInput, "invalid dnsname")
             })?;
 
             let stream = connector.connect(domain, stream).await?;
-            debug!("[{}] Connected to {} via tls", current_job.id(), target);
+            debug!("[{}] Connected to {} via tls", current_job.id(), target);*/
             let lines = Framed::new(stream, LinesCodec::new());
 
             // We split these as we handle the sink in a broadcast instead to be able to push non linear data over the socket

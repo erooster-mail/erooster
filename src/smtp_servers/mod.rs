@@ -130,21 +130,28 @@ pub async fn send_email_job(
 
             let address = response.iter().next().ok_or("No address found")?;
 
+            debug!("[{}] Got {} for {}", current_job.id(), address, target);
+
             let connector = TlsConnector::from(Arc::new(config.clone()));
 
             let stream = TcpStream::connect(&(address, 465)).await?;
+            debug!("[{}] Connected to {} via tcp", current_job.id(), target);
 
             let domain = rustls::ServerName::try_from(target.as_str()).map_err(|_| {
                 std::io::Error::new(std::io::ErrorKind::InvalidInput, "invalid dnsname")
             })?;
 
             let stream = connector.connect(domain, stream).await?;
+            debug!("[{}] Connected to {} via tls", current_job.id(), target);
             let lines = Framed::new(stream, LinesCodec::new());
 
             // We split these as we handle the sink in a broadcast instead to be able to push non linear data over the socket
             let (mut lines_sender, mut lines_reader) = lines.split();
 
-            debug!("[{}] Connected. Waiting for response", current_job.id());
+            debug!(
+                "[{}] Fully Connected. Waiting for response",
+                current_job.id()
+            );
             // TODO this is totally dumb code currently.
             // We check if we get a ready status
             let first = lines_reader

@@ -109,9 +109,11 @@ impl DataCommand<'_> {
                         .set_json(&email_payload)?
                         .spawn(pool)
                         .await?;
+                    lines.send(String::from("250 OK")).await?;
                     State::NotAuthenticated
                 } else {
                     write_lock.state = State::NotAuthenticated;
+                    lines.send(String::from("250 OK")).await?;
                     color_eyre::eyre::bail!("Invalid state");
                 };
             }

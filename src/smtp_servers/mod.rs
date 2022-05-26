@@ -3,14 +3,12 @@ use crate::line_codec::LinesCodec;
 use crate::{config::Config, database::Database};
 use futures::StreamExt;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use rustls::OwnedTrustAnchor;
 use serde::{Deserialize, Serialize};
 use sqlxmq::{job, CurrentJob, JobRegistry, OwnedHandle};
 use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::net::TcpStream;
-use tokio_rustls::TlsConnector;
 use tokio_util::codec::Framed;
 use tracing::debug;
 use trust_dns_resolver::TokioAsyncResolver;
@@ -110,20 +108,6 @@ pub async fn send_email_job(
     if let Some(email) = email {
         debug!("[{}] Found payload", current_job.id());
         let resolver = TokioAsyncResolver::tokio_from_system_conf()?;
-        let mut root_cert_store = rustls::RootCertStore::empty();
-        root_cert_store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(
-            |ta| {
-                OwnedTrustAnchor::from_subject_spki_name_constraints(
-                    ta.subject,
-                    ta.spki,
-                    ta.name_constraints,
-                )
-            },
-        ));
-        let config = rustls::ClientConfig::builder()
-            .with_safe_defaults()
-            .with_root_certificates(root_cert_store)
-            .with_no_client_auth();
 
         debug!("[{}] Setup for tls connection done", current_job.id());
         for (target, to) in email.to {
@@ -134,18 +118,10 @@ pub async fn send_email_job(
 
             debug!("[{}] Got {} for {}", current_job.id(), address, target);
 
-            //let connector = TlsConnector::from(Arc::new(config.clone()));
-
             // let stream = TcpStream::connect(&(address, 465)).await?;
             let stream = TcpStream::connect(&(address, 25)).await?;
             debug!("[{}] Connected to {} via tcp", current_job.id(), target);
 
-            /*let domain = rustls::ServerName::try_from(target.as_str()).map_err(|_| {
-                std::io::Error::new(std::io::ErrorKind::InvalidInput, "invalid dnsname")
-            })?;
-
-            let stream = connector.connect(domain, stream).await?;
-            debug!("[{}] Connected to {} via tls", current_job.id(), target);*/
             let lines = Framed::new(stream, LinesCodec::new());
 
             // We split these as we handle the sink in a broadcast instead to be able to push non linear data over the socket

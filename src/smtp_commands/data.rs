@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::Path, sync::Arc};
 
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use maildir::Maildir;
-use tracing::info;
+use tracing::debug;
 
 use crate::{
     config::Config,
@@ -22,7 +22,7 @@ impl DataCommand<'_> {
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
-        info!("Waiting for incoming data");
+        debug!("Waiting for incoming data");
         {
             let write_lock = self.data.con_state.write().await;
             let username = if let State::Authenticated(username) = &write_lock.state {
@@ -48,6 +48,7 @@ impl DataCommand<'_> {
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
+        debug!("Reading incoming data");
         {
             let mut write_lock = self.data.con_state.write().await;
             if let Some(data) = &write_lock.data {
@@ -56,35 +57,15 @@ impl DataCommand<'_> {
                 write_lock.data = Some(line.to_string());
             }
             if line == "." {
+                debug!("Got end of line");
                 let receipts = if let Some(receipts) = write_lock.receipts.clone() {
                     receipts
                 } else {
                     color_eyre::eyre::bail!("No receipts")
                 };
                 write_lock.state = if let State::ReceivingData(Some(username)) = &write_lock.state {
-                    for receipt in receipts {
-                        let folder = "INBOX".to_string();
-                        let mailbox_path = Path::new(&config.mail.maildir_folders)
-                            .join(receipt)
-                            .join(folder.clone());
-                        let maildir = Maildir::from(mailbox_path.clone());
-                        if !mailbox_path.exists() {
-                            maildir.create_dirs()?;
-                            add_flag(&mailbox_path, "\\Subscribed")?;
-                            add_flag(&mailbox_path, "\\NoInferiors")?;
-                        }
-                        let data = if let Some(data) = write_lock.data.clone() {
-                            data
-                        } else {
-                            color_eyre::eyre::bail!("No data")
-                        };
-                        let message_id = maildir.store_new(data.as_bytes())?;
-                        info!("Stored message: {}", message_id);
-                        // TODO cleanup after we are done
-                        lines.send(String::from("250 OK")).await?;
-                    }
-                    State::Authenticated(username.clone())
-                } else if matches!(write_lock.state, State::ReceivingData(None)) {
+                    debug!("Authenticated user: {}", username);
+
                     let data = if let Some(data) = write_lock.data.clone() {
                         data
                     } else {
@@ -109,6 +90,32 @@ impl DataCommand<'_> {
                         .set_json(&email_payload)?
                         .spawn(pool)
                         .await?;
+                    debug!("Email added to queue");
+                    lines.send(String::from("250 OK")).await?;
+
+                    State::Authenticated(username.clone())
+                } else if matches!(write_lock.state, State::ReceivingData(None)) {
+                    debug!("No authenticated user");
+                    for receipt in receipts {
+                        let folder = "INBOX".to_string();
+                        let mailbox_path = Path::new(&config.mail.maildir_folders)
+                            .join(receipt)
+                            .join(folder.clone());
+                        let maildir = Maildir::from(mailbox_path.clone());
+                        if !mailbox_path.exists() {
+                            maildir.create_dirs()?;
+                            add_flag(&mailbox_path, "\\Subscribed")?;
+                            add_flag(&mailbox_path, "\\NoInferiors")?;
+                        }
+                        let data = if let Some(data) = write_lock.data.clone() {
+                            data
+                        } else {
+                            color_eyre::eyre::bail!("No data")
+                        };
+                        let message_id = maildir.store_new(data.as_bytes())?;
+                        debug!("Stored message: {}", message_id);
+                    }
+                    // TODO cleanup after we are done
                     lines.send(String::from("250 OK")).await?;
                     State::NotAuthenticated
                 } else {

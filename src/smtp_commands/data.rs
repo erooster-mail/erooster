@@ -24,15 +24,14 @@ impl DataCommand<'_> {
     {
         debug!("Waiting for incoming data");
         {
-            let write_lock = self.data.con_state.write().await;
+            let mut write_lock = self.data.con_state.write().await;
             let username = if let State::Authenticated(username) = &write_lock.state {
                 Some(username.clone())
             } else {
                 None
             };
-            self.data.con_state.write().await.state = State::ReceivingData(username);
+            write_lock.state = State::ReceivingData(username);
         };
-        debug!("Updated state");
         lines
             .send(String::from("354 Start mail input; end with <CRLF>.<CRLF>"))
             .await?;

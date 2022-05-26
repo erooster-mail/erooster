@@ -59,12 +59,12 @@ pub async fn start(config: Arc<Config>, database: DB) -> color_eyre::eyre::Resul
     let pool = database.get_pool();
 
     // Construct a job registry from our job.
-    let registry = JobRegistry::new(&[send_email_job]);
+    let mut registry = JobRegistry::new(&[send_email_job]);
     // Here is where you can configure the registry
     // registry.set_error_handler(...)
 
     // And add context
-    //registry.set_context("Hello");
+    registry.set_context("");
 
     let runner = registry
         // Create a job runner using the connection pool.
@@ -88,7 +88,7 @@ pub(crate) struct EmailPayload {
 }
 
 // Arguments to the `#[job]` attribute allow setting default job options.
-#[job]
+#[job(retries = 3, backoff_secs = 120)]
 pub async fn send_email_job(
     // The first argument should always be the current job.
     mut current_job: CurrentJob,

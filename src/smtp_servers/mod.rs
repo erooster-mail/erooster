@@ -12,6 +12,7 @@ use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio_rustls::TlsConnector;
 use tokio_util::codec::Framed;
+use tracing::debug;
 use trust_dns_resolver::TokioAsyncResolver;
 
 pub(crate) mod encrypted;
@@ -89,6 +90,7 @@ pub(crate) struct EmailPayload {
 
 // Arguments to the `#[job]` attribute allow setting default job options.
 #[job(retries = 3, backoff_secs = 120)]
+#[allow(clippy::too_many_lines)]
 pub async fn send_email_job(
     // The first argument should always be the current job.
     mut current_job: CurrentJob,
@@ -96,9 +98,15 @@ pub async fn send_email_job(
     // provided via [`JobRegistry::set_context`].
     _message: &'static str,
 ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+    debug!(
+        "[{}] Starting to send email job: {}",
+        current_job.id(),
+        current_job.id()
+    );
     // Decode a JSON payload
     let email: Option<EmailPayload> = current_job.json()?;
     if let Some(email) = email {
+        debug!("[{}] Found payload", current_job.id());
         let resolver = TokioAsyncResolver::tokio_from_system_conf()?;
         let mut root_cert_store = rustls::RootCertStore::empty();
         root_cert_store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(
@@ -115,7 +123,9 @@ pub async fn send_email_job(
             .with_root_certificates(root_cert_store)
             .with_no_client_auth();
 
+        debug!("[{}] Setup for tls connection done", current_job.id());
         for (target, to) in email.to {
+            debug!("[{}] Looking up {}", current_job.id(), target);
             let response = resolver.lookup_ip(target.clone()).await?;
 
             let address = response.iter().next().ok_or("No address found")?;
@@ -133,12 +143,16 @@ pub async fn send_email_job(
 
             // We split these as we handle the sink in a broadcast instead to be able to push non linear data over the socket
             let (mut lines_sender, mut lines_reader) = lines.split();
+
+            debug!("[{}] Connected. Waiting for response", current_job.id());
             // TODO this is totally dumb code currently.
             // We check if we get a ready status
             let first = lines_reader
                 .next()
                 .await
                 .ok_or("Server did not send ready status")??;
+
+            debug!("[{}] Got greeting: {}", current_job.id(), first);
             if !first.starts_with("220") {
                 lines_sender.send(String::from("RSET")).await?;
                 lines_sender.send(String::from("QUIT")).await?;
@@ -149,6 +163,7 @@ pub async fn send_email_job(
                 .send(format!("EHLO {}", email.sender_domain))
                 .await?;
 
+            debug!("[{}] Sent EHLO", current_job.id());
             // Check if we get greeted and finished all caps
             let mut capabilities_happening = true;
             while capabilities_happening {
@@ -156,6 +171,7 @@ pub async fn send_email_job(
                     .next()
                     .await
                     .ok_or("Server did not respond")??;
+                debug!("[{}] Got: {}", current_job.id(), line);
                 let char_4 = line
                     .chars()
                     .nth(3)
@@ -169,10 +185,12 @@ pub async fn send_email_job(
             lines_sender
                 .send(format!("MAIL FROM:<{}>", email.from))
                 .await?;
+            debug!("[{}] Sent MAIL FROM", current_job.id());
             let line = lines_reader
                 .next()
                 .await
                 .ok_or("Server did not respond")??;
+            debug!("[{}] got {}", current_job.id(), line);
             if line != "250 OK" {
                 lines_sender.send(String::from("RSET")).await?;
                 lines_sender.send(String::from("QUIT")).await?;
@@ -183,10 +201,12 @@ pub async fn send_email_job(
             // TODO actually follow spec here. This may be garbage :P
             for to in to {
                 lines_sender.send(format!("RCPT TO:<{}>", to)).await?;
+                debug!("[{}] Sent RCPT TO", current_job.id());
                 let line = lines_reader
                     .next()
                     .await
                     .ok_or("Server did not respond")??;
+                debug!("[{}] Got {}", current_job.id(), line);
                 if line != "250 OK" && line != "550 No such user here" {
                     lines_sender.send(String::from("RSET")).await?;
                     lines_sender.send(String::from("QUIT")).await?;
@@ -196,13 +216,29 @@ pub async fn send_email_job(
 
             // Send the body
             lines_sender.send(String::from("DATA")).await?;
-            // send body end
-            lines_sender.send(String::from(".")).await?;
+            debug!("[{}] Sent DATA", current_job.id());
 
             let line = lines_reader
                 .next()
                 .await
                 .ok_or("Server did not respond")??;
+            debug!("[{}] Got {}", current_job.id(), line);
+            if !line.starts_with("354") {
+                lines_sender.send(String::from("RSET")).await?;
+                lines_sender.send(String::from("QUIT")).await?;
+                return Err("Server did not accept data command".into());
+            }
+
+            lines_sender.send(email.body.clone()).await?;
+            // send body end
+            lines_sender.send(String::from(".")).await?;
+            debug!("[{}] Sent body and ending", current_job.id());
+
+            let line = lines_reader
+                .next()
+                .await
+                .ok_or("Server did not respond")??;
+            debug!("[{}] Got {}", current_job.id(), line);
             if !line.starts_with("354") {
                 lines_sender.send(String::from("RSET")).await?;
                 lines_sender.send(String::from("QUIT")).await?;
@@ -212,9 +248,15 @@ pub async fn send_email_job(
             // QUIT after sending
             lines_sender.send(String::from("QUIT")).await?;
         }
+        debug!(
+            "[{}] Finished sending email job: {}",
+            current_job.id(),
+            current_job.id()
+        );
         // Mark the job as complete
         current_job.complete().await?;
     } else {
+        debug!("[{}] Something broken", current_job.id());
         return Err("No email payload found".into());
     }
 

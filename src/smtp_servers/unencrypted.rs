@@ -52,7 +52,7 @@ impl Unencrypted {
                     state: State::NotAuthenticated,
                     data: None,
                     receipts: None,
-                    senders: None,
+                    sender: None,
                 }));
 
                 let (mut tx, mut rx) = mpsc::unbounded();

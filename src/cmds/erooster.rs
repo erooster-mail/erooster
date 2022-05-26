@@ -54,7 +54,8 @@ async fn main() -> Result<()> {
     let config = erooster::get_config(args.config).await?;
     let database = Arc::new(get_database(Arc::clone(&config)).await?);
     erooster::imap_servers::start(Arc::clone(&config), Arc::clone(&database))?;
-    erooster::smtp_servers::start(config, database)?;
+    // We do need the let here to make sure that the runner is bound to the lifetime of main.
+    let _runner = erooster::smtp_servers::start(config, database).await?;
 
     match signal::ctrl_c().await {
         Ok(()) => {}

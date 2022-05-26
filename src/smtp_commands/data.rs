@@ -1,11 +1,15 @@
-use std::{path::Path, sync::Arc};
+use std::{collections::HashMap, path::Path, sync::Arc};
 
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use maildir::Maildir;
 use tracing::info;
 
 use crate::{
-    config::Config, imap_commands::utils::add_flag, smtp_commands::Data, smtp_servers::state::State,
+    config::Config,
+    database::{Database, DB},
+    imap_commands::utils::add_flag,
+    smtp_commands::Data,
+    smtp_servers::{send_email_job, state::State, EmailPayload},
 };
 
 #[allow(clippy::module_name_repetitions)]
@@ -20,7 +24,13 @@ impl DataCommand<'_> {
     {
         info!("Waiting for incoming data");
         {
-            self.data.con_state.write().await.state = State::ReceivingData;
+            let write_lock = self.data.con_state.write().await;
+            let username = if let State::Authenticated(username) = &write_lock.state {
+                Some(username.clone())
+            } else {
+                None
+            };
+            self.data.con_state.write().await.state = State::ReceivingData(username);
         };
         lines
             .send(String::from("354 Start mail input; end with <CRLF>.<CRLF>"))
@@ -33,6 +43,7 @@ impl DataCommand<'_> {
         config: Arc<Config>,
         lines: &mut S,
         line: &str,
+        database: DB,
     ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
@@ -50,28 +61,59 @@ impl DataCommand<'_> {
                 } else {
                     color_eyre::eyre::bail!("No receipts")
                 };
-                write_lock.state = State::NotAuthenticated;
-                for receipt in receipts {
-                    let folder = "INBOX".to_string();
-                    let mailbox_path = Path::new(&config.mail.maildir_folders)
-                        .join(receipt)
-                        .join(folder.clone());
-                    let maildir = Maildir::from(mailbox_path.clone());
-                    if !mailbox_path.exists() {
-                        maildir.create_dirs()?;
-                        add_flag(&mailbox_path, "\\Subscribed")?;
-                        add_flag(&mailbox_path, "\\NoInferiors")?;
+                write_lock.state = if let State::ReceivingData(Some(username)) = &write_lock.state {
+                    for receipt in receipts {
+                        let folder = "INBOX".to_string();
+                        let mailbox_path = Path::new(&config.mail.maildir_folders)
+                            .join(receipt)
+                            .join(folder.clone());
+                        let maildir = Maildir::from(mailbox_path.clone());
+                        if !mailbox_path.exists() {
+                            maildir.create_dirs()?;
+                            add_flag(&mailbox_path, "\\Subscribed")?;
+                            add_flag(&mailbox_path, "\\NoInferiors")?;
+                        }
+                        let data = if let Some(data) = write_lock.data.clone() {
+                            data
+                        } else {
+                            color_eyre::eyre::bail!("No data")
+                        };
+                        let message_id = maildir.store_new(data.as_bytes())?;
+                        info!("Stored message: {}", message_id);
+                        // TODO cleanup after we are done
+                        lines.send(String::from("250 OK")).await?;
                     }
+                    State::Authenticated(username.clone())
+                } else if matches!(write_lock.state, State::ReceivingData(None)) {
                     let data = if let Some(data) = write_lock.data.clone() {
                         data
                     } else {
                         color_eyre::eyre::bail!("No data")
                     };
-                    let message_id = maildir.store_new(data.as_bytes())?;
-                    info!("Stored message: {}", message_id);
-                    // TODO cleanup after we are done
-                    lines.send(String::from("250 OK")).await?;
-                }
+                    let mut to = HashMap::new();
+                    for address in receipts {
+                        let domain = address.split('@').collect::<Vec<&str>>()[1];
+                        to.entry(domain.to_string())
+                            .or_insert(Vec::new())
+                            .push(address);
+                    }
+                    let email_payload = EmailPayload {
+                        to,
+                        from: write_lock.sender.clone().unwrap(),
+                        body: data,
+                        sender_domain: config.mail.hostname.clone(),
+                    };
+                    let pool = database.get_pool();
+                    send_email_job
+                        .builder()
+                        .set_json(&email_payload)?
+                        .spawn(pool)
+                        .await?;
+                    State::NotAuthenticated
+                } else {
+                    write_lock.state = State::NotAuthenticated;
+                    color_eyre::eyre::bail!("Invalid state");
+                };
             }
         };
         Ok(())

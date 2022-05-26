@@ -9,7 +9,7 @@ pub struct Connection {
     pub secure: bool,
     pub data: Option<String>,
     pub receipts: Option<Vec<String>>,
-    pub senders: Option<Vec<String>>,
+    pub sender: Option<String>,
 }
 
 impl Connection {
@@ -19,7 +19,7 @@ impl Connection {
             state: State::NotAuthenticated,
             data: None,
             receipts: None,
-            senders: None,
+            sender: None,
         }))
     }
 }
@@ -28,8 +28,8 @@ impl Connection {
 pub enum State {
     /// Initial State
     NotAuthenticated,
-    /// DATA command issued
-    ReceivingData,
+    /// DATA command issued, if not None this means we were authenticated
+    ReceivingData(Option<String>),
     /// Authentication in progress
     Authenticating(AuthState),
     /// Authentication done

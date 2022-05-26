@@ -27,7 +27,7 @@ impl Mail<'_> {
 
         {
             let mut write_lock = self.data.con_state.write().await;
-            write_lock.senders = Some(senders);
+            write_lock.sender = Some(senders[0].clone());
         };
         lines.send(String::from("250 OK")).await?;
         Ok(())

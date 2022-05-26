@@ -135,9 +135,9 @@ impl Data {
 
         let con_clone = Arc::clone(&self.con_state);
         let state = { con_clone.read().await.state.clone() };
-        if let State::ReceivingData = state {
+        if matches!(state, State::ReceivingData(_)) {
             DataCommand { data: self }
-                .receive(config, lines, &line)
+                .receive(config, lines, &line, database)
                 .await?;
             // We are done here
             return Ok(false);

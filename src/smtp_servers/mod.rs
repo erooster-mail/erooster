@@ -201,7 +201,7 @@ pub async fn send_email_job(
                 .await
                 .ok_or("Server did not respond")??;
             debug!("[{}] got {}", current_job.id(), line);
-            if line != "250 OK" {
+            if !line.starts_with("250") {
                 lines_sender.send(String::from("RSET")).await?;
                 lines_sender.send(String::from("QUIT")).await?;
                 return Err("Server did not accept MAIL FROM command".into());
@@ -217,7 +217,7 @@ pub async fn send_email_job(
                     .await
                     .ok_or("Server did not respond")??;
                 debug!("[{}] Got {}", current_job.id(), line);
-                if line != "250 OK" && line != "550 No such user here" {
+                if !line.starts_with("250") && !line.starts_with("550") {
                     lines_sender.send(String::from("RSET")).await?;
                     lines_sender.send(String::from("QUIT")).await?;
                     return Err("Server did not accept RCPT TO command".into());

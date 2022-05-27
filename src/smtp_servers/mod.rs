@@ -89,7 +89,7 @@ pub(crate) struct EmailPayload {
 }
 
 // Arguments to the `#[job]` attribute allow setting default job options.
-#[job(retries = 3, backoff_secs = 120)]
+#[job(retries = 3, backoff_secs = 1200)]
 #[allow(clippy::too_many_lines)]
 pub async fn send_email_job(
     // The first argument should always be the current job.

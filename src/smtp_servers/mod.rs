@@ -111,12 +111,27 @@ pub async fn send_email_job(
 
         debug!("[{}] Setup for tls connection done", current_job.id());
         for (target, to) in email.to {
-            debug!("[{}] Looking up {}", current_job.id(), target);
+            debug!(
+                "[{}] Looking up mx records for {}",
+                current_job.id(),
+                target
+            );
             let mx_record_resp = resolver.mx_lookup(target.clone()).await;
 
+            debug!(
+                "[{}] Looking up A/AAAA records for {}",
+                current_job.id(),
+                target
+            );
             let response = resolver.lookup_ip(target.clone()).await?;
             let mut address = response.iter().next().ok_or("No address found")?;
+            debug!("[{}] Got {} for {}", current_job.id(), address, target);
 
+            debug!(
+                "[{}] Checking mx record results for {}",
+                current_job.id(),
+                target
+            );
             if let Ok(mx_record_resp) = mx_record_resp {
                 for record in mx_record_resp {
                     debug!(
@@ -134,8 +149,6 @@ pub async fn send_email_job(
                     }
                 }
             }
-
-            debug!("[{}] Got {} for {}", current_job.id(), address, target);
 
             // let stream = TcpStream::connect(&(address, 465)).await?;
             let stream = TcpStream::connect(&(address, 25)).await?;

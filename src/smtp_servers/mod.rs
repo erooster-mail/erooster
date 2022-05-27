@@ -112,9 +112,26 @@ pub async fn send_email_job(
         debug!("[{}] Setup for tls connection done", current_job.id());
         for (target, to) in email.to {
             debug!("[{}] Looking up {}", current_job.id(), target);
+            let mx_record_resp = resolver.mx_lookup(target.clone()).await?;
+
             let response = resolver.lookup_ip(target.clone()).await?;
 
-            let address = response.iter().next().ok_or("No address found")?;
+            let mut address = response.iter().next().ok_or("No address found")?;
+            for record in mx_record_resp {
+                println!(
+                    "[{}] Found MX: {} {}",
+                    current_job.id(),
+                    record.preference(),
+                    record.exchange()
+                );
+                let lookup_response = resolver.lookup_ip(record.exchange().clone()).await;
+                if let Ok(lookup_response) = lookup_response {
+                    let mut ip_addrs = lookup_response.iter();
+                    if let Some(ip_addrs) = ip_addrs.next() {
+                        address = ip_addrs;
+                    }
+                }
+            }
 
             debug!("[{}] Got {} for {}", current_job.id(), address, target);
 

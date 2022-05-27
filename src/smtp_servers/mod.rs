@@ -118,7 +118,7 @@ pub async fn send_email_job(
 
             let mut address = response.iter().next().ok_or("No address found")?;
             for record in mx_record_resp {
-                println!(
+                debug!(
                     "[{}] Found MX: {} {}",
                     current_job.id(),
                     record.preference(),

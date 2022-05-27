@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use sqlxmq::{job, CurrentJob, JobRegistry, OwnedHandle};
 use std::collections::HashMap;
 use std::error::Error;
+use std::net::IpAddr;
 use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio_util::codec::Framed;
@@ -119,13 +120,27 @@ pub async fn send_email_job(
             let mx_record_resp = resolver.mx_lookup(target.clone()).await;
 
             debug!(
-                "[{}] Looking up A/AAAA records for {}",
+                "[{}] Looking up AAAA records for {}",
                 current_job.id(),
                 target
             );
-            let response = resolver.lookup_ip(target.clone()).await?;
-            let mut address = response.iter().next().ok_or("No address found")?;
-            debug!("[{}] Got {} for {}", current_job.id(), address, target);
+            let mut address: Option<IpAddr> = None;
+            let response = resolver.ipv6_lookup(target.clone()).await;
+            if let Ok(response) = response {
+                address = Some(IpAddr::V6(
+                    *response.iter().next().ok_or("No address found")?,
+                ));
+                debug!("[{}] Got {:?} for {}", current_job.id(), address, target);
+            } else {
+                debug!("[{}] Looking up A records for {}", current_job.id(), target);
+                let response = resolver.ipv4_lookup(target.clone()).await;
+                if let Ok(response) = response {
+                    address = Some(IpAddr::V4(
+                        *response.iter().next().ok_or("No address found")?,
+                    ));
+                    debug!("[{}] Got {:?} for {}", current_job.id(), address, target);
+                }
+            }
 
             debug!(
                 "[{}] Checking mx record results for {}",
@@ -140,18 +155,32 @@ pub async fn send_email_job(
                         record.preference(),
                         record.exchange()
                     );
-                    let lookup_response = resolver.lookup_ip(record.exchange().clone()).await;
-                    if let Ok(lookup_response) = lookup_response {
-                        let mut ip_addrs = lookup_response.iter();
-                        if let Some(ip_addrs) = ip_addrs.next() {
-                            address = ip_addrs;
+                    let response = resolver.ipv6_lookup(record.exchange().clone()).await;
+                    if let Ok(response) = response {
+                        address = Some(IpAddr::V6(
+                            *response.iter().next().ok_or("No address found")?,
+                        ));
+                        debug!("[{}] Got {:?} for {}", current_job.id(), address, target);
+                    } else {
+                        debug!("[{}] Looking up A records for {}", current_job.id(), target);
+                        let response = resolver.ipv4_lookup(record.exchange().clone()).await;
+                        if let Ok(response) = response {
+                            address = Some(IpAddr::V4(
+                                *response.iter().next().ok_or("No address found")?,
+                            ));
+                            debug!("[{}] Got {:?} for {}", current_job.id(), address, target);
                         }
                     }
                 }
             }
 
+            if matches!(address, None) {
+                debug!("[{}] No address found for {}", current_job.id(), target);
+                continue;
+            }
+
             // let stream = TcpStream::connect(&(address, 465)).await?;
-            let stream = TcpStream::connect(&(address, 25)).await?;
+            let stream = TcpStream::connect(&(address.unwrap(), 25)).await?;
             debug!("[{}] Connected to {} via tcp", current_job.id(), target);
 
             let lines = Framed::new(stream, LinesCodec::new());

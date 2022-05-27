@@ -159,6 +159,14 @@ pub async fn send_email_job(
             if !first.starts_with("220") {
                 lines_sender.send(String::from("RSET")).await?;
                 lines_sender.send(String::from("QUIT")).await?;
+                debug!(
+                    "[{}] Got full {:?}",
+                    current_job.id(),
+                    lines_reader
+                        .filter_map(|x| async move { x.ok() })
+                        .collect::<Vec<String>>()
+                        .await
+                );
                 return Err("Server did not send ready status".into());
             }
             // We send EHLO
@@ -197,6 +205,14 @@ pub async fn send_email_job(
             if !line.starts_with("250") {
                 lines_sender.send(String::from("RSET")).await?;
                 lines_sender.send(String::from("QUIT")).await?;
+                debug!(
+                    "[{}] Got full {:?}",
+                    current_job.id(),
+                    lines_reader
+                        .filter_map(|x| async move { x.ok() })
+                        .collect::<Vec<String>>()
+                        .await
+                );
                 return Err("Server did not accept MAIL FROM command".into());
             }
 
@@ -213,6 +229,14 @@ pub async fn send_email_job(
                 if !line.starts_with("250") && !line.starts_with("550") {
                     lines_sender.send(String::from("RSET")).await?;
                     lines_sender.send(String::from("QUIT")).await?;
+                    debug!(
+                        "[{}] Got full {:?}",
+                        current_job.id(),
+                        lines_reader
+                            .filter_map(|x| async move { x.ok() })
+                            .collect::<Vec<String>>()
+                            .await
+                    );
                     return Err("Server did not accept RCPT TO command".into());
                 }
             }
@@ -229,7 +253,16 @@ pub async fn send_email_job(
             if !line.starts_with("354") {
                 lines_sender.send(String::from("RSET")).await?;
                 lines_sender.send(String::from("QUIT")).await?;
-                return Err("Server did not accept data command".into());
+
+                debug!(
+                    "[{}] Got full {:?}",
+                    current_job.id(),
+                    lines_reader
+                        .filter_map(|x| async move { x.ok() })
+                        .collect::<Vec<String>>()
+                        .await
+                );
+                return Err("Server did not accept data start command".into());
             }
 
             lines_sender.send(email.body.clone()).await?;
@@ -243,6 +276,14 @@ pub async fn send_email_job(
             if !line.starts_with("250") {
                 lines_sender.send(String::from("RSET")).await?;
                 lines_sender.send(String::from("QUIT")).await?;
+                debug!(
+                    "[{}] Got full {:?}",
+                    current_job.id(),
+                    lines_reader
+                        .filter_map(|x| async move { x.ok() })
+                        .collect::<Vec<String>>()
+                        .await
+                );
                 return Err("Server did not accept data command".into());
             }
 

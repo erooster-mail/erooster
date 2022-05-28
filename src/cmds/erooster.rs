@@ -30,11 +30,10 @@
 #![warn(missing_docs)]
 #![allow(clippy::missing_panics_doc)]
 
-use std::sync::Arc;
-
 use clap::Parser;
 use color_eyre::eyre::Result;
-use erooster::database::get_database;
+use erooster::backend::database::get_database;
+use std::sync::Arc;
 use tokio::signal;
 use tracing::{error, info};
 

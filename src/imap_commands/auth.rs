@@ -1,5 +1,5 @@
-use crate::database::{Database, DB};
 use crate::{
+    backend::database::{Database, DB},
     imap_commands::{CommandData, Data},
     imap_servers::state::State,
 };

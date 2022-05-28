@@ -1,5 +1,5 @@
-use crate::database::{Database, DB};
 use crate::{
+    backend::database::{Database, DB},
     smtp_commands::{CommandData, Data},
     smtp_servers::state::{AuthState, State},
 };

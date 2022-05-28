@@ -1,10 +1,9 @@
-use std::sync::Arc;
-
-use crate::{config::Config, database::Database};
+use crate::{backend::database::Database, config::Config};
 use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use color_eyre::Result;
 use rand_core::OsRng;
 use sqlx::PgPool;
+use std::sync::Arc;
 use tracing::{debug, error};
 
 /// Postgres specific database implementation

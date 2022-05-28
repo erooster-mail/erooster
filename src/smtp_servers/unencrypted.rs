@@ -1,13 +1,5 @@
-use std::{net::SocketAddr, sync::Arc};
-
-use futures::{channel::mpsc, SinkExt, StreamExt};
-use tokio::{net::TcpListener, sync::RwLock};
-use tokio_stream::wrappers::TcpListenerStream;
-use tokio_util::codec::Framed;
-use tracing::{debug, error, info};
-
-use crate::database::DB;
 use crate::{
+    backend::database::DB,
     config::Config,
     line_codec::LinesCodec,
     smtp_commands::Data,
@@ -16,6 +8,12 @@ use crate::{
         state::{Connection, State},
     },
 };
+use futures::{channel::mpsc, SinkExt, StreamExt};
+use std::{net::SocketAddr, sync::Arc};
+use tokio::{net::TcpListener, sync::RwLock};
+use tokio_stream::wrappers::TcpListenerStream;
+use tokio_util::codec::Framed;
+use tracing::{debug, error, info};
 
 /// An unencrypted smtp Server
 pub struct Unencrypted;

@@ -1,18 +1,5 @@
-use std::{net::SocketAddr, sync::Arc};
-
-use async_trait::async_trait;
-use futures::{channel::mpsc, SinkExt, StreamExt};
-use notify::Event;
-use tokio::{
-    net::TcpListener,
-    sync::{broadcast, RwLock},
-};
-use tokio_stream::wrappers::TcpListenerStream;
-use tokio_util::codec::Framed;
-use tracing::{debug, info};
-
-use crate::database::DB;
 use crate::{
+    backend::database::DB,
     config::Config,
     imap_commands::Data,
     imap_servers::Server,
@@ -22,6 +9,17 @@ use crate::{
     },
     line_codec::LinesCodec,
 };
+use async_trait::async_trait;
+use futures::{channel::mpsc, SinkExt, StreamExt};
+use notify::Event;
+use std::{net::SocketAddr, sync::Arc};
+use tokio::{
+    net::TcpListener,
+    sync::{broadcast, RwLock},
+};
+use tokio_stream::wrappers::TcpListenerStream;
+use tokio_util::codec::Framed;
+use tracing::{debug, info};
 
 /// An unencrypted imap Server
 pub struct Unencrypted;

@@ -1,6 +1,8 @@
-use crate::database::DB;
-use crate::line_codec::LinesCodec;
-use crate::{config::Config, database::Database};
+use crate::{
+    backend::database::{Database, DB},
+    config::Config,
+    line_codec::LinesCodec,
+};
 use futures::StreamExt;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use serde::{Deserialize, Serialize};

@@ -1,5 +1,5 @@
-use crate::database::DB;
 use crate::{
+    backend::database::DB,
     config::Config,
     imap_commands::Data,
     imap_servers::Server,

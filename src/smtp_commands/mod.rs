@@ -1,5 +1,5 @@
-use crate::database::DB;
 use crate::{
+    backend::database::DB,
     config::Config,
     smtp_commands::{
         auth::Auth, data::DataCommand, ehlo::Ehlo, mail::Mail, noop::Noop, quit::Quit, rcpt::Rcpt,

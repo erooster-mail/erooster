@@ -1,16 +1,14 @@
-use std::{collections::HashMap, path::Path, sync::Arc};
-
-use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use maildir::Maildir;
-use tracing::debug;
-
 use crate::{
+    backend::database::{Database, DB},
     config::Config,
-    database::{Database, DB},
     imap_commands::utils::add_flag,
     smtp_commands::Data,
     smtp_servers::{send_email_job, state::State, EmailPayload},
 };
+use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use maildir::Maildir;
+use std::{collections::HashMap, path::Path, sync::Arc};
+use tracing::debug;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct DataCommand<'a> {

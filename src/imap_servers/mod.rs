@@ -1,6 +1,4 @@
-use crate::config::Config;
-use crate::database::DB;
-use crate::imap_commands::capability::get_capabilities;
+use crate::{backend::database::DB, config::Config, imap_commands::capability::get_capabilities};
 use async_trait::async_trait;
 use const_format::formatcp;
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};

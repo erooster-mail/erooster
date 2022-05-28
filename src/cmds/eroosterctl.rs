@@ -30,13 +30,11 @@
 #![warn(missing_docs)]
 #![allow(clippy::missing_panics_doc)]
 
-use std::{io, process::exit, sync::Arc};
-
 use clap::{Parser, Subcommand};
 use color_eyre::eyre::Result;
 use erooster::{
+    backend::database::{get_database, Database},
     config::Config,
-    database::{get_database, Database},
 };
 use indicatif::{ProgressBar, ProgressStyle};
 use owo_colors::{
@@ -44,6 +42,7 @@ use owo_colors::{
     DynColors, OwoColorize,
 };
 use std::io::Write;
+use std::{io, process::exit, sync::Arc};
 use tracing::error;
 
 #[derive(Parser, Debug)]

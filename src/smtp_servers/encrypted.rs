@@ -1,3 +1,11 @@
+use crate::{
+    backend::database::DB,
+    config::Config,
+    line_codec::LinesCodec,
+    smtp_commands::Data,
+    smtp_servers::{send_capabilities, state::Connection},
+};
+use futures::{channel::mpsc, SinkExt, StreamExt};
 use std::{
     fs,
     io::{self, BufReader},
@@ -5,8 +13,6 @@ use std::{
     path::Path,
     sync::Arc,
 };
-
-use futures::{channel::mpsc, SinkExt, StreamExt};
 use tokio::net::TcpListener;
 use tokio_rustls::{
     rustls::{self, Certificate, PrivateKey},
@@ -15,14 +21,6 @@ use tokio_rustls::{
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, info};
-
-use crate::database::DB;
-use crate::{
-    config::Config,
-    line_codec::LinesCodec,
-    smtp_commands::Data,
-    smtp_servers::{send_capabilities, state::Connection},
-};
 
 /// An encrypted smtp Server
 pub struct Encrypted;

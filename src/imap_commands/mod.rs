@@ -1,5 +1,4 @@
-use crate::database::DB;
-use crate::{
+use crate::{backend::database::DB,
     config::Config,
     imap_commands::{
         auth::{Authenticate, AuthenticationMethod},

@@ -47,6 +47,7 @@ mod list;
 mod login;
 mod logout;
 mod noop;
+mod parsers;
 mod rename;
 mod select;
 mod subscribe;
@@ -300,7 +301,9 @@ impl Data {
                             .await?;
                     }
                     Commands::Uid => {
-                        Uid.exec(lines, &command_data, config).await?;
+                        Uid { data: self }
+                            .exec(lines, &command_data, storage)
+                            .await?;
                     }
                 }
             }

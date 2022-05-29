@@ -1,5 +1,5 @@
 use crate::{
-    backend::storage::{Storage, MailStorage},
+    backend::storage::{MailStorage, Storage},
     config::Config,
     imap_commands::{CommandData, Data},
 };

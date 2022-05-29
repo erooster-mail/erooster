@@ -1,4 +1,7 @@
-use crate::backend::{database::DB, storage::maildir::MaildirStorage};
+use crate::backend::{
+    database::DB,
+    storage::maildir::{MaildirMailEntry, MaildirStorage},
+};
 use mailparse::{MailHeader, ParsedMail};
 use std::path::{Path, PathBuf};
 
@@ -9,6 +12,10 @@ pub mod maildir;
 /// The current storage type
 #[cfg(feature = "maildir")]
 pub type Storage = MaildirStorage;
+
+/// The current `MailEntry` type
+#[cfg(feature = "maildir")]
+pub type MailEntryType = MaildirMailEntry;
 
 /// Representation of a Mail entry
 #[async_trait::async_trait]
@@ -71,6 +78,8 @@ pub trait MailStorage<M: MailEntry> {
     fn list_cur(&self, path: String) -> Vec<M>;
     /// Get the new messages
     fn list_new(&self, path: String) -> Vec<M>;
+    /// Get the all messages
+    fn list_all(&self, path: String) -> Vec<M>;
 }
 
 /// Get the struct of the current storage implementation

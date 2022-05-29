@@ -136,6 +136,20 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             })
             .collect()
     }
+    fn list_all(&self, path: String) -> Vec<MaildirMailEntry> {
+        let maildir = Maildir::from(path);
+        maildir
+            .list_new()
+            .chain(maildir.list_cur())
+            .filter_map(|x| match x {
+                Ok(x) => Some(MaildirMailEntry {
+                    entry: x,
+                    db: Arc::clone(&self.db),
+                }),
+                Err(_) => None,
+            })
+            .collect()
+    }
 }
 
 #[derive(sqlx::FromRow)]

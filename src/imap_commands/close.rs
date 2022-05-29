@@ -108,7 +108,7 @@ mod tests {
             command: Commands::Close,
             arguments: &[],
         };
-        let config = crate::get_config("./config.yml").await?;
+        let config = crate::get_config(String::from("./config.yml")).await?;
         let database = Arc::new(get_database(Arc::clone(&config)).await?);
         let storage = Arc::new(crate::backend::storage::get_storage(database));
         let (mut tx, mut rx) = mpsc::unbounded();
@@ -135,7 +135,7 @@ mod tests {
             arguments: &[],
         };
         let (mut tx, mut rx) = mpsc::unbounded();
-        let config = crate::get_config("./config.yml").await?;
+        let config = crate::get_config(String::from("./config.yml")).await?;
         let database = Arc::new(get_database(Arc::clone(&config)).await?);
         let storage = Arc::new(crate::backend::storage::get_storage(database));
         let res = caps.exec(&mut tx, storage, config, &cmd_data).await;
@@ -163,7 +163,7 @@ mod tests {
             arguments: &[],
         };
         let (mut tx, mut rx) = mpsc::unbounded();
-        let config = crate::get_config("./config.yml").await?;
+        let config = crate::get_config(String::from("./config.yml")).await?;
         let database = Arc::new(get_database(Arc::clone(&config)).await?);
         let storage = Arc::new(crate::backend::storage::get_storage(database));
         let res = caps.exec(&mut tx, storage, config, &cmd_data).await;

@@ -1,4 +1,4 @@
 CREATE TABLE IF NOT EXISTS mails (
     id BIGSERIAL NOT NULL PRIMARY KEY UNIQUE,
-    maildir_id TEXT NOT NULL,
+    maildir_id TEXT NOT NULL
 );

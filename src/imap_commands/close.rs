@@ -1,10 +1,10 @@
 use crate::{
+    backend::storage::{MailEntry, MailStorage, Storage},
     config::Config,
     imap_commands::{CommandData, Data},
     imap_servers::state::{Access, State},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use maildir::Maildir;
 use std::{path::Path, sync::Arc};
 use tokio::fs;
 use tracing::debug;
@@ -17,7 +17,8 @@ impl Close<'_> {
     pub async fn exec<S>(
         &self,
         lines: &mut S,
-        #[cfg(not(test))] config: Arc<Config>,
+        storage: Arc<Storage>,
+        config: Arc<Config>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -42,10 +43,13 @@ impl Close<'_> {
                 let mailbox_path = Path::new(&config.mail.maildir_folders)
                     .join(self.data.con_state.read().await.username.clone().unwrap())
                     .join(folder.clone());
-                let maildir = Maildir::from(mailbox_path.clone());
 
                 // We need to check all messages it seems?
-                let mails = maildir.list_cur().chain(maildir.list_new()).flatten();
+                let mails = storage.list_cur(mailbox_path.clone().into_os_string().into_string().expect(
+                                    "Failed to convert path. Your system may be incompatible",
+                                )).into_iter().chain(storage.list_new(mailbox_path.into_os_string().into_string().expect(
+                                    "Failed to convert path. Your system may be incompatible",
+                                )));
                 for mail in mails {
                     debug!("Checking mails");
                     if mail.is_trashed() {
@@ -98,8 +102,10 @@ mod tests {
             command: Commands::Close,
             arguments: &[],
         };
+        let storage = Arc::new(crate::backend::storage::get_storage());
+        let config = Arc::new(crate::get_config("./config.yml"));
         let (mut tx, mut rx) = mpsc::unbounded();
-        let res = caps.exec(&mut tx, &cmd_data).await;
+        let res = caps.exec(&mut tx, storage, config, &cmd_data).await;
         assert!(res.is_ok());
         assert_eq!(rx.next().await, Some(String::from("1 OK CLOSE completed")));
     }
@@ -122,7 +128,9 @@ mod tests {
             arguments: &[],
         };
         let (mut tx, mut rx) = mpsc::unbounded();
-        let res = caps.exec(&mut tx, &cmd_data).await;
+        let storage = Arc::new(crate::backend::storage::get_storage());
+        let config = Arc::new(crate::get_config("./config.yml"));
+        let res = caps.exec(&mut tx, storage, config, &cmd_data).await;
         assert!(res.is_ok());
         assert_eq!(
             rx.next().await,
@@ -147,7 +155,9 @@ mod tests {
             arguments: &[],
         };
         let (mut tx, mut rx) = mpsc::unbounded();
-        let res = caps.exec(&mut tx, &cmd_data).await;
+        let storage = Arc::new(crate::backend::storage::get_storage());
+        let config = Arc::new(crate::get_config("./config.yml"));
+        let res = caps.exec(&mut tx, storage, config, &cmd_data).await;
         assert!(res.is_ok());
         assert_eq!(rx.next().await, Some(String::from("1 NO invalid state")));
     }

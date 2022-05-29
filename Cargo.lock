@@ -648,6 +648,7 @@ dependencies = [
  "futures",
  "indicatif",
  "maildir",
+ "mailparse",
  "nom 7.1.1",
  "notify",
  "owo-colors",

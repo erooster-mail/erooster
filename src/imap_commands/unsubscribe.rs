@@ -1,6 +1,7 @@
 use crate::{
+    backend::storage::{Storage, MailStorage},
     config::Config,
-    imap_commands::{utils::remove_flag, CommandData, Data},
+    imap_commands::{CommandData, Data},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{path::Path, sync::Arc};
@@ -14,6 +15,7 @@ impl Unsubscribe<'_> {
         &self,
         lines: &mut S,
         config: Arc<Config>,
+        storage: Arc<Storage>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -35,7 +37,7 @@ impl Unsubscribe<'_> {
                     .await?;
                 return Ok(());
             }
-            remove_flag(&mailbox_path, "\\Subscribed").await?;
+            storage.remove_flag(&mailbox_path, "\\Subscribed").await?;
             lines
                 .send(format!("{} OK UNSUBSCRIBE completed", command_data.tag))
                 .await?;

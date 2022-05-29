@@ -1,5 +1,5 @@
 use crate::{
-    backend::database::DB,
+    backend::{database::DB, storage::Storage},
     config::Config,
     imap_commands::Data,
     imap_servers::Server,
@@ -79,9 +79,11 @@ impl Server for Encrypted {
     /// # Errors
     ///
     /// Returns an error if the cert setup fails
+    #[allow(clippy::too_many_lines)]
     async fn run(
         config: Arc<Config>,
         database: DB,
+        storage: Arc<Storage>,
         file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()> {
         // Load SSL Keys
@@ -123,6 +125,7 @@ impl Server for Encrypted {
             // We need to clone these as we move into a new thread
             let config = Arc::clone(&config);
             let database = Arc::clone(&database);
+            let storage = Arc::clone(&storage);
             let file_watcher = file_watcher.clone();
 
             // Start talking with new peer on new thread
@@ -189,6 +192,7 @@ impl Server for Encrypted {
                                         &mut tx,
                                         Arc::clone(&config),
                                         Arc::clone(&database),
+                                        Arc::clone(&storage),
                                         line,
                                     )
                                     .await;

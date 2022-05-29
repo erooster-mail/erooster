@@ -1,5 +1,4 @@
 use std::sync::Arc;
-
 use crate::{config::Config, imap_commands::CommandData};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 

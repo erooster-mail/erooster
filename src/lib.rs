@@ -24,7 +24,11 @@
     clippy::clone_on_ref_ptr
 )]
 #![warn(missing_docs)]
-#![allow(clippy::missing_panics_doc, clippy::missing_errors_doc)]
+#![allow(
+    clippy::missing_panics_doc,
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions
+)]
 
 use std::{path::Path, sync::Arc};
 

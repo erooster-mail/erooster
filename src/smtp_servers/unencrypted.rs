@@ -1,5 +1,5 @@
 use crate::{
-    backend::database::DB,
+    backend::{database::DB, storage::Storage},
     config::Config,
     line_codec::LinesCodec,
     smtp_commands::Data,
@@ -22,7 +22,11 @@ impl Unencrypted {
     // TODO make this only pub for benches and tests
     #[allow(missing_docs)]
     #[allow(clippy::missing_errors_doc)]
-    pub async fn run(config: Arc<Config>, database: DB) -> color_eyre::eyre::Result<()> {
+    pub async fn run(
+        config: Arc<Config>,
+        database: DB,
+        storage: Arc<Storage>,
+    ) -> color_eyre::eyre::Result<()> {
         let addr: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
                 .iter()
@@ -41,6 +45,7 @@ impl Unencrypted {
 
             let config = Arc::clone(&config);
             let database = Arc::clone(&database);
+            let storage = Arc::clone(&storage);
             tokio::spawn(async move {
                 let lines = Framed::new(tcp_stream, LinesCodec::new());
                 let (mut lines_sender, mut lines_reader) = lines.split();
@@ -77,7 +82,13 @@ impl Unencrypted {
                     // TODO make sure to handle IDLE different as it needs us to stream lines
                     // TODO pass lines and make it possible to not need new lines in responds but instead directly use `lines.send`
                     let response = data
-                        .parse(&mut tx, Arc::clone(&config), Arc::clone(&database), line)
+                        .parse(
+                            &mut tx,
+                            Arc::clone(&config),
+                            Arc::clone(&database),
+                            Arc::clone(&storage),
+                            line,
+                        )
                         .await;
 
                     match response {

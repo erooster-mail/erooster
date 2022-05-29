@@ -1,9 +1,9 @@
 use crate::{
+    backend::storage::{MailStorage, Storage},
     config::Config,
-    imap_commands::{utils::add_flag, CommandData, Data},
+    imap_commands::{CommandData, Data},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use maildir::Maildir;
 use std::{path::Path, sync::Arc};
 use tracing::error;
 
@@ -15,6 +15,7 @@ impl Create<'_> {
         &self,
         lines: &mut S,
         config: Arc<Config>,
+        storage: Arc<Storage>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -29,11 +30,16 @@ impl Create<'_> {
             let mailbox_path = Path::new(&config.mail.maildir_folders)
                 .join(self.data.con_state.read().await.username.clone().unwrap())
                 .join(folder.clone());
-            let maildir = Maildir::from(mailbox_path.clone());
-            match maildir.create_dirs() {
+            let mailbox_path_string = mailbox_path
+                .clone()
+                .into_os_string()
+                .into_string()
+                .expect("Failed to convert path. Your system may be incompatible");
+
+            match storage.create_dirs(mailbox_path_string) {
                 Ok(_) => {
                     if folder.to_lowercase() == ".trash" {
-                        add_flag(&mailbox_path, "\\Trash")?;
+                        storage.add_flag(&mailbox_path, "\\Trash").await?;
                     }
                     lines
                         .send(format!("{} OK CREATE completed", command_data.tag))

@@ -1,4 +1,5 @@
-use crate::{backend::database::DB,
+use crate::{
+    backend::{database::DB, storage::Storage},
     config::Config,
     imap_commands::{
         auth::{Authenticate, AuthenticationMethod},
@@ -51,7 +52,6 @@ mod select;
 mod subscribe;
 mod uid;
 mod unsubscribe;
-pub mod utils;
 
 #[derive(Debug)]
 pub struct Data {
@@ -178,6 +178,7 @@ impl Data {
         lines: &mut S,
         config: Arc<Config>,
         database: DB,
+        storage: Arc<Storage>,
         line: String,
     ) -> color_eyre::eyre::Result<bool>
     where
@@ -244,27 +245,27 @@ impl Data {
                     }
                     Commands::List => {
                         List { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, config, storage, &command_data)
                             .await?;
                     }
                     Commands::LSub => {
                         LSub { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, config, storage, &command_data)
                             .await?;
                     }
                     Commands::Select => {
                         Select { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, config, storage, &command_data)
                             .await?;
                     }
                     Commands::Examine => {
                         Examine { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, config, storage, &command_data)
                             .await?;
                     }
                     Commands::Create => {
                         Create { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, config, storage, &command_data)
                             .await?;
                     }
                     Commands::Delete => {
@@ -274,12 +275,12 @@ impl Data {
                     }
                     Commands::Subscribe => {
                         Subscribe { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, config, storage, &command_data)
                             .await?;
                     }
                     Commands::Unsubscribe => {
                         Unsubscribe { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, config, storage, &command_data)
                             .await?;
                     }
                     Commands::Noop => {
@@ -289,14 +290,9 @@ impl Data {
                         Check { data: self }.exec(lines, &command_data).await?;
                     }
                     Commands::Close => {
-                        // See why in the command itself
-                        cfg_if::cfg_if! {
-                            if #[cfg(not(test))] {
-                                    Close { data: self }
-                                        .exec(lines, config, &command_data)
-                                        .await?;
-                            }
-                        }
+                        Close { data: self }
+                            .exec(lines, storage, config, &command_data)
+                            .await?;
                     }
                     Commands::Rename => {
                         Rename { data: self }

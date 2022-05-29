@@ -32,7 +32,7 @@
 
 use clap::Parser;
 use color_eyre::eyre::Result;
-use erooster::backend::database::get_database;
+use erooster::backend::{database::get_database, storage::get_storage};
 use std::sync::Arc;
 use tokio::signal;
 use tracing::{error, info};
@@ -52,9 +52,14 @@ async fn main() -> Result<()> {
     info!("Starting ERooster Server");
     let config = erooster::get_config(args.config).await?;
     let database = Arc::new(get_database(Arc::clone(&config)).await?);
-    erooster::imap_servers::start(Arc::clone(&config), Arc::clone(&database))?;
+    let storage = Arc::new(get_storage());
+    erooster::imap_servers::start(
+        Arc::clone(&config),
+        Arc::clone(&database),
+        Arc::clone(&storage),
+    )?;
     // We do need the let here to make sure that the runner is bound to the lifetime of main.
-    let _runner = erooster::smtp_servers::start(config, database).await?;
+    let _runner = erooster::smtp_servers::start(config, database, storage).await?;
 
     match signal::ctrl_c().await {
         Ok(()) => {}

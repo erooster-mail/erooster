@@ -1,12 +1,13 @@
 use crate::{
-    backend::database::{Database, DB},
+    backend::{
+        database::{Database, DB},
+        storage::{MailStorage, Storage},
+    },
     config::Config,
-    imap_commands::utils::add_flag,
     smtp_commands::Data,
     smtp_servers::{send_email_job, state::State, EmailPayload},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use maildir::Maildir;
 use std::{collections::HashMap, path::Path, sync::Arc};
 use tracing::debug;
 
@@ -42,6 +43,7 @@ impl DataCommand<'_> {
         lines: &mut S,
         line: &str,
         database: DB,
+        storage: Arc<Storage>,
     ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
@@ -99,18 +101,27 @@ impl DataCommand<'_> {
                         let mailbox_path = Path::new(&config.mail.maildir_folders)
                             .join(receipt)
                             .join(folder.clone());
-                        let maildir = Maildir::from(mailbox_path.clone());
                         if !mailbox_path.exists() {
-                            maildir.create_dirs()?;
-                            add_flag(&mailbox_path, "\\Subscribed")?;
-                            add_flag(&mailbox_path, "\\NoInferiors")?;
+                            storage.create_dirs(
+                                mailbox_path.clone().into_os_string().into_string().expect(
+                                    "Failed to convert path. Your system may be incompatible",
+                                ),
+                            )?;
+                            storage.add_flag(&mailbox_path, "\\Subscribed").await?;
+                            storage.add_flag(&mailbox_path, "\\NoInferiors").await?;
                         }
                         let data = if let Some(data) = write_lock.data.clone() {
                             data
                         } else {
                             color_eyre::eyre::bail!("No data")
                         };
-                        let message_id = maildir.store_new(data.as_bytes())?;
+                        let message_id =
+                            storage.store_new(
+                                mailbox_path.clone().into_os_string().into_string().expect(
+                                    "Failed to convert path. Your system may be incompatible",
+                                ),
+                                data.as_bytes(),
+                            )?;
                         debug!("Stored message: {}", message_id);
                     }
                     // TODO cleanup after we are done

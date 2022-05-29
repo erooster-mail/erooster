@@ -1,5 +1,8 @@
 use crate::{
-    backend::database::{Database, DB},
+    backend::{
+        database::{Database, DB},
+        storage::Storage,
+    },
     config::Config,
     line_codec::LinesCodec,
 };
@@ -40,19 +43,33 @@ where
 /// # Errors
 ///
 /// Returns an error if the server startup fails
-pub async fn start(config: Arc<Config>, database: DB) -> color_eyre::eyre::Result<OwnedHandle> {
+pub async fn start(
+    config: Arc<Config>,
+    database: DB,
+    storage: Arc<Storage>,
+) -> color_eyre::eyre::Result<OwnedHandle> {
     let config_clone = Arc::clone(&config);
     let db_clone = Arc::clone(&database);
+    let storage_clone = Arc::clone(&storage);
     tokio::spawn(async move {
-        if let Err(e) =
-            unencrypted::Unencrypted::run(Arc::clone(&config_clone), Arc::clone(&db_clone)).await
+        if let Err(e) = unencrypted::Unencrypted::run(
+            Arc::clone(&config_clone),
+            Arc::clone(&db_clone),
+            Arc::clone(&storage_clone),
+        )
+        .await
         {
             panic!("Unable to start server: {:?}", e);
         }
     });
     let db_clone = Arc::clone(&database);
     tokio::spawn(async move {
-        if let Err(e) = encrypted::Encrypted::run(Arc::clone(&config), Arc::clone(&db_clone)).await
+        if let Err(e) = encrypted::Encrypted::run(
+            Arc::clone(&config),
+            Arc::clone(&db_clone),
+            Arc::clone(&storage),
+        )
+        .await
         {
             panic!("Unable to start TLS server: {:?}", e);
         }

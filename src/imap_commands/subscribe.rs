@@ -1,6 +1,7 @@
 use crate::{
+    backend::storage::{MailStorage, Storage},
     config::Config,
-    imap_commands::{utils::add_flag, CommandData, Data},
+    imap_commands::{CommandData, Data},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{path::Path, sync::Arc};
@@ -14,6 +15,7 @@ impl Subscribe<'_> {
         &self,
         lines: &mut S,
         config: Arc<Config>,
+        storage: Arc<Storage>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -28,7 +30,7 @@ impl Subscribe<'_> {
             let mailbox_path = Path::new(&config.mail.maildir_folders)
                 .join(self.data.con_state.read().await.username.clone().unwrap())
                 .join(folder.clone());
-            add_flag(&mailbox_path, "\\Subscribed")?;
+            storage.add_flag(&mailbox_path, "\\Subscribed").await?;
             lines
                 .send(format!("{} OK SUBSCRIBE completed", command_data.tag))
                 .await?;

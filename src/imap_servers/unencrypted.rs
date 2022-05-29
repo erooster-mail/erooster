@@ -1,5 +1,5 @@
 use crate::{
-    backend::database::DB,
+    backend::{database::DB, storage::Storage},
     config::Config,
     imap_commands::Data,
     imap_servers::Server,
@@ -29,6 +29,7 @@ impl Server for Unencrypted {
     async fn run(
         config: Arc<Config>,
         database: DB,
+        storage: Arc<Storage>,
         mut _file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()> {
         let addr: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
@@ -49,6 +50,7 @@ impl Server for Unencrypted {
 
             let config = Arc::clone(&config);
             let database = Arc::clone(&database);
+            let storage = Arc::clone(&storage);
             tokio::spawn(async move {
                 let lines = Framed::new(tcp_stream, LinesCodec::new());
                 let (mut lines_sender, mut lines_reader) = lines.split();
@@ -78,7 +80,13 @@ impl Server for Unencrypted {
                     // TODO make sure to handle IDLE different as it needs us to stream lines
                     // TODO pass lines and make it possible to not need new lines in responds but instead directly use `lines.send`
                     let response = data
-                        .parse(&mut tx, Arc::clone(&config), Arc::clone(&database), line)
+                        .parse(
+                            &mut tx,
+                            Arc::clone(&config),
+                            Arc::clone(&database),
+                            Arc::clone(&storage),
+                            line,
+                        )
                         .await;
 
                     match response {

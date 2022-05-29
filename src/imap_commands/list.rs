@@ -1,10 +1,10 @@
 use crate::{
+    backend::storage::{MailStorage, Storage},
     config::Config,
-    imap_commands::{utils::get_flags, CommandData, Commands, Data},
+    imap_commands::{CommandData, Commands, Data},
     imap_servers::state::State,
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use maildir::Maildir;
 use std::{path::Path, sync::Arc};
 use tracing::debug;
 
@@ -13,6 +13,7 @@ pub async fn basic<S>(
     data: &Data,
     lines: &mut S,
     config: Arc<Config>,
+    storage: Arc<Storage>,
     command_data: &CommandData<'_>,
 ) -> color_eyre::eyre::Result<()>
 where
@@ -62,8 +63,12 @@ where
             folder = folder.join(mailbox_patterns_folder);
         }
 
-        let maildir = Maildir::from(folder);
-        let sub_folders = maildir.list_subdirs();
+        let sub_folders = storage.list_subdirs(
+            folder
+                .into_os_string()
+                .into_string()
+                .expect("Failed to convert path. Your system may be incompatible"),
+        )?;
         if reference_name.is_empty() && mailbox_patterns == "*" {
             lines
                 .feed(format!(
@@ -72,15 +77,15 @@ where
                 ))
                 .await?;
         }
-        for sub_folder in sub_folders.flatten() {
+        for sub_folder in sub_folders {
             // TODO calc flags
-            let flags_raw = get_flags(sub_folder.path()).await;
+            let flags_raw = storage.get_flags(&sub_folder).await;
             let flags = if let Ok(flags_raw) = flags_raw {
                 flags_raw
             } else {
                 vec![]
             };
-            let folder_name = sub_folder.path().file_name().unwrap().to_string_lossy();
+            let folder_name = sub_folder.file_name().unwrap().to_string_lossy();
             lines
                 .feed(format!(
                     "* {} ({}) \"/\" \"{}\"",
@@ -122,8 +127,12 @@ where
             folder = folder.join(mailbox_patterns_folder);
         }
 
-        let maildir = Maildir::from(folder);
-        let sub_folders = maildir.list_subdirs();
+        let sub_folders = storage.list_subdirs(
+            folder
+                .into_os_string()
+                .into_string()
+                .expect("Failed to convert path. Your system may be incompatible"),
+        )?;
         if reference_name.is_empty() && mailbox_patterns == "%" {
             lines
                 .feed(format!(
@@ -132,9 +141,9 @@ where
                 ))
                 .await?;
         }
-        for sub_folder in sub_folders.flatten() {
+        for sub_folder in sub_folders {
             // TODO calc flags
-            let flags_raw = get_flags(sub_folder.path()).await;
+            let flags_raw = storage.get_flags(&sub_folder).await;
             let flags = if let Ok(flags_raw) = flags_raw {
                 flags_raw
             } else {
@@ -146,7 +155,6 @@ where
                     command_resp,
                     flags.join(" "),
                     sub_folder
-                        .path()
                         .file_name()
                         .unwrap()
                         .to_string_lossy()
@@ -173,7 +181,7 @@ where
 
         // TODO check for folder existence
         // TODO calc flags
-        let flags_raw = get_flags(&folder).await;
+        let flags_raw = storage.get_flags(&folder).await;
         let mut flags = if let Ok(flags_raw) = flags_raw {
             if folder.exists() {
                 flags_raw
@@ -250,6 +258,7 @@ impl List<'_> {
         &self,
         lines: &mut S,
         config: Arc<Config>,
+        storage: Arc<Storage>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -258,7 +267,7 @@ impl List<'_> {
         let arguments = &command_data.arguments;
         assert!(arguments.len() >= 2);
         if arguments.len() == 2 {
-            basic(self.data, lines, config, command_data).await?;
+            basic(self.data, lines, config, storage, command_data).await?;
         } else if arguments.len() == 4 {
             self.extended(lines, command_data).await?;
         } else {
@@ -282,6 +291,7 @@ impl LSub<'_> {
         &self,
         lines: &mut S,
         config: Arc<Config>,
+        storage: Arc<Storage>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -290,7 +300,7 @@ impl LSub<'_> {
         let arguments = &command_data.arguments;
         assert!(arguments.len() == 2);
         if arguments.len() == 2 {
-            basic(self.data, lines, config, command_data).await?;
+            basic(self.data, lines, config, storage, command_data).await?;
         } else {
             lines
                 .send(format!(

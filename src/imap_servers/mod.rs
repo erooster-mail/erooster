@@ -1,4 +1,8 @@
-use crate::{backend::database::DB, config::Config, imap_commands::capability::get_capabilities};
+use crate::{
+    backend::{database::DB, storage::Storage},
+    config::Config,
+    imap_commands::capability::get_capabilities,
+};
 use async_trait::async_trait;
 use const_format::formatcp;
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
@@ -20,6 +24,7 @@ pub trait Server {
     async fn run(
         config: Arc<Config>,
         database: DB,
+        storage: Arc<Storage>,
         file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()>;
 }
@@ -29,7 +34,11 @@ pub trait Server {
 /// # Errors
 ///
 /// Returns an error if the server startup fails
-pub fn start(config: Arc<Config>, database: DB) -> color_eyre::eyre::Result<()> {
+pub fn start(
+    config: Arc<Config>,
+    database: DB,
+    storage: Arc<Storage>,
+) -> color_eyre::eyre::Result<()> {
     let (tx, _rx) = broadcast::channel(1);
     let tx_clone = tx.clone();
     let mut watcher = RecommendedWatcher::new(move |res: notify::Result<Event>| {
@@ -50,11 +59,13 @@ pub fn start(config: Arc<Config>, database: DB) -> color_eyre::eyre::Result<()> 
 
     let config_clone = Arc::clone(&config);
     let db_clone = Arc::clone(&database);
+    let storage_clone = Arc::clone(&storage);
     let tx_clone2 = tx_clone.clone();
     tokio::spawn(async move {
         if let Err(e) = unencrypted::Unencrypted::run(
             Arc::clone(&config_clone),
             Arc::clone(&db_clone),
+            Arc::clone(&storage_clone),
             tx_clone,
         )
         .await
@@ -63,8 +74,13 @@ pub fn start(config: Arc<Config>, database: DB) -> color_eyre::eyre::Result<()> 
         }
     });
     tokio::spawn(async move {
-        if let Err(e) =
-            encrypted::Encrypted::run(Arc::clone(&config), Arc::clone(&database), tx_clone2).await
+        if let Err(e) = encrypted::Encrypted::run(
+            Arc::clone(&config),
+            Arc::clone(&database),
+            Arc::clone(&storage),
+            tx_clone2,
+        )
+        .await
         {
             panic!("Unable to start TLS server: {:?}", e);
         }

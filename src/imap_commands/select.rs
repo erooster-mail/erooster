@@ -1,13 +1,10 @@
 use crate::{
+    backend::storage::{MailStorage, Storage},
     config::Config,
-    imap_commands::{
-        utils::{add_flag, get_uid_for_folder},
-        CommandData, Data,
-    },
+    imap_commands::{CommandData, Data},
     imap_servers::state::{Access, State},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use maildir::Maildir;
 use std::{
     path::Path,
     sync::Arc,
@@ -22,6 +19,7 @@ async fn select<S>(
     data: &Data,
     lines: &mut S,
     config: Arc<Config>,
+    storage: Arc<Storage>,
     rw: bool,
     command_data: &CommandData<'_>,
 ) -> color_eyre::eyre::Result<()>
@@ -46,20 +44,37 @@ where
     let mailbox_path = Path::new(&config.mail.maildir_folders)
         .join(data.con_state.read().await.username.clone().unwrap())
         .join(folder.clone());
-    let maildir = Maildir::from(mailbox_path.clone());
     if folder == "INBOX" && !mailbox_path.exists() {
-        maildir.create_dirs()?;
-        add_flag(&mailbox_path, "\\Subscribed")?;
-        add_flag(&mailbox_path, "\\NoInferiors")?;
+        storage.create_dirs(
+            mailbox_path
+                .clone()
+                .into_os_string()
+                .into_string()
+                .expect("Failed to convert path. Your system may be incompatible"),
+        )?;
+        storage.add_flag(&mailbox_path, "\\Subscribed").await?;
+        storage.add_flag(&mailbox_path, "\\NoInferiors").await?;
     }
-    send_success(lines, folder, maildir, rw, command_data).await?;
+    send_success(
+        lines,
+        folder,
+        storage,
+        mailbox_path
+            .into_os_string()
+            .into_string()
+            .expect("Failed to convert path. Your system may be incompatible"),
+        rw,
+        command_data,
+    )
+    .await?;
     Ok(())
 }
 
 async fn send_success<S>(
     lines: &mut S,
     folder: String,
-    maildir: Maildir,
+    storage: Arc<Storage>,
+    mailbox_path: String,
     rw: bool,
     command_data: &CommandData<'_>,
 ) -> color_eyre::eyre::Result<()>
@@ -68,7 +83,7 @@ where
 {
     // TODO get flags and perma flags
     // TODO UIDNEXT and UIDVALIDITY
-    let count = maildir.count_cur() + maildir.count_new();
+    let count = storage.count_cur(mailbox_path.clone()) + storage.count_new(mailbox_path.clone());
     lines.feed(format!("* {} EXISTS", count)).await?;
     let current_time = SystemTime::now();
     let unix_timestamp = current_time.duration_since(UNIX_EPOCH)?;
@@ -77,7 +92,7 @@ where
     lines
         .feed(format!("* OK [UIDVALIDITY {}] UIDs valid", timestamp))
         .await?;
-    let current_uid = get_uid_for_folder(&maildir)?;
+    let current_uid = storage.get_uid_for_folder(mailbox_path)?;
     lines
         .feed(format!(
             "* OK [UIDNEXT {}] Predicted next UID",
@@ -114,13 +129,14 @@ impl Select<'_> {
         &self,
         lines: &mut S,
         config: Arc<Config>,
+        storage: Arc<Storage>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         if self.data.con_state.read().await.state == State::Authenticated {
-            select(self.data, lines, config, true, command_data).await?;
+            select(self.data, lines, config, storage, true, command_data).await?;
         } else {
             lines
                 .send(format!("{} NO invalid state", command_data.tag))
@@ -139,13 +155,14 @@ impl Examine<'_> {
         &self,
         lines: &mut S,
         config: Arc<Config>,
+        storage: Arc<Storage>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         if self.data.con_state.read().await.state == State::Authenticated {
-            select(self.data, lines, config, false, command_data).await?;
+            select(self.data, lines, config, storage, false, command_data).await?;
         } else {
             lines
                 .send(format!("{} NO invalid state", command_data.tag))

@@ -1,5 +1,5 @@
 use crate::{
-    backend::database::DB,
+    backend::{database::DB, storage::Storage},
     config::Config,
     smtp_commands::{
         auth::Auth, data::DataCommand, ehlo::Ehlo, mail::Mail, noop::Noop, quit::Quit, rcpt::Rcpt,
@@ -126,6 +126,7 @@ impl Data {
         lines: &mut S,
         config: Arc<Config>,
         database: DB,
+        storage: Arc<Storage>,
         line: String,
     ) -> color_eyre::eyre::Result<bool>
     where
@@ -138,7 +139,7 @@ impl Data {
         let state = { con_clone.read().await.state.clone() };
         if matches!(state, State::ReceivingData(_)) {
             DataCommand { data: self }
-                .receive(config, lines, &line, database)
+                .receive(config, lines, &line, database, storage)
                 .await?;
             // We are done here
             return Ok(false);

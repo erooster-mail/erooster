@@ -56,6 +56,7 @@ rustls = "0.20.6"
 webpki-roots = "0.22.3"
 cfg-if = "1.0.0"
 trust-dns-resolver = "0.21.2"
+mailparse = "0.13.8"
 
 [build-dependencies]
 clap_mangen = "0.1"
@@ -65,8 +66,11 @@ clap = { version = "3.1.6", features = ["derive", "color", "suggestions","env"] 
 version = "0.6.1"
 #git = "https://github.com/soywod/maildir"
 #rev = "179625c3cc15212fb26eca5b819f7fe0d6f802e1"
+optional = true
 
 [features]
+default = ["maildir"]
+maildir = ["dep:maildir"]
 
 #[profile.release]
 #debug = true

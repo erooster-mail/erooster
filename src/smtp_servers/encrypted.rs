@@ -1,5 +1,5 @@
 use crate::{
-    backend::database::DB,
+    backend::{database::DB, storage::Storage},
     config::Config,
     line_codec::LinesCodec,
     smtp_commands::Data,
@@ -60,7 +60,11 @@ impl Encrypted {
     /// # Errors
     ///
     /// Returns an error if the cert setup fails
-    pub(crate) async fn run(config: Arc<Config>, database: DB) -> color_eyre::eyre::Result<()> {
+    pub(crate) async fn run(
+        config: Arc<Config>,
+        database: DB,
+        storage: Arc<Storage>,
+    ) -> color_eyre::eyre::Result<()> {
         // Load SSL Keys
         let certs = Encrypted::load_certs(Path::new(&config.tls.cert_path))?;
         let key = Encrypted::load_key(Path::new(&config.tls.key_path))?;
@@ -97,6 +101,7 @@ impl Encrypted {
             // We need to clone these as we move into a new thread
             let config = Arc::clone(&config);
             let database = Arc::clone(&database);
+            let storage = Arc::clone(&storage);
 
             // Start talking with new peer on new thread
             let acceptor = acceptor.clone();
@@ -143,6 +148,7 @@ impl Encrypted {
                                         &mut tx,
                                         Arc::clone(&config),
                                         Arc::clone(&database),
+                                        Arc::clone(&storage),
                                         line,
                                     )
                                     .await;

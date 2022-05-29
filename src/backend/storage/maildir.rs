@@ -1,27 +1,29 @@
-use crate::backend::storage::{MailEntry, MailStorage};
+use crate::backend::{
+    database::{Database, DB},
+    storage::{MailEntry, MailStorage},
+};
 use futures::TryStreamExt;
 use maildir::Maildir;
 use mailparse::ParsedMail;
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 use tokio_stream::wrappers::LinesStream;
 
 /// The Storage handler for the maildir format
-pub struct MaildirStorage;
+pub struct MaildirStorage {
+    db: DB,
+}
 
 impl MaildirStorage {
     /// Create a new maildir storage handler
     #[must_use]
-    pub const fn new() -> Self {
-        MaildirStorage
-    }
-}
-
-impl Default for MaildirStorage {
-    fn default() -> Self {
-        Self::new()
+    pub const fn new(db: DB) -> Self {
+        MaildirStorage { db }
     }
 }
 
@@ -80,10 +82,16 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         maildir.create_dirs().map_err(Into::into)
     }
 
-    fn store_new(&self, path: String, data: &[u8]) -> color_eyre::eyre::Result<String> {
+    async fn store_new(&self, path: String, data: &[u8]) -> color_eyre::eyre::Result<String> {
         let maildir = Maildir::from(path);
-        maildir.store_new(data).map_err(Into::into)
+        let maildir_id = maildir.store_new(data)?;
+        sqlx::query("INSERT INTO mails (maildir_id) VALUES ($1)")
+            .bind(maildir_id)
+            .execute(self.db.get_pool())
+            .await?;
+        Ok(maildir_id)
     }
+
     fn list_subdirs(&self, path: String) -> color_eyre::eyre::Result<Vec<PathBuf>> {
         let maildir = Maildir::from(path);
         Ok(maildir
@@ -107,7 +115,10 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         maildir
             .list_cur()
             .filter_map(|x| match x {
-                Ok(x) => Some(MaildirMailEntry(x)),
+                Ok(x) => Some(MaildirMailEntry {
+                    entry: x,
+                    db: Arc::clone(&self.db),
+                }),
                 Err(_) => None,
             })
             .collect()
@@ -117,66 +128,88 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         maildir
             .list_new()
             .filter_map(|x| match x {
-                Ok(x) => Some(MaildirMailEntry(x)),
+                Ok(x) => Some(MaildirMailEntry {
+                    entry: x,
+                    db: Arc::clone(&self.db),
+                }),
                 Err(_) => None,
             })
             .collect()
     }
 }
 
-/// Wrapper for the mailentries from the Maildir crate
-pub struct MaildirMailEntry(maildir::MailEntry);
+#[derive(sqlx::FromRow)]
+struct DbMails {
+    id: i64,
+    #[allow(dead_code)]
+    maildir_id: String,
+}
 
+/// Wrapper for the mailentries from the Maildir crate
+pub struct MaildirMailEntry {
+    entry: maildir::MailEntry,
+    db: DB,
+}
+
+#[async_trait::async_trait]
 impl MailEntry for MaildirMailEntry {
+    async fn uid(&self) -> color_eyre::eyre::Result<i64> {
+        let maildir_id = self.entry.id();
+        let mail_row = sqlx::query_as::<_, DbMails>("SELECT * FROM mails WHERE maildir_id = $1")
+            .bind(maildir_id)
+            .fetch_one(self.db.get_pool())
+            .await?;
+        Ok(mail_row.id)
+    }
     fn id(&self) -> &str {
-        self.0.id()
+        self.entry.id()
     }
     fn parsed(&mut self) -> color_eyre::eyre::Result<ParsedMail> {
-        self.0.parsed().map_err(Into::into)
+        self.entry.parsed().map_err(Into::into)
     }
 
     fn headers(&mut self) -> color_eyre::eyre::Result<Vec<mailparse::MailHeader>> {
-        self.0.headers().map_err(Into::into)
+        self.entry.headers().map_err(Into::into)
     }
 
     fn received(&mut self) -> color_eyre::eyre::Result<i64> {
-        self.0.received().map_err(Into::into)
+        self.entry.received().map_err(Into::into)
     }
 
     fn date(&mut self) -> color_eyre::eyre::Result<i64> {
-        self.0.date().map_err(Into::into)
+        self.entry.date().map_err(Into::into)
     }
 
     fn flags(&self) -> &str {
-        self.0.flags()
+        self.entry.flags()
     }
 
     fn is_draft(&self) -> bool {
-        self.0.is_draft()
+        self.entry.is_draft()
     }
 
     fn is_flagged(&self) -> bool {
-        self.0.is_flagged()
+        self.entry.is_flagged()
     }
 
     fn is_passed(&self) -> bool {
-        self.0.is_passed()
+        self.entry.is_passed()
     }
 
     fn is_replied(&self) -> bool {
-        self.0.is_replied()
+        self.entry.is_replied()
     }
 
     fn is_seen(&self) -> bool {
-        self.0.is_seen()
+        self.entry.is_seen()
     }
 
     fn is_trashed(&self) -> bool {
-        self.0.is_trashed()
+        self.entry.is_trashed()
     }
 
     fn path(&self) -> &std::path::PathBuf {
-        self.0.path()
+        self.entry.path()
     }
 }
 

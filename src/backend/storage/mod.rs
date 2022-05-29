@@ -1,6 +1,5 @@
+use crate::backend::{database::DB, storage::maildir::MaildirStorage};
 use mailparse::{MailHeader, ParsedMail};
-
-use crate::backend::storage::maildir::MaildirStorage;
 use std::path::{Path, PathBuf};
 
 /// The maildir format
@@ -12,7 +11,10 @@ pub mod maildir;
 pub type Storage = MaildirStorage;
 
 /// Representation of a Mail entry
+#[async_trait::async_trait]
 pub trait MailEntry {
+    /// The uid of the mail entry
+    async fn uid(&self) -> color_eyre::eyre::Result<i64>;
     /// The id of the email
     fn id(&self) -> &str;
     /// The parsed form of the email
@@ -58,7 +60,7 @@ pub trait MailStorage<M: MailEntry> {
     /// Creates the required folder structure
     fn create_dirs(&self, path: String) -> color_eyre::eyre::Result<()>;
     /// Store new message
-    fn store_new(&self, path: String, data: &[u8]) -> color_eyre::eyre::Result<String>;
+    async fn store_new(&self, path: String, data: &[u8]) -> color_eyre::eyre::Result<String>;
     /// List the subfolders
     fn list_subdirs(&self, path: String) -> color_eyre::eyre::Result<Vec<PathBuf>>;
     /// Count of current messages
@@ -74,6 +76,6 @@ pub trait MailStorage<M: MailEntry> {
 /// Get the struct of the current storage implementation
 #[cfg(feature = "maildir")]
 #[must_use]
-pub const fn get_storage() -> Storage {
-    MaildirStorage::new()
+pub const fn get_storage(db: DB) -> Storage {
+    MaildirStorage::new(db)
 }

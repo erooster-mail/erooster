@@ -34,29 +34,35 @@ impl Close<'_> {
                 return Ok(());
             }
 
-            // We dont want actual file access in tests for now hence this is not included in tests
-            // TODO setup tests to actually do file actions
-            cfg_if::cfg_if! {
-                if #[cfg(not(test))] {
-                    let mut folder = folder.replace('/', ".");
-                folder.insert(0, '.');
-                let mailbox_path = Path::new(&config.mail.maildir_folders)
-                    .join(self.data.con_state.read().await.username.clone().unwrap())
-                    .join(folder.clone());
+            let mut folder = folder.replace('/', ".");
+            folder.insert(0, '.');
+            let mailbox_path = Path::new(&config.mail.maildir_folders)
+                .join(self.data.con_state.read().await.username.clone().unwrap())
+                .join(folder.clone());
 
-                // We need to check all messages it seems?
-                let mails = storage.list_cur(mailbox_path.clone().into_os_string().into_string().expect(
-                                    "Failed to convert path. Your system may be incompatible",
-                                )).into_iter().chain(storage.list_new(mailbox_path.into_os_string().into_string().expect(
-                                    "Failed to convert path. Your system may be incompatible",
-                                )));
-                for mail in mails {
-                    debug!("Checking mails");
-                    if mail.is_trashed() {
-                        let path = mail.path();
-                        fs::remove_file(path).await?;
-                    }
-                }
+            // We need to check all messages it seems?
+            let mails = storage
+                .list_cur(
+                    mailbox_path
+                        .clone()
+                        .into_os_string()
+                        .into_string()
+                        .expect("Failed to convert path. Your system may be incompatible"),
+                )
+                .into_iter()
+                .chain(
+                    storage.list_new(
+                        mailbox_path
+                            .into_os_string()
+                            .into_string()
+                            .expect("Failed to convert path. Your system may be incompatible"),
+                    ),
+                );
+            for mail in mails {
+                debug!("Checking mails");
+                if mail.is_trashed() {
+                    let path = mail.path();
+                    fs::remove_file(path).await?;
                 }
             }
 
@@ -102,8 +108,9 @@ mod tests {
             command: Commands::Close,
             arguments: &[],
         };
-        let storage = Arc::new(crate::backend::storage::get_storage());
         let config = Arc::new(crate::get_config("./config.yml"));
+        let database = Arc::new(get_database(Arc::clone(&config)).await?);
+        let storage = Arc::new(crate::backend::storage::get_storage(database));
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, storage, config, &cmd_data).await;
         assert!(res.is_ok());
@@ -128,8 +135,9 @@ mod tests {
             arguments: &[],
         };
         let (mut tx, mut rx) = mpsc::unbounded();
-        let storage = Arc::new(crate::backend::storage::get_storage());
         let config = Arc::new(crate::get_config("./config.yml"));
+        let database = Arc::new(get_database(Arc::clone(&config)).await?);
+        let storage = Arc::new(crate::backend::storage::get_storage(database));
         let res = caps.exec(&mut tx, storage, config, &cmd_data).await;
         assert!(res.is_ok());
         assert_eq!(
@@ -155,8 +163,9 @@ mod tests {
             arguments: &[],
         };
         let (mut tx, mut rx) = mpsc::unbounded();
-        let storage = Arc::new(crate::backend::storage::get_storage());
         let config = Arc::new(crate::get_config("./config.yml"));
+        let database = Arc::new(get_database(Arc::clone(&config)).await?);
+        let storage = Arc::new(crate::backend::storage::get_storage(database));
         let res = caps.exec(&mut tx, storage, config, &cmd_data).await;
         assert!(res.is_ok());
         assert_eq!(rx.next().await, Some(String::from("1 NO invalid state")));

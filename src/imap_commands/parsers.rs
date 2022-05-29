@@ -94,9 +94,9 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                     opt(delimited(
                         char('<'),
                         separated_pair(
-                            take_while1(|x: char| x.is_digit(10)),
+                            take_while1(|x: char| x.is_ascii_digit()),
                             char('.'),
-                            take_while1(|x: char| x.is_digit(10)),
+                            take_while1(|x: char| x.is_ascii_digit()),
                         ),
                         char('>'),
                     )),
@@ -117,9 +117,9 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                     opt(delimited(
                         char('<'),
                         separated_pair(
-                            take_while1(|x: char| x.is_digit(10)),
+                            take_while1(|x: char| x.is_ascii_digit()),
                             char('.'),
-                            take_while1(|x: char| x.is_digit(10)),
+                            take_while1(|x: char| x.is_ascii_digit()),
                         ),
                         char('>'),
                     )),
@@ -140,9 +140,9 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                     opt(delimited(
                         char('<'),
                         separated_pair(
-                            take_while1(|x: char| x.is_digit(10)),
+                            take_while1(|x: char| x.is_ascii_digit()),
                             char('.'),
-                            take_while1(|x: char| x.is_digit(10)),
+                            take_while1(|x: char| x.is_ascii_digit()),
                         ),
                         char('>'),
                     )),
@@ -163,9 +163,9 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                     opt(delimited(
                         char('<'),
                         separated_pair(
-                            take_while1(|x: char| x.is_digit(10)),
+                            take_while1(|x: char| x.is_ascii_digit()),
                             char('.'),
-                            take_while1(|x: char| x.is_digit(10)),
+                            take_while1(|x: char| x.is_ascii_digit()),
                         ),
                         char('>'),
                     )),

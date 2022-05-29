@@ -86,7 +86,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let maildir = Maildir::from(path);
         let maildir_id = maildir.store_new(data)?;
         sqlx::query("INSERT INTO mails (maildir_id) VALUES ($1)")
-            .bind(maildir_id)
+            .bind(maildir_id.clone())
             .execute(self.db.get_pool())
             .await?;
         Ok(maildir_id)

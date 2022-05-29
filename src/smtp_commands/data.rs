@@ -115,13 +115,14 @@ impl DataCommand<'_> {
                         } else {
                             color_eyre::eyre::bail!("No data")
                         };
-                        let message_id =
-                            storage.store_new(
+                        let message_id = storage
+                            .store_new(
                                 mailbox_path.clone().into_os_string().into_string().expect(
                                     "Failed to convert path. Your system may be incompatible",
                                 ),
                                 data.as_bytes(),
-                            )?;
+                            )
+                            .await?;
                         debug!("Stored message: {}", message_id);
                     }
                     // TODO cleanup after we are done

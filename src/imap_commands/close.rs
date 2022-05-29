@@ -108,8 +108,14 @@ mod tests {
             command: Commands::Close,
             arguments: &[],
         };
-        let config = crate::get_config(String::from("./config.yml")).await?;
-        let database = Arc::new(get_database(Arc::clone(&config)).await?);
+        let config = crate::get_config(String::from("./config.yml"))
+            .await
+            .unwrap();
+        let database = Arc::new(
+            crate::backend::database::get_database(Arc::clone(&config))
+                .await
+                .unwrap(),
+        );
         let storage = Arc::new(crate::backend::storage::get_storage(database));
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, storage, config, &cmd_data).await;
@@ -135,8 +141,14 @@ mod tests {
             arguments: &[],
         };
         let (mut tx, mut rx) = mpsc::unbounded();
-        let config = crate::get_config(String::from("./config.yml")).await?;
-        let database = Arc::new(get_database(Arc::clone(&config)).await?);
+        let config = crate::get_config(String::from("./config.yml"))
+            .await
+            .unwrap();
+        let database = Arc::new(
+            crate::backend::database::get_database(Arc::clone(&config))
+                .await
+                .unwrap(),
+        );
         let storage = Arc::new(crate::backend::storage::get_storage(database));
         let res = caps.exec(&mut tx, storage, config, &cmd_data).await;
         assert!(res.is_ok());
@@ -163,8 +175,14 @@ mod tests {
             arguments: &[],
         };
         let (mut tx, mut rx) = mpsc::unbounded();
-        let config = crate::get_config(String::from("./config.yml")).await?;
-        let database = Arc::new(get_database(Arc::clone(&config)).await?);
+        let config = crate::get_config(String::from("./config.yml"))
+            .await
+            .unwrap();
+        let database = Arc::new(
+            crate::backend::database::get_database(Arc::clone(&config))
+                .await
+                .unwrap(),
+        );
         let storage = Arc::new(crate::backend::storage::get_storage(database));
         let res = caps.exec(&mut tx, storage, config, &cmd_data).await;
         assert!(res.is_ok());

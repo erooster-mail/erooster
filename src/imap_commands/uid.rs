@@ -153,7 +153,17 @@ async fn generate_response_for_attributes(
 ) -> Option<String> {
     match attr {
         FetchAttributes::Envelope => None,
-        FetchAttributes::RFC822Header => None,
+        FetchAttributes::RFC822Header => {
+            if let Ok(headers_vec) = mail.headers() {
+                let mut headers = String::new();
+                for header in headers_vec {
+                    headers.push_str(&format!("{}: {}\r\n", header.get_key(), header.get_value()));
+                }
+                Some(format!("RFC822.HEADER {}", headers))
+            } else {
+                Some(String::from("RFC822.HEADER ()"))
+            }
+        }
         FetchAttributes::Flags => {
             let mut flags = String::new();
             if mail.is_draft() {

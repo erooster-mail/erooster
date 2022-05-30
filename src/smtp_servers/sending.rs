@@ -321,20 +321,28 @@ pub async fn send_email_job(
                 continue;
             }
 
-            if let Ok(secure_con) =
-                get_secure_connection(address.unwrap(), &current_job, target).await
-            {
-                if let Err(e) = send_email(secure_con, &email, &current_job, to, true).await {
-                    error!(
-                        "[{}] Error sending email via tls on port 465: {}",
-                        current_job.id(),
-                        e
-                    );
-                    match get_unsecure_connection(address.unwrap(), &current_job, target).await {
-                        Ok(unsecure_con) => {
-                            if let Err(e) =
-                                send_email(unsecure_con, &email, &current_job, to, false).await
-                            {
+            match get_secure_connection(address.unwrap(), &current_job, target).await {
+                Ok(secure_con) => {
+                    if let Err(e) = send_email(secure_con, &email, &current_job, to, true).await {
+                        error!(
+                            "[{}] Error sending email via tls on port 465: {}",
+                            current_job.id(),
+                            e
+                        );
+                        match get_unsecure_connection(address.unwrap(), &current_job, target).await
+                        {
+                            Ok(unsecure_con) => {
+                                if let Err(e) =
+                                    send_email(unsecure_con, &email, &current_job, to, false).await
+                                {
+                                    error!(
+                                        "[{}] Error sending email via tcp on port 25: {}",
+                                        current_job.id(),
+                                        e
+                                    );
+                                }
+                            }
+                            Err(e) => {
                                 error!(
                                     "[{}] Error sending email via tcp on port 25: {}",
                                     current_job.id(),
@@ -342,24 +350,24 @@ pub async fn send_email_job(
                                 );
                             }
                         }
-                        Err(e) => {
-                            error!(
-                                "[{}] Error sending email via tcp on port 25: {}",
-                                current_job.id(),
-                                e
-                            );
-                        }
                     }
                 }
-            } else {
-                let unsecure_con =
-                    get_unsecure_connection(address.unwrap(), &current_job, target).await?;
-                if let Err(e) = send_email(unsecure_con, &email, &current_job, to, false).await {
+                Err(e) => {
                     error!(
-                        "[{}] Error sending email via tcp on port 25: {}",
+                        "[{}] Error sending email via tls on port 465: {}",
                         current_job.id(),
                         e
                     );
+                    let unsecure_con =
+                        get_unsecure_connection(address.unwrap(), &current_job, target).await?;
+                    if let Err(e) = send_email(unsecure_con, &email, &current_job, to, false).await
+                    {
+                        error!(
+                            "[{}] Error sending email via tcp on port 25: {}",
+                            current_job.id(),
+                            e
+                        );
+                    }
                 }
             }
         }
@@ -414,7 +422,7 @@ async fn get_secure_connection(
         .with_root_certificates(roots)
         .with_no_client_auth();
     let connector = TlsConnector::from(Arc::new(config));
-
+    debug!("[{}] Trying tls", current_job.id(),);
     let stream = TcpStream::connect(&(addr, 465)).await?;
     debug!(
         "[{}] Connected to {} via tcp {:?} waiting for tls magic",

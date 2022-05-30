@@ -110,9 +110,9 @@ async fn generate_response(args: Vec<FetchArguments>, mail: &MailEntryType) -> O
     let mut resp = None;
     for arg in args {
         resp = match arg {
-            FetchArguments::All => todo!(),
-            FetchArguments::Fast => todo!(),
-            FetchArguments::Full => todo!(),
+            FetchArguments::All => None,
+            FetchArguments::Fast => None,
+            FetchArguments::Full => None,
             FetchArguments::Single(single_arg) => {
                 generate_response_for_attributes(single_arg, mail).await
             }
@@ -135,19 +135,19 @@ async fn generate_response_for_attributes(
     mail: &MailEntryType,
 ) -> Option<String> {
     match attr {
-        FetchAttributes::Envelope => todo!(),
+        FetchAttributes::Envelope => None,
         FetchAttributes::Flags => {
             let flags = mail.flags();
             Some(format!("FLAGS ({})", flags))
         }
-        FetchAttributes::InternalDate => todo!(),
-        FetchAttributes::RFC822Size => todo!(),
-        FetchAttributes::Uid => todo!(),
-        FetchAttributes::BodyStructure => todo!(),
-        FetchAttributes::BodySection(_, _) => todo!(),
-        FetchAttributes::BodyPeek(_, _) => todo!(),
-        FetchAttributes::Binary(_, _) => todo!(),
-        FetchAttributes::BinaryPeek(_, _) => todo!(),
-        FetchAttributes::BinarySize(_) => todo!(),
+        FetchAttributes::InternalDate => None,
+        FetchAttributes::RFC822Size => None,
+        FetchAttributes::Uid => None,
+        FetchAttributes::BodyStructure => None,
+        FetchAttributes::BodySection(_, _) => None,
+        FetchAttributes::BodyPeek(_, _) => None,
+        FetchAttributes::Binary(_, _) => None,
+        FetchAttributes::BinaryPeek(_, _) => None,
+        FetchAttributes::BinarySize(_) => None,
     }
 }

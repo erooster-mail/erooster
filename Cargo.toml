@@ -53,10 +53,10 @@ rpassword = "6.0.1"
 indicatif = "0.16.2"
 clearscreen = "1.0.9"
 rustls = "0.20.6"
-webpki-roots = "0.22.3"
 cfg-if = "1.0.0"
 trust-dns-resolver = "0.21.2"
 mailparse = "0.13.8"
+rustls-native-certs = "0.6.2"
 
 [build-dependencies]
 clap_mangen = "0.1"

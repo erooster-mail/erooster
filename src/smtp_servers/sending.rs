@@ -1,14 +1,15 @@
-use std::{collections::HashMap, error::Error, net::IpAddr};
+use std::{collections::HashMap, error::Error, io, net::IpAddr, sync::Arc};
 
-use futures::{SinkExt, StreamExt};
+use futures::{Sink, SinkExt, Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use sqlxmq::{job, CurrentJob};
 use tokio::net::TcpStream;
+use tokio_rustls::TlsConnector;
 use tokio_util::codec::Framed;
-use tracing::debug;
+use tracing::{debug, error};
 use trust_dns_resolver::TokioAsyncResolver;
 
-use crate::line_codec::LinesCodec;
+use crate::line_codec::{LinesCodec, LinesCodecError};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EmailPayload {
@@ -20,14 +21,16 @@ pub struct EmailPayload {
 }
 
 #[allow(clippy::too_many_lines)]
-async fn send_email(
-    lines: Framed<TcpStream, LinesCodec>,
+async fn send_email<T>(
+    con: T,
     email: &EmailPayload,
     current_job: &CurrentJob,
     to: &Vec<String>,
-) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
-    // We split these as we handle the sink in a broadcast instead to be able to push non linear data over the socket
-    let (mut lines_sender, mut lines_reader) = lines.split();
+) -> Result<(), Box<dyn Error + Send + Sync + 'static>>
+where
+    T: Stream<Item = Result<String, LinesCodecError>> + Sink<String, Error = LinesCodecError>,
+{
+    let (mut lines_sender, mut lines_reader) = con.split();
     debug!(
         "[{}] Fully Connected. Waiting for response",
         current_job.id()
@@ -178,6 +181,7 @@ async fn send_email(
 
 // Arguments to the `#[job]` attribute allow setting default job options.
 #[job(retries = 3, backoff_secs = 1200)]
+#[allow(clippy::too_many_lines)]
 pub async fn send_email_job(
     // The first argument should always be the current job.
     mut current_job: CurrentJob,
@@ -265,13 +269,30 @@ pub async fn send_email_job(
                 continue;
             }
 
-            // let stream = TcpStream::connect(&(address, 465)).await?;
-            let stream = TcpStream::connect(&(address.unwrap(), 25)).await?;
-            debug!("[{}] Connected to {} via tcp", current_job.id(), target);
-
-            let lines = Framed::new(stream, LinesCodec::new());
-
-            send_email(lines, &email, &current_job, to).await?;
+            if let Ok(secure_con) =
+                get_secure_connection(address.unwrap(), &current_job, target).await
+            {
+                if let Err(e) = send_email(secure_con, &email, &current_job, to).await {
+                    error!(
+                        "[{}] Error sending email via tls on port 465: {}",
+                        current_job.id(),
+                        e
+                    );
+                    let unsecure_con =
+                        get_unsecure_connection(address.unwrap(), &current_job, target).await?;
+                    send_email(unsecure_con, &email, &current_job, to).await?;
+                }
+            } else {
+                let unsecure_con =
+                    get_unsecure_connection(address.unwrap(), &current_job, target).await?;
+                if let Err(e) = send_email(unsecure_con, &email, &current_job, to).await {
+                    error!(
+                        "[{}] Error sending email via tcp on port 25: {}",
+                        current_job.id(),
+                        e
+                    );
+                }
+            }
         }
         debug!(
             "[{}] Finished sending email job: {}",
@@ -286,4 +307,48 @@ pub async fn send_email_job(
     }
 
     Ok(())
+}
+
+async fn get_unsecure_connection(
+    addr: IpAddr,
+    current_job: &CurrentJob,
+    target: &String,
+) -> Result<
+    impl Stream<Item = Result<String, LinesCodecError>> + Sink<String, Error = LinesCodecError>,
+    Box<dyn Error + Send + Sync + 'static>,
+> {
+    let stream = TcpStream::connect(&(addr, 25)).await?;
+    debug!("[{}] Connected to {} via tcp", current_job.id(), target);
+
+    Ok(Framed::new(stream, LinesCodec::new()))
+}
+
+async fn get_secure_connection(
+    addr: IpAddr,
+    current_job: &CurrentJob,
+    target: &String,
+) -> Result<
+    impl Stream<Item = Result<String, LinesCodecError>> + Sink<String, Error = LinesCodecError>,
+    Box<dyn Error + Send + Sync + 'static>,
+> {
+    let mut roots = rustls::RootCertStore::empty();
+    for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs") {
+        roots.add(&rustls::Certificate(cert.0)).unwrap();
+    }
+    let config = rustls::ClientConfig::builder()
+        .with_safe_defaults()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    let connector = TlsConnector::from(Arc::new(config));
+
+    let stream = TcpStream::connect(&(addr, 465)).await?;
+    debug!("[{}] Connected to {} via tcp", current_job.id(), target);
+
+    let domain = rustls::ServerName::try_from(target.as_str())
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid dnsname"))?;
+
+    let stream = connector.connect(domain, stream).await?;
+    debug!("[{}] Connected to {} via tls", current_job.id(), target);
+
+    Ok(Framed::new(stream, LinesCodec::new()))
 }

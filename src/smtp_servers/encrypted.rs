@@ -80,7 +80,7 @@ impl Encrypted {
         let acceptor = TlsAcceptor::from(Arc::new(server_config));
 
         // Opens the listener
-        let addr: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
+        let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
                 .iter()
                 .map(|ip| format!("{}:465", ip).parse().unwrap())
@@ -88,95 +88,114 @@ impl Encrypted {
         } else {
             vec!["0.0.0.0:465".parse()?]
         };
-        info!("[SMTP] Trying to listen on {:?}", addr);
-        let listener = TcpListener::bind(&addr[..]).await.unwrap();
-        info!("[SMTP] Listening on ecrypted Port");
-        let mut stream = TcpListenerStream::new(listener);
+        for addr in addrs {
+            info!("[SMTP] Trying to listen on {:?}", addr);
+            let listener = TcpListener::bind(addr).await.unwrap();
+            info!("[SMTP] Listening on ecrypted Port");
+            let stream = TcpListenerStream::new(listener);
+            listen(
+                stream,
+                Arc::clone(&config),
+                Arc::clone(&database),
+                Arc::clone(&storage),
+                acceptor.clone(),
+            )
+            .await;
+        }
 
-        // Looks for new peers
-        while let Some(Ok(tcp_stream)) = stream.next().await {
-            debug!("[SMTP] Got new TLS peer: {:?}", tcp_stream.peer_addr());
-            let peer = tcp_stream.peer_addr().expect("peer addr to exist");
+        Ok(())
+    }
+}
 
-            // We need to clone these as we move into a new thread
-            let config = Arc::clone(&config);
-            let database = Arc::clone(&database);
-            let storage = Arc::clone(&storage);
+async fn listen(
+    mut stream: TcpListenerStream,
+    config: Arc<Config>,
+    database: DB,
+    storage: Arc<Storage>,
+    acceptor: TlsAcceptor,
+) {
+    // Looks for new peers
+    while let Some(Ok(tcp_stream)) = stream.next().await {
+        debug!("[SMTP] Got new TLS peer: {:?}", tcp_stream.peer_addr());
+        let peer = tcp_stream.peer_addr().expect("peer addr to exist");
 
-            // Start talking with new peer on new thread
-            let acceptor = acceptor.clone();
-            tokio::spawn(async move {
-                // Accept TCP connection
-                let tls_stream = acceptor.accept(tcp_stream).await;
+        // We need to clone these as we move into a new thread
+        let config = Arc::clone(&config);
+        let database = Arc::clone(&database);
+        let storage = Arc::clone(&storage);
 
-                // Continue if it worked
-                match tls_stream {
-                    Ok(stream) => {
-                        debug!("[SMTP] TLS negotiation done");
+        // Start talking with new peer on new thread
+        let acceptor = acceptor.clone();
+        tokio::spawn(async move {
+            // Accept TCP connection
+            let tls_stream = acceptor.accept(tcp_stream).await;
 
-                        // Proceed as normal
-                        let lines = Framed::new(stream, LinesCodec::new());
-                        // We split these as we handle the sink in a broadcast instead to be able to push non linear data over the socket
-                        let (mut lines_sender, mut lines_reader) = lines.split();
-                        // Create our Connection
-                        let connection = Connection::new(true);
+            // Continue if it worked
+            match tls_stream {
+                Ok(stream) => {
+                    debug!("[SMTP] TLS negotiation done");
 
-                        // Prepare our custom return path
-                        let (mut tx, mut rx) = mpsc::unbounded();
-                        tokio::spawn(async move {
-                            while let Some(res) = rx.next().await {
-                                lines_sender.send(res).await.unwrap();
-                            }
-                        });
+                    // Proceed as normal
+                    let lines = Framed::new(stream, LinesCodec::new());
+                    // We split these as we handle the sink in a broadcast instead to be able to push non linear data over the socket
+                    let (mut lines_sender, mut lines_reader) = lines.split();
+                    // Create our Connection
+                    let connection = Connection::new(true);
 
-                        // Greet the client with the capabilities we provide
-                        send_capabilities(Arc::clone(&config), &mut tx)
-                            .await
-                            .unwrap();
+                    // Prepare our custom return path
+                    let (mut tx, mut rx) = mpsc::unbounded();
+                    tokio::spawn(async move {
+                        while let Some(res) = rx.next().await {
+                            lines_sender.send(res).await.unwrap();
+                        }
+                    });
 
-                        // Read lines from the stream
-                        while let Some(Ok(line)) = lines_reader.next().await {
-                            let data = Data {
-                                con_state: Arc::clone(&connection),
-                            };
-                            debug!("[SMTP] [{}] Got Command: {}", peer, line);
-                            // TODO make sure to handle IDLE different as it needs us to stream lines
+                    // Greet the client with the capabilities we provide
+                    send_capabilities(Arc::clone(&config), &mut tx)
+                        .await
+                        .unwrap();
 
-                            {
-                                let close = data
-                                    .parse(
-                                        &mut tx,
-                                        Arc::clone(&config),
-                                        Arc::clone(&database),
-                                        Arc::clone(&storage),
-                                        line,
-                                    )
-                                    .await;
-                                match close {
-                                    Ok(close) => {
-                                        // Cleanup timeout managers
-                                        if close {
-                                            // Used for later session timer management
-                                            debug!("[SMTP] Closing TLS connection");
-                                            break;
-                                        }
-                                    }
-                                    // We try a last time to do a graceful shutdown before closing
-                                    Err(e) => {
-                                        tx.send(format!("500 This should not happen: {}", e))
-                                            .await
-                                            .unwrap();
+                    // Read lines from the stream
+                    while let Some(Ok(line)) = lines_reader.next().await {
+                        let data = Data {
+                            con_state: Arc::clone(&connection),
+                        };
+                        debug!("[SMTP] [{}] Got Command: {}", peer, line);
+                        // TODO make sure to handle IDLE different as it needs us to stream lines
+
+                        {
+                            let close = data
+                                .parse(
+                                    &mut tx,
+                                    Arc::clone(&config),
+                                    Arc::clone(&database),
+                                    Arc::clone(&storage),
+                                    line,
+                                )
+                                .await;
+                            match close {
+                                Ok(close) => {
+                                    // Cleanup timeout managers
+                                    if close {
+                                        // Used for later session timer management
                                         debug!("[SMTP] Closing TLS connection");
                                         break;
                                     }
                                 }
-                            };
-                        }
+                                // We try a last time to do a graceful shutdown before closing
+                                Err(e) => {
+                                    tx.send(format!("500 This should not happen: {}", e))
+                                        .await
+                                        .unwrap();
+                                    debug!("[SMTP] Closing TLS connection");
+                                    break;
+                                }
+                            }
+                        };
                     }
-                    Err(e) => error!("[SMTP] Got error while accepting TLS: {}", e),
                 }
-            });
-        }
-        Ok(())
+                Err(e) => error!("[SMTP] Got error while accepting TLS: {}", e),
+            }
+        });
     }
 }

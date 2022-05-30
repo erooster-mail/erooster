@@ -81,7 +81,9 @@ impl Uid<'_> {
                 for mail in filtered_mails {
                     let uid = mail.uid().await?;
                     if let Some(resp) = generate_response(args.clone(), &mail).await {
-                        lines.feed(format!("* {} FETCH ({})", uid, resp)).await?;
+                        lines
+                            .feed(format!("* {} FETCH (UID {} {})", uid, uid, resp))
+                            .await?;
                     }
                 }
 

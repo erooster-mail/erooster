@@ -16,6 +16,7 @@ pub struct Uid<'a> {
 }
 
 impl Uid<'_> {
+    #[allow(clippy::too_many_lines)]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
@@ -46,26 +47,41 @@ impl Uid<'_> {
                         .expect("Failed to convert path. Your system may be incompatible"),
                 );
 
-                let range = command_data.arguments[1].split(':').collect::<Vec<_>>();
-                let start = range[0].parse::<i64>().unwrap_or(1);
-                let end = range[1];
-                let end_int = end.parse::<i64>().unwrap_or(i64::max_value());
-                let filtered_mails: Vec<MailEntryType> = if end == "*" {
+                let filtered_mails: Vec<MailEntryType> = if command_data.arguments[1].contains(":")
+                {
+                    let range = command_data.arguments[1].split(':').collect::<Vec<_>>();
+                    let start = range[0].parse::<i64>().unwrap_or(1);
+                    let end = range[1];
+                    let end_int = end.parse::<i64>().unwrap_or(i64::max_value());
+                    if end == "*" {
+                        stream::iter(mails)
+                            .filter_map(|mail: MailEntryType| async {
+                                if let Ok(id) = mail.uid().await {
+                                    (id >= start).then(|| mail)
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect()
+                            .await
+                    } else {
+                        stream::iter(mails)
+                            .filter_map(|mail: MailEntryType| async move {
+                                if let Ok(id) = mail.uid().await {
+                                    (id >= start && id <= end_int).then(|| mail)
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect()
+                            .await
+                    }
+                } else {
+                    let wanted_id = command_data.arguments[1].parse::<i64>().unwrap_or(1);
                     stream::iter(mails)
                         .filter_map(|mail: MailEntryType| async {
                             if let Ok(id) = mail.uid().await {
-                                (id >= start).then(|| mail)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect()
-                        .await
-                } else {
-                    stream::iter(mails)
-                        .filter_map(|mail: MailEntryType| async move {
-                            if let Ok(id) = mail.uid().await {
-                                (id >= start && id <= end_int).then(|| mail)
+                                (id == wanted_id).then(|| mail)
                             } else {
                                 None
                             }

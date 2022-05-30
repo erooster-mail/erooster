@@ -136,7 +136,11 @@ async fn generate_response(args: Vec<FetchArguments>, mail: &MailEntryType) -> O
                 let mut resp = String::new();
                 for arg in args {
                     if let Some(extra_resp) = generate_response_for_attributes(arg, mail).await {
-                        resp = format!("{}\r\n{}", resp, extra_resp);
+                        if resp.is_empty() {
+                            resp = extra_resp;
+                        } else {
+                            resp.push_str(&format!(" {}", extra_resp));
+                        }
                     }
                 }
                 Some(resp)

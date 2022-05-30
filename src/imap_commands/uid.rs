@@ -35,6 +35,7 @@ impl Uid<'_> {
                 let mut folder = folder.replace('/', ".");
                 folder.insert(0, '.');
                 folder.remove_matches('"');
+                folder = folder.replace(".INBOX", "INBOX");
                 let mailbox_path = Path::new(&config.mail.maildir_folders)
                     .join(self.data.con_state.read().await.username.clone().unwrap())
                     .join(folder.clone());

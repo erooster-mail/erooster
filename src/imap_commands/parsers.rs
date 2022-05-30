@@ -201,6 +201,10 @@ fn inner_fetch_arguments(input: &str) -> Res<FetchArguments> {
             map(tag_no_case("all"), |_| FetchArguments::All),
             map(tag_no_case("fast"), |_| FetchArguments::Fast),
             map(tag_no_case("full"), |_| FetchArguments::Full),
+            map(
+                separated_list0(space1, fetch_attributes),
+                FetchArguments::List,
+            ),
             map(fetch_attributes, FetchArguments::Single),
             map(
                 delimited(

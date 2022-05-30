@@ -26,14 +26,16 @@ async fn send_email<T>(
     email: &EmailPayload,
     current_job: &CurrentJob,
     to: &Vec<String>,
+    tls: bool,
 ) -> Result<(), Box<dyn Error + Send + Sync + 'static>>
 where
     T: Stream<Item = Result<String, LinesCodecError>> + Sink<String, Error = LinesCodecError>,
 {
     let (mut lines_sender, mut lines_reader) = con.split();
     debug!(
-        "[{}] Fully Connected. Waiting for response",
-        current_job.id()
+        "[{}] [{}] Fully Connected. Waiting for response",
+        current_job.id(),
+        if tls { "TLS" } else { "Plain" }
     );
     // TODO this is totally dumb code currently.
     // We check if we get a ready status
@@ -42,13 +44,19 @@ where
         .await
         .ok_or("Server did not send ready status")??;
 
-    debug!("[{}] Got greeting: {}", current_job.id(), first);
+    debug!(
+        "[{}] [{}] Got greeting: {}",
+        current_job.id(),
+        if tls { "TLS" } else { "Plain" },
+        first
+    );
     if !first.starts_with("220") {
         lines_sender.send(String::from("RSET")).await?;
         lines_sender.send(String::from("QUIT")).await?;
         debug!(
-            "[{}] Got full {:?}",
+            "[{}] [{}] Got full {:?}",
             current_job.id(),
+            if tls { "TLS" } else { "Plain" },
             lines_reader
                 .filter_map(|x| async move { x.ok() })
                 .collect::<Vec<String>>()
@@ -61,7 +69,11 @@ where
         .send(format!("EHLO {}", email.sender_domain))
         .await?;
 
-    debug!("[{}] Sent EHLO", current_job.id());
+    debug!(
+        "[{}] [{}] Sent EHLO",
+        current_job.id(),
+        if tls { "TLS" } else { "Plain" },
+    );
     // Check if we get greeted and finished all caps
     let mut capabilities_happening = true;
     while capabilities_happening {
@@ -69,7 +81,12 @@ where
             .next()
             .await
             .ok_or("Server did not respond")??;
-        debug!("[{}] Got: {}", current_job.id(), line);
+        debug!(
+            "[{}] [{}] Got: {}",
+            current_job.id(),
+            if tls { "TLS" } else { "Plain" },
+            line
+        );
         let char_4 = line
             .chars()
             .nth(3)
@@ -83,18 +100,28 @@ where
     lines_sender
         .send(format!("MAIL FROM:<{}>", email.from))
         .await?;
-    debug!("[{}] Sent MAIL FROM", current_job.id());
+    debug!(
+        "[{}] [{}] Sent MAIL FROM",
+        current_job.id(),
+        if tls { "TLS" } else { "Plain" },
+    );
     let line = lines_reader
         .next()
         .await
         .ok_or("Server did not respond")??;
-    debug!("[{}] got {}", current_job.id(), line);
+    debug!(
+        "[{}] [{}] got {}",
+        current_job.id(),
+        if tls { "TLS" } else { "Plain" },
+        line
+    );
     if !line.starts_with("250") {
         lines_sender.send(String::from("RSET")).await?;
         lines_sender.send(String::from("QUIT")).await?;
         debug!(
-            "[{}] Got full {:?}",
+            "[{}] [{}] Got full {:?}",
             current_job.id(),
+            if tls { "TLS" } else { "Plain" },
             lines_reader
                 .filter_map(|x| async move { x.ok() })
                 .collect::<Vec<String>>()
@@ -107,18 +134,28 @@ where
     // TODO actually follow spec here. This may be garbage :P
     for to in to {
         lines_sender.send(format!("RCPT TO:<{}>", to)).await?;
-        debug!("[{}] Sent RCPT TO", current_job.id());
+        debug!(
+            "[{}] [{}] Sent RCPT TO",
+            current_job.id(),
+            if tls { "TLS" } else { "Plain" },
+        );
         let line = lines_reader
             .next()
             .await
             .ok_or("Server did not respond")??;
-        debug!("[{}] Got {}", current_job.id(), line);
+        debug!(
+            "[{}] [{}] Got {}",
+            current_job.id(),
+            if tls { "TLS" } else { "Plain" },
+            line
+        );
         if !line.starts_with("250") && !line.starts_with("550 No such user here") {
             lines_sender.send(String::from("RSET")).await?;
             lines_sender.send(String::from("QUIT")).await?;
             debug!(
-                "[{}] Got full {:?}",
+                "[{}] [{}] Got full {:?}",
                 current_job.id(),
+                if tls { "TLS" } else { "Plain" },
                 lines_reader
                     .filter_map(|x| async move { x.ok() })
                     .collect::<Vec<String>>()
@@ -130,20 +167,30 @@ where
 
     // Send the body
     lines_sender.send(String::from("DATA")).await?;
-    debug!("[{}] Sent DATA", current_job.id());
+    debug!(
+        "[{}] [{}] Sent DATA",
+        current_job.id(),
+        if tls { "TLS" } else { "Plain" },
+    );
 
     let line = lines_reader
         .next()
         .await
         .ok_or("Server did not respond")??;
-    debug!("[{}] Got {}", current_job.id(), line);
+    debug!(
+        "[{}] [{}] Got {}",
+        current_job.id(),
+        if tls { "TLS" } else { "Plain" },
+        line
+    );
     if !line.starts_with("354") {
         lines_sender.send(String::from("RSET")).await?;
         lines_sender.send(String::from("QUIT")).await?;
 
         debug!(
-            "[{}] Got full {:?}",
+            "[{}] [{}] Got full {:?}",
             current_job.id(),
+            if tls { "TLS" } else { "Plain" },
             lines_reader
                 .filter_map(|x| async move { x.ok() })
                 .collect::<Vec<String>>()
@@ -153,7 +200,11 @@ where
     }
 
     lines_sender.send(email.body.clone()).await?;
-    debug!("[{}] Sent body and ending", current_job.id());
+    debug!(
+        "[{}] [{}] Sent body and ending",
+        current_job.id(),
+        if tls { "TLS" } else { "Plain" },
+    );
 
     let line = lines_reader
         .next()
@@ -164,8 +215,9 @@ where
         lines_sender.send(String::from("RSET")).await?;
         lines_sender.send(String::from("QUIT")).await?;
         debug!(
-            "[{}] Got full {:?}",
+            "[{}] [{}] Got full {:?}",
             current_job.id(),
+            if tls { "TLS" } else { "Plain" },
             lines_reader
                 .filter_map(|x| async move { x.ok() })
                 .collect::<Vec<String>>()
@@ -210,7 +262,7 @@ pub async fn send_email_job(
             let mx_record_resp = resolver.mx_lookup(target.clone()).await;
 
             debug!(
-                "[{}] Looking up AAAA records for {}",
+                "[{}] Looking up IP records for {}",
                 current_job.id(),
                 target
             );
@@ -272,20 +324,37 @@ pub async fn send_email_job(
             if let Ok(secure_con) =
                 get_secure_connection(address.unwrap(), &current_job, target).await
             {
-                if let Err(e) = send_email(secure_con, &email, &current_job, to).await {
+                if let Err(e) = send_email(secure_con, &email, &current_job, to, true).await {
                     error!(
                         "[{}] Error sending email via tls on port 465: {}",
                         current_job.id(),
                         e
                     );
-                    let unsecure_con =
-                        get_unsecure_connection(address.unwrap(), &current_job, target).await?;
-                    send_email(unsecure_con, &email, &current_job, to).await?;
+                    match get_unsecure_connection(address.unwrap(), &current_job, target).await {
+                        Ok(unsecure_con) => {
+                            if let Err(e) =
+                                send_email(unsecure_con, &email, &current_job, to, false).await
+                            {
+                                error!(
+                                    "[{}] Error sending email via tcp on port 25: {}",
+                                    current_job.id(),
+                                    e
+                                );
+                            }
+                        }
+                        Err(e) => {
+                            error!(
+                                "[{}] Error sending email via tcp on port 25: {}",
+                                current_job.id(),
+                                e
+                            );
+                        }
+                    }
                 }
             } else {
                 let unsecure_con =
                     get_unsecure_connection(address.unwrap(), &current_job, target).await?;
-                if let Err(e) = send_email(unsecure_con, &email, &current_job, to).await {
+                if let Err(e) = send_email(unsecure_con, &email, &current_job, to, false).await {
                     error!(
                         "[{}] Error sending email via tcp on port 25: {}",
                         current_job.id(),
@@ -318,7 +387,12 @@ async fn get_unsecure_connection(
     Box<dyn Error + Send + Sync + 'static>,
 > {
     let stream = TcpStream::connect(&(addr, 25)).await?;
-    debug!("[{}] Connected to {} via tcp", current_job.id(), target);
+    debug!(
+        "[{}] Connected to {} via tcp as {:?}",
+        current_job.id(),
+        target,
+        stream.local_addr()?
+    );
 
     Ok(Framed::new(stream, LinesCodec::new()))
 }
@@ -342,7 +416,12 @@ async fn get_secure_connection(
     let connector = TlsConnector::from(Arc::new(config));
 
     let stream = TcpStream::connect(&(addr, 465)).await?;
-    debug!("[{}] Connected to {} via tcp", current_job.id(), target);
+    debug!(
+        "[{}] Connected to {} via tcp {:?} waiting for tls magic",
+        current_job.id(),
+        target,
+        stream.local_addr()?
+    );
 
     let domain = rustls::ServerName::try_from(target.as_str())
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid dnsname"))?;

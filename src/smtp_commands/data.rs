@@ -5,7 +5,7 @@ use crate::{
     },
     config::Config,
     smtp_commands::Data,
-    smtp_servers::{send_email_job, state::State, EmailPayload},
+    smtp_servers::{state::State, sending::{EmailPayload, send_email_job}},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{collections::HashMap, path::Path, sync::Arc};

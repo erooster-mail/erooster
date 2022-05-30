@@ -39,20 +39,17 @@ impl Uid<'_> {
                 let mailbox_path = Path::new(&config.mail.maildir_folders)
                     .join(self.data.con_state.read().await.username.clone().unwrap())
                     .join(folder.clone());
-                debug!("mailbox_path: {:?}", mailbox_path);
                 let mails: Vec<MailEntryType> = storage.list_all(
                     mailbox_path
                         .into_os_string()
                         .into_string()
                         .expect("Failed to convert path. Your system may be incompatible"),
                 );
-                debug!("Mails: {}", mails.len());
 
                 let range = command_data.arguments[1].split(':').collect::<Vec<_>>();
                 let start = range[0].parse::<i64>().unwrap_or(1);
                 let end = range[1];
                 let end_int = end.parse::<i64>().unwrap_or(i64::max_value());
-                debug!("start: {}, end: {}", start, end_int);
                 let filtered_mails: Vec<MailEntryType> = if end == "*" {
                     stream::iter(mails)
                         .filter_map(|mail: MailEntryType| async {
@@ -81,7 +78,6 @@ impl Uid<'_> {
                 let (_, args) =
                     fetch_arguments(fetch_args).expect("Failed to parse fetch arguments");
                 debug!("Fetch args: {:?}", args);
-                debug!("filtered_mails: {}", filtered_mails.len());
                 for mail in filtered_mails {
                     let uid = mail.uid().await?;
                     if let Some(resp) = generate_response(args.clone(), &mail).await {
@@ -155,7 +151,23 @@ async fn generate_response_for_attributes(
     match attr {
         FetchAttributes::Envelope => None,
         FetchAttributes::Flags => {
-            let flags = mail.flags();
+            let mut flags = String::new();
+            if mail.is_draft() {
+                flags = format!("{} \\Draft", flags);
+            }
+            if mail.is_flagged() {
+                flags = format!("{} \\Flagged", flags);
+            }
+            if mail.is_seen() {
+                flags = format!("{} \\Seen", flags);
+            }
+            if mail.is_replied() {
+                flags = format!("{} \\Answered", flags);
+            }
+            if mail.is_trashed() {
+                flags = format!("{} \\Deleted", flags);
+            }
+
             Some(format!("FLAGS ({})", flags))
         }
         FetchAttributes::InternalDate => None,

@@ -138,6 +138,29 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
             ),
             map(
                 tuple((
+                    tag_no_case("RFC822.PEEK"),
+                    space1,
+                    section,
+                    space1,
+                    opt(delimited(
+                        char('<'),
+                        separated_pair(
+                            take_while1(|x: char| x.is_ascii_digit()),
+                            char('.'),
+                            take_while1(|x: char| x.is_ascii_digit()),
+                        ),
+                        char('>'),
+                    )),
+                )),
+                |(_, _, x, _, y)| {
+                    FetchAttributes::BodyPeek(
+                        x,
+                        y.map(|(a, b)| (a.parse::<u64>().unwrap(), b.parse::<u64>().unwrap())),
+                    )
+                },
+            ),
+            map(
+                tuple((
                     tag_no_case("BINARY"),
                     space1,
                     section,

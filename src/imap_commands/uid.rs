@@ -79,9 +79,9 @@ impl Uid<'_> {
                 let (_, args) =
                     fetch_arguments(fetch_args.clone()).expect("Failed to parse fetch arguments");
                 debug!("Fetch args results: {:?}", args);
-                for mail in filtered_mails {
+                for mut mail in filtered_mails {
                     let uid = mail.uid().await?;
-                    if let Some(resp) = generate_response(args.clone(), &mail).await {
+                    if let Some(resp) = generate_response(args.clone(), &mut mail).await {
                         lines
                             .feed(format!("* {} FETCH (UID {} {})", uid, uid, resp))
                             .await?;
@@ -123,7 +123,7 @@ impl Uid<'_> {
     }
 }
 
-async fn generate_response(arg: FetchArguments, mail: &MailEntryType) -> Option<String> {
+async fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Option<String> {
     match arg {
         FetchArguments::All => None,
         FetchArguments::Fast => None,
@@ -149,7 +149,7 @@ async fn generate_response(arg: FetchArguments, mail: &MailEntryType) -> Option<
 
 async fn generate_response_for_attributes(
     attr: FetchAttributes,
-    mail: &MailEntryType,
+    mail: &mut MailEntryType,
 ) -> Option<String> {
     match attr {
         FetchAttributes::Envelope => None,
@@ -175,7 +175,20 @@ async fn generate_response_for_attributes(
             Some(format!("FLAGS ({})", flags))
         }
         FetchAttributes::InternalDate => None,
-        FetchAttributes::RFC822Size => None,
+        FetchAttributes::RFC822Size => {
+            if let Ok(parsed) = mail.parsed() {
+                let size = match parsed.get_body_encoded() {
+                    mailparse::body::Body::Base64(b) => b.get_raw().len(),
+                    mailparse::body::Body::QuotedPrintable(q) => q.get_raw().len(),
+                    mailparse::body::Body::SevenBit(s) => s.get_raw().len(),
+                    mailparse::body::Body::EightBit(e) => e.get_raw().len(),
+                    mailparse::body::Body::Binary(b) => b.get_raw().len(),
+                };
+                Some(format!("RFC822.SIZE {}", size))
+            } else {
+                Some(String::from("RFC822.SIZE 0"))
+            }
+        }
         FetchAttributes::Uid => None,
         FetchAttributes::BodyStructure => None,
         FetchAttributes::BodySection(_, _) => None,

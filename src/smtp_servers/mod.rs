@@ -289,7 +289,7 @@ pub async fn send_email_job(
                     .await
                     .ok_or("Server did not respond")??;
                 debug!("[{}] Got {}", current_job.id(), line);
-                if !line.starts_with("250") && !line.starts_with("550") {
+                if !line.starts_with("250") && !line.starts_with("550 No such user here") {
                     lines_sender.send(String::from("RSET")).await?;
                     lines_sender.send(String::from("QUIT")).await?;
                     debug!(

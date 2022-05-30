@@ -60,6 +60,8 @@ pub enum FetchAttributes {
     Flags,
     InternalDate,
     RFC822Size,
+    // TODO remove this with imap4rev2 adaption in clients or feature flag
+    RFC822Header,
     Uid,
     BodyStructure,
     BodySection(Option<SectionText>, Option<(u64, u64)>),
@@ -80,6 +82,9 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                 FetchAttributes::InternalDate
             }),
             map(tag_no_case("RFC822.SIZE"), |_| FetchAttributes::RFC822Size),
+            map(tag_no_case("RFC822.HEADER"), |_| {
+                FetchAttributes::RFC822Header
+            }),
             map(tag_no_case("UID"), |_| FetchAttributes::Uid),
             map(
                 separated_pair(tag_no_case("BODY"), space1, tag_no_case("[STRUCTURE]")),

@@ -153,6 +153,7 @@ async fn generate_response_for_attributes(
 ) -> Option<String> {
     match attr {
         FetchAttributes::Envelope => None,
+        FetchAttributes::RFC822Header => None,
         FetchAttributes::Flags => {
             let mut flags = String::new();
             if mail.is_draft() {

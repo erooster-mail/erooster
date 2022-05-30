@@ -1,6 +1,9 @@
 use crate::{
     backend::storage::{MailEntry, MailEntryType, MailStorage, Storage},
-    imap_commands::{parsers::fetch_arguments, CommandData, Data},
+    imap_commands::{
+        parsers::{fetch_arguments, FetchArguments, FetchAttributes},
+        CommandData, Data,
+    },
     imap_servers::state::State,
 };
 use futures::{channel::mpsc::SendError, stream, Sink, SinkExt, StreamExt};
@@ -63,8 +66,9 @@ impl Uid<'_> {
                 debug!("Fetch args: {:?}", args);
                 for mail in filtered_mails {
                     let uid = mail.uid().await?;
-
-                    let line = format!("* {} FETCH ", uid);
+                    if let Some(resp) = generate_response(args.clone(), &mail).await {
+                        lines.feed(format!("* {} FETCH ({})", uid, resp)).await?;
+                    }
                 }
 
                 lines
@@ -99,5 +103,51 @@ impl Uid<'_> {
                 .await?;
         }
         Ok(())
+    }
+}
+
+async fn generate_response(args: Vec<FetchArguments>, mail: &MailEntryType) -> Option<String> {
+    let mut resp = None;
+    for arg in args {
+        resp = match arg {
+            FetchArguments::All => todo!(),
+            FetchArguments::Fast => todo!(),
+            FetchArguments::Full => todo!(),
+            FetchArguments::Single(single_arg) => {
+                generate_response_for_attributes(single_arg, mail).await
+            }
+            FetchArguments::List(args) => {
+                let mut resp = String::new();
+                for arg in args {
+                    if let Some(extra_resp) = generate_response_for_attributes(arg, mail).await {
+                        resp = format!("{}\r\n{}", resp, extra_resp);
+                    }
+                }
+                Some(resp)
+            }
+        }
+    }
+    resp
+}
+
+async fn generate_response_for_attributes(
+    attr: FetchAttributes,
+    mail: &MailEntryType,
+) -> Option<String> {
+    match attr {
+        FetchAttributes::Envelope => todo!(),
+        FetchAttributes::Flags => {
+            let flags = mail.flags();
+            Some(format!("FLAGS ({})", flags))
+        }
+        FetchAttributes::InternalDate => todo!(),
+        FetchAttributes::RFC822Size => todo!(),
+        FetchAttributes::Uid => todo!(),
+        FetchAttributes::BodyStructure => todo!(),
+        FetchAttributes::BodySection(_, _) => todo!(),
+        FetchAttributes::BodyPeek(_, _) => todo!(),
+        FetchAttributes::Binary(_, _) => todo!(),
+        FetchAttributes::BinaryPeek(_, _) => todo!(),
+        FetchAttributes::BinarySize(_) => todo!(),
     }
 }

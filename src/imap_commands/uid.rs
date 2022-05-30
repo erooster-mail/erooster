@@ -159,9 +159,9 @@ async fn generate_response_for_attributes(
                 for header in headers_vec {
                     headers.push_str(&format!("{}: {}\r\n", header.get_key(), header.get_value()));
                 }
-                Some(format!("RFC822.HEADER {}", headers))
+                Some(format!("RFC822.HEADER\r\n {}", headers))
             } else {
-                Some(String::from("RFC822.HEADER ()"))
+                Some(String::from("RFC822.HEADER\r\n"))
             }
         }
         FetchAttributes::Flags => {

@@ -46,14 +46,20 @@ impl Server for Unencrypted {
             info!("[IMAP] Listening on unecrypted Port");
             let stream = TcpListenerStream::new(listener);
 
-            listen(
-                stream,
-                Arc::clone(&config),
-                Arc::clone(&database),
-                Arc::clone(&storage),
-                file_watcher.clone(),
-            )
-            .await;
+            let config = Arc::clone(&config);
+            let database = Arc::clone(&database);
+            let storage = Arc::clone(&storage);
+            let file_watcher = file_watcher.clone();
+            tokio::spawn(async move {
+                listen(
+                    stream,
+                    Arc::clone(&config),
+                    Arc::clone(&database),
+                    Arc::clone(&storage),
+                    file_watcher.clone(),
+                )
+                .await;
+            });
         }
         Ok(())
     }

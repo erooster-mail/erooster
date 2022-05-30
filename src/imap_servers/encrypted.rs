@@ -115,15 +115,22 @@ impl Server for Encrypted {
             info!("[IMAP] Listening on ecrypted Port");
             let stream = TcpListenerStream::new(listener);
 
-            listen(
-                stream,
-                Arc::clone(&config),
-                Arc::clone(&database),
-                Arc::clone(&storage),
-                file_watcher.clone(),
-                acceptor.clone(),
-            )
-            .await;
+            let config = Arc::clone(&config);
+            let database = Arc::clone(&database);
+            let storage = Arc::clone(&storage);
+            let file_watcher = file_watcher.clone();
+            let acceptor = acceptor.clone();
+            tokio::spawn(async move {
+                listen(
+                    stream,
+                    Arc::clone(&config),
+                    Arc::clone(&database),
+                    Arc::clone(&storage),
+                    file_watcher.clone(),
+                    acceptor.clone(),
+                )
+                .await;
+            });
         }
 
         Ok(())

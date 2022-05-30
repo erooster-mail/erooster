@@ -40,13 +40,19 @@ impl Unencrypted {
             let listener = TcpListener::bind(addr).await?;
             info!("[SMTP] Listening on unecrypted Port");
             let stream = TcpListenerStream::new(listener);
-            listen(
-                stream,
-                Arc::clone(&config),
-                Arc::clone(&database),
-                Arc::clone(&storage),
-            )
-            .await;
+            
+            let config = Arc::clone(&config);
+            let database = Arc::clone(&database);
+            let storage = Arc::clone(&storage);
+            tokio::spawn(async move {
+                listen(
+                    stream,
+                    Arc::clone(&config),
+                    Arc::clone(&database),
+                    Arc::clone(&storage),
+                )
+                .await;
+            });
         }
 
         Ok(())

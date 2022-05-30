@@ -93,14 +93,20 @@ impl Encrypted {
             let listener = TcpListener::bind(addr).await.unwrap();
             info!("[SMTP] Listening on ecrypted Port");
             let stream = TcpListenerStream::new(listener);
-            listen(
-                stream,
-                Arc::clone(&config),
-                Arc::clone(&database),
-                Arc::clone(&storage),
-                acceptor.clone(),
-            )
-            .await;
+            let config = Arc::clone(&config);
+            let database = Arc::clone(&database);
+            let storage = Arc::clone(&storage);
+            let acceptor = acceptor.clone();
+            tokio::spawn(async move {
+                listen(
+                    stream,
+                    Arc::clone(&config),
+                    Arc::clone(&database),
+                    Arc::clone(&storage),
+                    acceptor.clone(),
+                )
+                .await;
+            });
         }
 
         Ok(())

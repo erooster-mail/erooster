@@ -47,7 +47,7 @@ const_format = "0.2.22"
 sqlx = { version = "0.5", features = [ "runtime-tokio-rustls"] }
 argon2 = { version = "0.4", features = ["std"] }
 rand_core = { version = "0.6", features = ["std"] }
-sqlxmq = { version = "0.3.4", default-features = false, features = [ "runtime-tokio-rustls"] }
+sqlxmq = { version = "0.3", default-features = false, features = [ "runtime-tokio-rustls"] }
 owo-colors = "3"
 rpassword = "6.0.1"
 indicatif = "0.16.2"

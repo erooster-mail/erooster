@@ -231,8 +231,8 @@ where
     Ok(())
 }
 
-// Arguments to the `#[job]` attribute allow setting default job options.
-#[job(retries = 3, backoff_secs = 1200)]
+// Note this is a hack to get max retries. Please fix this
+#[job(retries = 4294967295, backoff_secs = 1200)]
 #[allow(clippy::too_many_lines)]
 pub async fn send_email_job(
     // The first argument should always be the current job.

@@ -1,5 +1,6 @@
 use crate::{
     backend::storage::{MailEntry, MailEntryType, MailStorage, Storage},
+    config::Config,
     imap_commands::{
         parsers::{fetch_arguments, FetchArguments, FetchAttributes},
         CommandData, Data,
@@ -7,7 +8,7 @@ use crate::{
     imap_servers::state::State,
 };
 use futures::{channel::mpsc::SendError, stream, Sink, SinkExt, StreamExt};
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 use tracing::debug;
 
 pub struct Uid<'a> {
@@ -18,6 +19,7 @@ impl Uid<'_> {
     pub async fn exec<S>(
         &self,
         lines: &mut S,
+        config: Arc<Config>,
         command_data: &CommandData<'_>,
         storage: Arc<Storage>,
     ) -> color_eyre::eyre::Result<()>
@@ -30,12 +32,26 @@ impl Uid<'_> {
             // TODO handle * as "everything"
             // TODO make this code also available to the pure FETCH command
             if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
-                let mails: Vec<MailEntryType> = storage.list_all(folder.to_string());
+                let mut folder = folder.replace('/', ".");
+                folder.insert(0, '.');
+                folder.remove_matches('"');
+                let mailbox_path = Path::new(&config.mail.maildir_folders)
+                    .join(self.data.con_state.read().await.username.clone().unwrap())
+                    .join(folder.clone());
+                debug!("mailbox_path: {:?}", mailbox_path);
+                let mails: Vec<MailEntryType> = storage.list_all(
+                    mailbox_path
+                        .into_os_string()
+                        .into_string()
+                        .expect("Failed to convert path. Your system may be incompatible"),
+                );
+                debug!("Mails: {}", mails.len());
 
                 let range = command_data.arguments[1].split(':').collect::<Vec<_>>();
                 let start = range[0].parse::<i64>().unwrap_or(1);
                 let end = range[1];
                 let end_int = end.parse::<i64>().unwrap_or(i64::max_value());
+                debug!("start: {}, end: {}", start, end_int);
                 let filtered_mails: Vec<MailEntryType> = if end == "*" {
                     stream::iter(mails)
                         .filter_map(|mail: MailEntryType| async {

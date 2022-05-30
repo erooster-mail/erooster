@@ -302,7 +302,7 @@ impl Data {
                     }
                     Commands::Uid => {
                         Uid { data: self }
-                            .exec(lines, &command_data, storage)
+                            .exec(lines, config, &command_data, storage)
                             .await?;
                     }
                 }

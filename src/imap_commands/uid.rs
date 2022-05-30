@@ -64,6 +64,7 @@ impl Uid<'_> {
                 let (_, args) =
                     fetch_arguments(fetch_args).expect("Failed to parse fetch arguments");
                 debug!("Fetch args: {:?}", args);
+                debug!("filtered_mails: {}", filtered_mails.len());
                 for mail in filtered_mails {
                     let uid = mail.uid().await?;
                     if let Some(resp) = generate_response(args.clone(), &mail).await {

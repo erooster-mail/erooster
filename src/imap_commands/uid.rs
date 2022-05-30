@@ -122,32 +122,28 @@ impl Uid<'_> {
     }
 }
 
-async fn generate_response(args: Vec<FetchArguments>, mail: &MailEntryType) -> Option<String> {
-    let mut resp = None;
-    for arg in args {
-        resp = match arg {
-            FetchArguments::All => None,
-            FetchArguments::Fast => None,
-            FetchArguments::Full => None,
-            FetchArguments::Single(single_arg) => {
-                generate_response_for_attributes(single_arg, mail).await
-            }
-            FetchArguments::List(args) => {
-                let mut resp = String::new();
-                for arg in args {
-                    if let Some(extra_resp) = generate_response_for_attributes(arg, mail).await {
-                        if resp.is_empty() {
-                            resp = extra_resp;
-                        } else {
-                            resp.push_str(&format!(" {}", extra_resp));
-                        }
+async fn generate_response(arg: FetchArguments, mail: &MailEntryType) -> Option<String> {
+    match arg {
+        FetchArguments::All => None,
+        FetchArguments::Fast => None,
+        FetchArguments::Full => None,
+        FetchArguments::Single(single_arg) => {
+            generate_response_for_attributes(single_arg, mail).await
+        }
+        FetchArguments::List(args) => {
+            let mut resp = String::new();
+            for arg in args {
+                if let Some(extra_resp) = generate_response_for_attributes(arg, mail).await {
+                    if resp.is_empty() {
+                        resp = extra_resp;
+                    } else {
+                        resp.push_str(&format!(" {}", extra_resp));
                     }
                 }
-                Some(resp)
             }
+            Some(resp)
         }
     }
-    resp
 }
 
 async fn generate_response_for_attributes(

@@ -222,14 +222,10 @@ fn inner_fetch_arguments(input: &str) -> Res<FetchArguments> {
 #[allow(clippy::needless_pass_by_value)]
 pub fn fetch_arguments(
     input: String,
-) -> color_eyre::eyre::Result<(String, Vec<FetchArguments>), String> {
+) -> color_eyre::eyre::Result<(String, FetchArguments), String> {
     context(
         "fetch_arguments",
-        delimited(
-            char('('),
-            separated_list0(space1, inner_fetch_arguments),
-            char(')'),
-        ),
+        delimited(char('('), inner_fetch_arguments, char(')')),
     )(&input)
     .map(|(x, y)| (x.to_string(), y))
     .map_err(|e| e.to_string())

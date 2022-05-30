@@ -74,7 +74,7 @@ pub enum FetchAttributes {
 #[allow(clippy::too_many_lines)]
 fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
     context(
-        "inner_fetch_arguments",
+        "fetch_attributes",
         alt((
             map(tag_no_case("ENVELOPE"), |_| FetchAttributes::Envelope),
             map(tag_no_case("FLAGS"), |_| FetchAttributes::Flags),
@@ -90,6 +90,9 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                 separated_pair(tag_no_case("BODY"), space1, tag_no_case("[STRUCTURE]")),
                 |_| FetchAttributes::BodyStructure,
             ),
+            map(tag_no_case("BODY"), |_| {
+                FetchAttributes::BodySection(None, None)
+            }),
             map(
                 tuple((
                     tag_no_case("BODY"),
@@ -113,6 +116,9 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                     )
                 },
             ),
+            map(tag_no_case("BODY.PEEK"), |_| {
+                FetchAttributes::BinaryPeek(None, None)
+            }),
             map(
                 tuple((
                     tag_no_case("BODY.PEEK"),
@@ -136,6 +142,9 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                     )
                 },
             ),
+            map(tag_no_case("RFC822.PEEK"), |_| {
+                FetchAttributes::BinaryPeek(None, None)
+            }),
             map(
                 tuple((
                     tag_no_case("RFC822.PEEK"),

@@ -4,18 +4,22 @@ use nom::{
     character::complete::{char, space1},
     combinator::{map, opt},
     error::{context, VerboseError},
-    multi::{many0, separated_list0},
+    multi::separated_list0,
     sequence::{delimited, separated_pair, tuple},
     IResult,
 };
 
 type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
+
 fn header_list(input: &str) -> Res<Vec<&str>> {
     context(
         "header_list",
         delimited(
             char('('),
-            many0(take_while1(|c: char| !c.is_whitespace() && c != ')')),
+            separated_list0(
+                space1,
+                take_while1(|c: char| c != ')' && !c.is_whitespace()),
+            ),
             char(')'),
         ),
     )(input)
@@ -33,8 +37,6 @@ fn section_text(input: &str) -> Res<SectionText> {
     context(
         "section_text",
         alt((
-            map(tag_no_case("Header"), |_| SectionText::Header),
-            map(tag_no_case("Text"), |_| SectionText::Text),
             map(
                 separated_pair(tag_no_case("Header.Fields"), space1, header_list),
                 |(_, x)| SectionText::HeaderFields(x.iter().map(ToString::to_string).collect()),
@@ -43,6 +45,8 @@ fn section_text(input: &str) -> Res<SectionText> {
                 separated_pair(tag_no_case("Header.Fields.Not"), space1, header_list),
                 |(_, x)| SectionText::HeaderFieldsNot(x.iter().map(ToString::to_string).collect()),
             ),
+            map(tag_no_case("Header"), |_| SectionText::Header),
+            map(tag_no_case("Text"), |_| SectionText::Text),
         )),
     )(input)
 }
@@ -90,7 +94,7 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                 tuple((
                     tag_no_case("BODY.PEEK"),
                     section,
-                    space1,
+                    opt(space1),
                     opt(delimited(
                         char('<'),
                         separated_pair(
@@ -112,7 +116,7 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                 tuple((
                     tag_no_case("RFC822.PEEK"),
                     section,
-                    space1,
+                    opt(space1),
                     opt(delimited(
                         char('<'),
                         separated_pair(
@@ -134,7 +138,7 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                 tuple((
                     tag_no_case("BINARY.PEEK"),
                     section,
-                    space1,
+                    opt(space1),
                     opt(delimited(
                         char('<'),
                         separated_pair(
@@ -159,7 +163,7 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                 tuple((
                     tag_no_case("BODY"),
                     section,
-                    space1,
+                    opt(space1),
                     opt(delimited(
                         char('<'),
                         separated_pair(
@@ -181,7 +185,7 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                 tuple((
                     tag_no_case("BINARY"),
                     section,
-                    space1,
+                    opt(space1),
                     opt(delimited(
                         char('<'),
                         separated_pair(
@@ -200,7 +204,7 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                 },
             ),
             map(
-                separated_pair(tag_no_case("BODY"), space1, tag_no_case("[STRUCTURE]")),
+                separated_pair(tag_no_case("BODY"), opt(space1), tag_no_case("[STRUCTURE]")),
                 |_| FetchAttributes::BodyStructure,
             ),
             map(tag_no_case("BODY.PEEK"), |_| {
@@ -233,11 +237,6 @@ fn inner_fetch_arguments(input: &str) -> Res<FetchArguments> {
             map(tag_no_case("fast"), |_| FetchArguments::Fast),
             map(tag_no_case("full"), |_| FetchArguments::Full),
             map(
-                separated_list0(space1, fetch_attributes),
-                FetchArguments::List,
-            ),
-            map(fetch_attributes, FetchArguments::Single),
-            map(
                 delimited(
                     char('('),
                     separated_list0(space1, fetch_attributes),
@@ -245,19 +244,70 @@ fn inner_fetch_arguments(input: &str) -> Res<FetchArguments> {
                 ),
                 FetchArguments::List,
             ),
+            map(
+                separated_list0(space1, fetch_attributes),
+                FetchArguments::List,
+            ),
+            map(fetch_attributes, FetchArguments::Single),
         )),
     )(input)
 }
 
-// This has a weird type signature due to lifetime conflicts on the caller
-#[allow(clippy::needless_pass_by_value)]
-pub fn fetch_arguments(
-    input: String,
-) -> color_eyre::eyre::Result<(String, FetchArguments), String> {
-    context(
-        "fetch_arguments",
-        delimited(char('('), inner_fetch_arguments, char(')')),
-    )(&input)
-    .map(|(x, y)| (x.to_string(), y))
-    .map_err(|e| e.to_string())
+pub fn fetch_arguments(input: &str) -> Res<FetchArguments> {
+    context("fetch_arguments", inner_fetch_arguments)(input)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_section() {
+        let input = "[HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type Reply-To x-spamd-result x-spam-score x-rspamd-score x-spam-status x-mailscanner-spamcheck X-Spam-Flag x-spam-level)]";
+        let args = section(input);
+        println!("{:?}", args);
+        assert!(args.is_ok());
+        let (unparsed, _) = args.unwrap();
+        assert_eq!(unparsed, "");
+    }
+
+    #[tokio::test]
+    async fn test_section_text() {
+        let input = "HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type Reply-To x-spamd-result x-spam-score x-rspamd-score x-spam-status x-mailscanner-spamcheck X-Spam-Flag x-spam-level)";
+        let args = section_text(input);
+        println!("{:?}", args);
+        assert!(args.is_ok());
+        let (unparsed, _) = args.unwrap();
+        assert_eq!(unparsed, "");
+    }
+
+    #[tokio::test]
+    async fn test_fetch_attributes() {
+        let input = "BODY.PEEK[HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type Reply-To x-spamd-result x-spam-score x-rspamd-score x-spam-status x-mailscanner-spamcheck X-Spam-Flag x-spam-level)]";
+        let args = fetch_attributes(input);
+        println!("{:?}", args);
+        assert!(args.is_ok());
+        let (unparsed, _) = args.unwrap();
+        assert_eq!(unparsed, "");
+    }
+
+    #[tokio::test]
+    async fn test_inner_fetch_arguments() {
+        let input = "(UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type Reply-To x-spamd-result x-spam-score x-rspamd-score x-spam-status x-mailscanner-spamcheck X-Spam-Flag x-spam-level)])";
+        let args = inner_fetch_arguments(input);
+        println!("{:?}", args);
+        assert!(args.is_ok());
+        let (unparsed, _) = args.unwrap();
+        assert_eq!(unparsed, "");
+    }
+
+    #[tokio::test]
+    async fn test_fetch_arguments() {
+        let input = "UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type Reply-To x-spamd-result x-spam-score x-rspamd-score x-spam-status x-mailscanner-spamcheck X-Spam-Flag x-spam-level)]";
+        let args = fetch_arguments(input);
+        println!("{:?}", args);
+        assert!(args.is_ok());
+        let (unparsed, _) = args.unwrap();
+        assert_eq!(unparsed, "");
+    }
 }

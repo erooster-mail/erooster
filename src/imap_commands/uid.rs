@@ -91,8 +91,9 @@ impl Uid<'_> {
                 };
 
                 let fetch_args = command_data.arguments[2..].to_vec().join(" ");
-                debug!("Fetch args: {}", fetch_args);
-                match fetch_arguments(fetch_args.clone()) {
+                let fetch_args_str = &fetch_args[1..fetch_args.len() - 1];
+                debug!("Fetch args: {}", fetch_args_str);
+                match fetch_arguments(fetch_args_str) {
                     Ok((_, args)) => {
                         debug!("Fetch args results: {:?}", args);
                         for mut mail in filtered_mails {

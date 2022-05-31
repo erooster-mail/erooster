@@ -309,6 +309,7 @@ fn body(
         }
     } else if let Ok(body) = mail.parsed() {
         if let Ok(body_text) = body.get_body() {
+            info!("Path: {:?}", mail.path());
             info!("Body: {}", body_text);
             format!("BODY[] {}", body_text)
         } else {

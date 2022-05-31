@@ -307,8 +307,15 @@ fn generate_response_for_attributes(
                         }
                     }
                 }
+            } else if let Ok(body) = mail.parsed() {
+                if let Ok(body_text) = body.get_body_raw() {
+                    let body_text = String::from_utf8_lossy(&body_text);
+                    Some(format!("BODY[] {}", body_text))
+                } else {
+                    Some(String::from("BODY[] NIL\r\n"))
+                }
             } else {
-                Some(String::from("BODY[HEADER] NIL\r\n"))
+                Some(String::from("BODY[] NIL\r\n"))
             }
         }
         FetchAttributes::Binary(_, _) => None,

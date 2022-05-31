@@ -9,7 +9,7 @@ use crate::{
 };
 use futures::{channel::mpsc::SendError, stream, Sink, SinkExt, StreamExt};
 use std::{path::Path, sync::Arc};
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 
 pub struct Uid<'a> {
     pub data: &'a Data,
@@ -27,7 +27,6 @@ impl Uid<'_> {
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
-        debug!("Arguments: {:?}", command_data.arguments);
         if command_data.arguments[0].to_lowercase() == "fetch" {
             // TODO handle the various request types defined in https://www.rfc-editor.org/rfc/rfc9051.html#name-fetch-command
             // TODO handle * as "everything"
@@ -95,7 +94,6 @@ impl Uid<'_> {
                 debug!("Fetch args: {}", fetch_args_str);
                 match fetch_arguments(fetch_args_str) {
                     Ok((_, args)) => {
-                        debug!("Fetch args results: {:?}", args);
                         for mut mail in filtered_mails {
                             let uid = mail.uid().await?;
                             if let Some(resp) = generate_response(args.clone(), &mut mail) {
@@ -240,14 +238,7 @@ fn generate_response_for_attributes(
                                 .iter()
                                 .map(|header| header.to_lowercase())
                                 .collect();
-                            info!("Requested headers: {:#?}", lower_headers_requested_vec);
                             for header in headers_vec {
-                                info!(
-                                    "Header: {} => {}",
-                                    header.get_key().to_lowercase(),
-                                    lower_headers_requested_vec
-                                        .contains(&header.get_key().to_lowercase())
-                                );
                                 if lower_headers_requested_vec
                                     .contains(&header.get_key().to_lowercase())
                                 {

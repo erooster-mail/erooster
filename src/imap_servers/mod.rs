@@ -15,7 +15,7 @@ pub(crate) mod unencrypted;
 
 /// A const variant of the Capabilities we welcome clients with
 pub const CAPABILITY_HELLO: &str =
-    formatcp!("* OK [{}] IMAP4rev2 Service Ready", get_capabilities());
+    formatcp!("* OK [{}] IMAP4rev1/IMAP4rev2 Service Ready", get_capabilities());
 
 /// An implementation of a imap server
 #[async_trait]

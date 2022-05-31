@@ -227,7 +227,62 @@ async fn generate_response_for_attributes(
         FetchAttributes::Uid => None,
         FetchAttributes::BodyStructure => None,
         FetchAttributes::BodySection(_, _) => None,
-        FetchAttributes::BodyPeek(_, _) => None,
+        FetchAttributes::BodyPeek(section_text, _) => {
+            if let Some(section_text) = section_text {
+                match section_text {
+                    super::parsers::SectionText::Header => {
+                        Some(String::from("BODY.FEED[HEADER.FIELDS]\r\n"))
+                    }
+                    super::parsers::SectionText::Text => None,
+                    super::parsers::SectionText::HeaderFields(headers_requested_vec) => {
+                        if let Ok(headers_vec) = mail.headers() {
+                            let mut headers = String::new();
+                            let mut lower_headers_requested_vec = headers_requested_vec
+                                .iter()
+                                .map(|header| header.to_lowercase());
+                            for header in headers_vec {
+                                if lower_headers_requested_vec
+                                    .any(|x| x == header.get_key().to_lowercase())
+                                {
+                                    headers.push_str(&format!(
+                                        "\r\n{}: {}",
+                                        header.get_key(),
+                                        header.get_value()
+                                    ));
+                                }
+                            }
+                            Some(format!("BODY.FEED[HEADER.FIELDS]{}", headers))
+                        } else {
+                            Some(String::from("BODY.FEED[HEADER.FIELDS]\r\n"))
+                        }
+                    }
+                    super::parsers::SectionText::HeaderFieldsNot(headers_requested_vec) => {
+                        if let Ok(headers_vec) = mail.headers() {
+                            let mut headers = String::new();
+                            let mut lower_headers_requested_vec = headers_requested_vec
+                                .iter()
+                                .map(|header| header.to_lowercase());
+                            for header in headers_vec {
+                                if !lower_headers_requested_vec
+                                    .any(|x| x == header.get_key().to_lowercase())
+                                {
+                                    headers.push_str(&format!(
+                                        "\r\n{}: {}",
+                                        header.get_key(),
+                                        header.get_value()
+                                    ));
+                                }
+                            }
+                            Some(format!("BODY.FEED[HEADER.FIELDS]{}", headers))
+                        } else {
+                            Some(String::from("BODY.FEED[HEADER.FIELDS]\r\n"))
+                        }
+                    }
+                }
+            } else {
+                Some(String::from("BODY.FEED[HEADER.FIELDS]\r\n"))
+            }
+        }
         FetchAttributes::Binary(_, _) => None,
         FetchAttributes::BinaryPeek(_, _) => None,
         FetchAttributes::BinarySize(_) => None,

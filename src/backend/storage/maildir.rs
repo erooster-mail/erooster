@@ -5,10 +5,7 @@ use crate::backend::{
 use futures::{StreamExt, TryStreamExt};
 use maildir::Maildir;
 use mailparse::ParsedMail;
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::path::{Path, PathBuf};
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
@@ -126,13 +123,8 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                     let uid = mail_rows
                         .iter()
                         .find(|y| y.maildir_id == maildir_id)
-                        .map(|y| y.id)
-                        .unwrap_or(0);
-                    Some(MaildirMailEntry {
-                        uid,
-                        entry: x,
-                        db: Arc::clone(&self.db),
-                    })
+                        .map_or(0, |y| y.id);
+                    Some(MaildirMailEntry { uid, entry: x })
                 }
                 Err(_) => None,
             })
@@ -153,13 +145,8 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                     let uid = mail_rows
                         .iter()
                         .find(|y| y.maildir_id == maildir_id)
-                        .map(|y| y.id)
-                        .unwrap_or(0);
-                    Some(MaildirMailEntry {
-                        uid,
-                        entry: x,
-                        db: Arc::clone(&self.db),
-                    })
+                        .map_or(0, |y| y.id);
+                    Some(MaildirMailEntry { uid, entry: x })
                 }
                 Err(_) => None,
             })
@@ -181,13 +168,8 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                     let uid = mail_rows
                         .iter()
                         .find(|y| y.maildir_id == maildir_id)
-                        .map(|y| y.id)
-                        .unwrap_or(0);
-                    Some(MaildirMailEntry {
-                        uid,
-                        entry: x,
-                        db: Arc::clone(&self.db),
-                    })
+                        .map_or(0, |y| y.id);
+                    Some(MaildirMailEntry { uid, entry: x })
                 }
                 Err(_) => None,
             })
@@ -206,7 +188,6 @@ struct DbMails {
 pub struct MaildirMailEntry {
     entry: maildir::MailEntry,
     uid: i64,
-    db: DB,
 }
 
 #[async_trait::async_trait]

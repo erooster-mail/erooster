@@ -87,13 +87,6 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
             }),
             map(tag_no_case("UID"), |_| FetchAttributes::Uid),
             map(
-                separated_pair(tag_no_case("BODY"), space1, tag_no_case("[STRUCTURE]")),
-                |_| FetchAttributes::BodyStructure,
-            ),
-            map(tag_no_case("BODY.PEEK"), |_| {
-                FetchAttributes::BinaryPeek(None, None)
-            }),
-            map(
                 tuple((
                     tag_no_case("BODY.PEEK"),
                     space1,
@@ -116,9 +109,6 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                     )
                 },
             ),
-            map(tag_no_case("RFC822.PEEK"), |_| {
-                FetchAttributes::BinaryPeek(None, None)
-            }),
             map(
                 tuple((
                     tag_no_case("RFC822.PEEK"),
@@ -169,10 +159,6 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                 tuple((tag_no_case("BINARY.SIZE"), space1, section)),
                 |(_, _, x)| FetchAttributes::BinarySize(x),
             ),
-            
-            map(tag_no_case("BODY"), |_| {
-                FetchAttributes::BodySection(None, None)
-            }),
             map(
                 tuple((
                     tag_no_case("BODY"),
@@ -219,6 +205,19 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                     )
                 },
             ),
+            map(
+                separated_pair(tag_no_case("BODY"), space1, tag_no_case("[STRUCTURE]")),
+                |_| FetchAttributes::BodyStructure,
+            ),
+            map(tag_no_case("BODY.PEEK"), |_| {
+                FetchAttributes::BinaryPeek(None, None)
+            }),
+            map(tag_no_case("RFC822.PEEK"), |_| {
+                FetchAttributes::BinaryPeek(None, None)
+            }),
+            map(tag_no_case("BODY"), |_| {
+                FetchAttributes::BodySection(None, None)
+            }),
         )),
     )(input)
 }

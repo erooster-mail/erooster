@@ -230,7 +230,8 @@ fn generate_response_for_attributes(
             if let Some(section_text) = section_text {
                 match section_text {
                     super::parsers::SectionText::Header => {
-                        Some(String::from("BODY.PEEK[HEADER.FIELDS]\r\n"))
+                        // TODO implement
+                        Some(String::from("BODY[HEADER] NIL\r\n"))
                     }
                     super::parsers::SectionText::Text => None,
                     super::parsers::SectionText::HeaderFields(headers_requested_vec) => {
@@ -252,12 +253,12 @@ fn generate_response_for_attributes(
                                 .join("\r\n");
                             let data = format!("{}\r\n", headers);
                             Some(format!(
-                                "BODY.PEEK[HEADER.FIELDS] {}\r\n{}",
+                                "BODY[HEADER] {{{}}}\r\n{}",
                                 data.as_bytes().len(),
                                 headers
                             ))
                         } else {
-                            Some(String::from("BODY.PEEK[HEADER.FIELDS]\r\n"))
+                            Some(String::from("BODY[HEADER] NIL\r\n"))
                         }
                     }
                     super::parsers::SectionText::HeaderFieldsNot(headers_requested_vec) => {
@@ -280,17 +281,17 @@ fn generate_response_for_attributes(
                                 .join("\r\n");
                             let data = format!("{}\r\n", headers);
                             Some(format!(
-                                "BODY.PEEK[HEADER.FIELDS] {}\r\n{}",
+                                "BODY[HEADER] {{{}}}\r\n{}",
                                 data.as_bytes().len(),
                                 headers
                             ))
                         } else {
-                            Some(String::from("BODY.PEEK[HEADER.FIELDS]\r\n"))
+                            Some(String::from("BODY[HEADER] NIL\r\n"))
                         }
                     }
                 }
             } else {
-                Some(String::from("BODY.PEEK[HEADER.FIELDS]\r\n"))
+                Some(String::from("BODY[HEADER] NIL\r\n"))
             }
         }
         FetchAttributes::Binary(_, _) => None,

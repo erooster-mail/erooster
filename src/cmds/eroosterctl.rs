@@ -127,7 +127,7 @@ async fn main() -> Result<()> {
             sentry::capture_event(event);
 
             // required because we use `panic = abort`
-            if !guard.close(None) {
+            if !guard.flush(None) {
                 warn!("unable to flush sentry events during panic");
             }
         }));

@@ -44,7 +44,7 @@ use owo_colors::{
 };
 use std::io::Write;
 use std::{io, process::exit, sync::Arc};
-use tracing::error;
+use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Parser, Debug)]
@@ -91,6 +91,7 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
     let config = erooster::get_config(cli.config).await?;
     if config.sentry {
+        info!("Sentry logging is enabled. Change the config to disable it.");
         tracing_subscriber::Registry::default()
             .with(sentry::integrations::tracing::layer())
             .with(tracing_subscriber::fmt::Layer::default())
@@ -104,6 +105,7 @@ async fn main() -> Result<()> {
             },
         ));
     } else {
+        info!("Sentry logging is disabled. Change the config to enable it.");
         tracing_subscriber::fmt::init();
     }
 

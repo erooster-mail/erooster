@@ -58,6 +58,7 @@ async fn main() -> Result<()> {
     let config = erooster::get_config(args.config).await?;
 
     if config.sentry {
+        info!("Sentry logging is enabled. Change the config to disable it.");
         tracing_subscriber::Registry::default()
             .with(sentry::integrations::tracing::layer())
             .with(tracing_subscriber::fmt::Layer::default())
@@ -71,6 +72,7 @@ async fn main() -> Result<()> {
             },
         ));
     } else {
+        info!("Sentry logging is disabled. Change the config to enable it.");
         tracing_subscriber::fmt::init();
     }
 

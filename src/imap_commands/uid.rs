@@ -236,14 +236,20 @@ fn generate_response_for_attributes(
                     super::parsers::SectionText::HeaderFields(headers_requested_vec) => {
                         if let Ok(headers_vec) = mail.headers() {
                             let mut headers = String::new();
-                            let mut lower_headers_requested_vec = headers_requested_vec
+                            let lower_headers_requested_vec: Vec<_> = headers_requested_vec
                                 .iter()
-                                .map(|header| header.to_lowercase());
+                                .map(|header| header.to_lowercase())
+                                .collect();
                             info!("Requested headers: {:#?}", lower_headers_requested_vec);
                             for header in headers_vec {
-                                info!("Header: {}", header.get_key().to_lowercase());
+                                info!(
+                                    "Header: {} => {}",
+                                    header.get_key().to_lowercase(),
+                                    lower_headers_requested_vec
+                                        .contains(&header.get_key().to_lowercase())
+                                );
                                 if lower_headers_requested_vec
-                                    .any(|x| x == header.get_key().to_lowercase())
+                                    .contains(&header.get_key().to_lowercase())
                                 {
                                     headers.push_str(&format!(
                                         "\r\n{}: {}",
@@ -260,12 +266,13 @@ fn generate_response_for_attributes(
                     super::parsers::SectionText::HeaderFieldsNot(headers_requested_vec) => {
                         if let Ok(headers_vec) = mail.headers() {
                             let mut headers = String::new();
-                            let mut lower_headers_requested_vec = headers_requested_vec
+                            let lower_headers_requested_vec: Vec<_> = headers_requested_vec
                                 .iter()
-                                .map(|header| header.to_lowercase());
+                                .map(|header| header.to_lowercase())
+                                .collect();
                             for header in headers_vec {
                                 if !lower_headers_requested_vec
-                                    .any(|x| x == header.get_key().to_lowercase())
+                                    .contains(&header.get_key().to_lowercase())
                                 {
                                     headers.push_str(&format!(
                                         "\r\n{}: {}",

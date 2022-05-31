@@ -155,6 +155,7 @@ fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Option<St
 }
 
 #[allow(clippy::too_many_lines)]
+#[allow(clippy::cast_possible_truncation)]
 fn generate_response_for_attributes(
     attr: FetchAttributes,
     mail: &mut MailEntryType,
@@ -212,14 +213,44 @@ fn generate_response_for_attributes(
         FetchAttributes::Uid => None,
         FetchAttributes::BodyStructure => None,
         FetchAttributes::BodySection(_, _) => None,
-        FetchAttributes::BodyPeek(section_text, _) => {
+        FetchAttributes::BodyPeek(section_text, range) => {
             if let Some(section_text) = section_text {
                 match section_text {
                     super::parsers::SectionText::Header => {
                         // TODO implement
                         Some(String::from("BODY[HEADER] NIL\r\n"))
                     }
-                    super::parsers::SectionText::Text => None,
+                    super::parsers::SectionText::Text => {
+                        if let Some((start, end)) = range {
+                            // TODO get range of octets
+                            if let Ok(body) = mail.parsed() {
+                                if let Ok(body_text) = body.get_body_raw() {
+                                    let end = if body_text.len() < (end as usize) {
+                                        body_text.len()
+                                    } else {
+                                        end as usize
+                                    };
+                                    let body_text =
+                                        body_text.get((start as usize)..end).unwrap_or(&[]);
+                                    let body_text = String::from_utf8_lossy(body_text);
+                                    Some(format!("BODY[TEXT] {}", body_text))
+                                } else {
+                                    Some(String::from("BODY[TEXT] NIL\r\n"))
+                                }
+                            } else {
+                                Some(String::from("BODY[TEXT] NIL\r\n"))
+                            }
+                        } else if let Ok(body) = mail.parsed() {
+                            if let Ok(body_text) = body.get_body_raw() {
+                                let body_text = String::from_utf8_lossy(&body_text);
+                                Some(format!("BODY[TEXT] {}", body_text))
+                            } else {
+                                Some(String::from("BODY[TEXT] NIL\r\n"))
+                            }
+                        } else {
+                            Some(String::from("BODY[TEXT] NIL\r\n"))
+                        }
+                    }
                     super::parsers::SectionText::HeaderFields(headers_requested_vec) => {
                         if let Ok(headers_vec) = mail.headers() {
                             let lower_headers_requested_vec: Vec<_> = headers_requested_vec

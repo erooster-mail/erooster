@@ -252,7 +252,7 @@ fn generate_response_for_attributes(
                                 .join("\r\n");
                             let data = format!("{}\r\n", headers);
                             Some(format!(
-                                "BODY.PEEK[HEADER.FIELDS] {{{}}}\r\n{}",
+                                "BODY.PEEK[HEADER.FIELDS] {}\r\n{}",
                                 data.as_bytes().len(),
                                 headers
                             ))
@@ -280,7 +280,7 @@ fn generate_response_for_attributes(
                                 .join("\r\n");
                             let data = format!("{}\r\n", headers);
                             Some(format!(
-                                "BODY.PEEK[HEADER.FIELDS] {{{}}}\r\n{}",
+                                "BODY.PEEK[HEADER.FIELDS] {}\r\n{}",
                                 data.as_bytes().len(),
                                 headers
                             ))

@@ -63,8 +63,8 @@ fn custom_url(location: &Location<'_>, message: &str) -> impl fmt::Display {
 |**location**|{}|
 ## More info
 ",
-                    env!("VERGEN_GIT_SHA_SHORT"),
                     VERSION,
+                    env!("VERGEN_GIT_SHA_SHORT"),
                     os_type().unwrap_or_else(|_| "unavailable".to_string()),
                     os_release().unwrap_or_else(|_| "unavailable".to_string()),
                     message,

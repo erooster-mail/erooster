@@ -37,7 +37,7 @@ impl Close<'_> {
             let mut folder = folder.replace('/', ".");
             folder.insert(0, '.');
             let mailbox_path = Path::new(&config.mail.maildir_folders)
-                .join(self.data.con_state.read().await.username.clone().unwrap())
+                .join(write_lock.username.clone().unwrap())
                 .join(folder.clone());
 
             // We need to check all messages it seems?

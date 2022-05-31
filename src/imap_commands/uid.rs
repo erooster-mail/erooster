@@ -9,7 +9,7 @@ use crate::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{path::Path, sync::Arc};
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 
 pub struct Uid<'a> {
     pub data: &'a Data,

@@ -60,11 +60,12 @@ async fn main() -> Result<()> {
 
     if config.sentry {
         info!("Sentry logging is enabled. Change the config to disable it.");
+
         tracing_subscriber::Registry::default()
             .with(sentry::integrations::tracing::layer())
             .with(tracing_subscriber::fmt::Layer::default())
             .init();
-        let guard = sentry::init((
+        let _guard = sentry::init((
             "https://78b5f2057d4e4194a522c6c2341acd6e@o105177.ingest.sentry.io/6458362",
             sentry::ClientOptions {
                 release: sentry::release_name!(),
@@ -74,7 +75,9 @@ async fn main() -> Result<()> {
         ));
         std::panic::set_hook(Box::new(move |panic_info| {
             let panic_report = panic_hook.panic_report(panic_info).to_string();
-            let event = sentry::protocol::Event {
+            eprintln!("{}", panic_report);
+            sentry::integrations::panic::panic_handler(panic_info);
+            /*let event = sentry::protocol::Event {
                 exception: vec![sentry::protocol::Exception {
                     ty: "panic".into(),
                     mechanism: Some(sentry::protocol::Mechanism {
@@ -95,7 +98,7 @@ async fn main() -> Result<()> {
             // required because we use `panic = abort`
             if !guard.flush(None) {
                 warn!("unable to flush sentry events during panic");
-            }
+            }*/
         }));
     } else {
         info!("Sentry logging is disabled. Change the config to enable it.");

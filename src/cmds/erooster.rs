@@ -50,9 +50,9 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    color_eyre::config::HookBuilder::default()
-        .panic_message(EroosterPanicMessage)
-        .install()?;
+    let builder = color_eyre::config::HookBuilder::default().panic_message(EroosterPanicMessage);
+    let (panic_hook, eyre_hook) = builder.into_hooks();
+    eyre_hook.install()?;
 
     let args = Args::parse();
     info!("Starting ERooster Server");
@@ -77,6 +77,11 @@ async fn main() -> Result<()> {
         info!("Sentry logging is disabled. Change the config to enable it.");
         tracing_subscriber::fmt::init();
     }
+    let next = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        eprintln!("{}", panic_hook.panic_report(panic_info));
+        next(panic_info);
+    }));
 
     let database = Arc::new(get_database(Arc::clone(&config)).await?);
     let storage = Arc::new(get_storage(Arc::clone(&database)));

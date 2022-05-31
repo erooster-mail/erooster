@@ -45,6 +45,7 @@ use owo_colors::{
 use std::io::Write;
 use std::{io, process::exit, sync::Arc};
 use tracing::error;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None, propagate_version = true)]
@@ -87,18 +88,25 @@ async fn main() -> Result<()> {
     color_eyre::config::HookBuilder::default()
         .panic_message(EroosterPanicMessage)
         .install()?;
-    tracing_subscriber::fmt::init();
     let cli = Cli::parse();
     let config = erooster::get_config(cli.config).await?;
     if config.sentry {
+        tracing_subscriber::Registry::default()
+            .with(sentry::integrations::tracing::layer())
+            .with(tracing_subscriber::fmt::Layer::default())
+            .init();
         let _guard = sentry::init((
             "https://78b5f2057d4e4194a522c6c2341acd6e@o105177.ingest.sentry.io/6458362",
             sentry::ClientOptions {
                 release: sentry::release_name!(),
+                traces_sample_rate: 0.2,
                 ..Default::default()
             },
         ));
+    } else {
+        tracing_subscriber::fmt::init();
     }
+
     match cli.command {
         Commands::Status => {
             status();

@@ -67,8 +67,9 @@ Erosster by default does not auto report an panics or errors.
 It provides however a github reporting link on panics.
 
 Additionally it is able to let ou auto report to a sentry.
+This also will record performance using tracing.
 Due to how sentry works this is not public.
-It is disabled b default due to gdpr rules.
+It is disabled by default due to gdpr rules.
 
 To enable sentry please set `sentry: true` in yout config file.
 

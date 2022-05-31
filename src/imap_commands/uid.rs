@@ -2,7 +2,7 @@ use crate::{
     backend::storage::{MailEntry, MailEntryType, MailStorage, Storage},
     config::Config,
     imap_commands::{
-        parsers::{fetch_arguments, FetchArguments, FetchAttributes},
+        parsers::{fetch_arguments, FetchArguments, FetchAttributes, SectionText},
         CommandData, Data,
     },
     imap_servers::state::State,
@@ -212,114 +212,113 @@ fn generate_response_for_attributes(
         }
         FetchAttributes::Uid => None,
         FetchAttributes::BodyStructure => None,
-        FetchAttributes::BodySection(_, _) => None,
-        FetchAttributes::BodyPeek(section_text, range) => {
-            if let Some(section_text) = section_text {
-                match section_text {
-                    super::parsers::SectionText::Header => {
-                        // TODO implement
-                        Some(String::from("BODY[HEADER] NIL\r\n"))
-                    }
-                    super::parsers::SectionText::Text => {
-                        if let Some((start, end)) = range {
-                            // TODO get range of octets
-                            if let Ok(body) = mail.parsed() {
-                                if let Ok(body_text) = body.get_body_raw() {
-                                    let end = if body_text.len() < (end as usize) {
-                                        body_text.len()
-                                    } else {
-                                        end as usize
-                                    };
-                                    let body_text =
-                                        body_text.get((start as usize)..end).unwrap_or(&[]);
-                                    let body_text = String::from_utf8_lossy(body_text);
-                                    Some(format!("BODY[TEXT] {}", body_text))
-                                } else {
-                                    Some(String::from("BODY[TEXT] NIL\r\n"))
-                                }
-                            } else {
-                                Some(String::from("BODY[TEXT] NIL\r\n"))
-                            }
-                        } else if let Ok(body) = mail.parsed() {
-                            if let Ok(body_text) = body.get_body_raw() {
-                                let body_text = String::from_utf8_lossy(&body_text);
-                                Some(format!("BODY[TEXT] {}", body_text))
-                            } else {
-                                Some(String::from("BODY[TEXT] NIL\r\n"))
-                            }
-                        } else {
-                            Some(String::from("BODY[TEXT] NIL\r\n"))
-                        }
-                    }
-                    super::parsers::SectionText::HeaderFields(headers_requested_vec) => {
-                        if let Ok(headers_vec) = mail.headers() {
-                            let lower_headers_requested_vec: Vec<_> = headers_requested_vec
-                                .iter()
-                                .map(|header| header.to_lowercase())
-                                .collect();
-                            let headers = headers_vec
-                                .iter()
-                                .filter(|header| {
-                                    lower_headers_requested_vec
-                                        .contains(&header.get_key().to_lowercase())
-                                })
-                                .map(|header| {
-                                    format!("{}: {}", header.get_key(), header.get_value())
-                                })
-                                .collect::<Vec<_>>()
-                                .join("\r\n");
-                            let data = format!("{}\r\n", headers);
-                            Some(format!(
-                                "BODY[HEADER] {{{}}}\r\n{}",
-                                data.as_bytes().len(),
-                                data
-                            ))
-                        } else {
-                            Some(String::from("BODY[HEADER] NIL\r\n"))
-                        }
-                    }
-                    super::parsers::SectionText::HeaderFieldsNot(headers_requested_vec) => {
-                        if let Ok(headers_vec) = mail.headers() {
-                            let lower_headers_requested_vec: Vec<_> = headers_requested_vec
-                                .iter()
-                                .map(|header| header.to_lowercase())
-                                .collect();
-
-                            let headers = headers_vec
-                                .iter()
-                                .filter(|header| {
-                                    !lower_headers_requested_vec
-                                        .contains(&header.get_key().to_lowercase())
-                                })
-                                .map(|header| {
-                                    format!("{}: {}", header.get_key(), header.get_value())
-                                })
-                                .collect::<Vec<_>>()
-                                .join("\r\n");
-                            let data = format!("{}\r\n", headers);
-                            Some(format!(
-                                "BODY[HEADER] {{{}}}\r\n{}",
-                                data.as_bytes().len(),
-                                data
-                            ))
-                        } else {
-                            Some(String::from("BODY[HEADER] NIL\r\n"))
-                        }
-                    }
-                }
-            } else if let Ok(body) = mail.parsed() {
-                if let Ok(body_text) = body.get_body() {
-                    info!("Body: {}",body_text);
-                    Some(format!("BODY[] {}", body_text))
-                } else {
-                    Some(String::from("BODY[] NIL\r\n"))
-                }
-            } else {
-                Some(String::from("BODY[] NIL\r\n"))
-            }
-        }
+        FetchAttributes::BodySection(section_text, range)
+        | FetchAttributes::BodyPeek(section_text, range) => body(section_text, range, mail),
         FetchAttributes::Binary(_, _) => None,
         FetchAttributes::BinaryPeek(_, _) => None,
         FetchAttributes::BinarySize(_) => None,
+    }
+}
+
+fn body(
+    section_text: Option<SectionText>,
+    range: Option<(u64, u64)>,
+    mail: &mut MailEntryType,
+) -> Option<String> {
+    if let Some(section_text) = section_text {
+        match section_text {
+            super::parsers::SectionText::Header => {
+                // TODO implement
+                Some(String::from("BODY[HEADER] NIL\r\n"))
+            }
+            super::parsers::SectionText::Text => {
+                if let Some((start, end)) = range {
+                    // TODO get range of octets
+                    if let Ok(body) = mail.parsed() {
+                        if let Ok(body_text) = body.get_body_raw() {
+                            let end = if body_text.len() < (end as usize) {
+                                body_text.len()
+                            } else {
+                                end as usize
+                            };
+                            let body_text = body_text.get((start as usize)..end).unwrap_or(&[]);
+                            let body_text = String::from_utf8_lossy(body_text);
+                            Some(format!("BODY[TEXT] {}", body_text))
+                        } else {
+                            Some(String::from("BODY[TEXT] NIL\r\n"))
+                        }
+                    } else {
+                        Some(String::from("BODY[TEXT] NIL\r\n"))
+                    }
+                } else if let Ok(body) = mail.parsed() {
+                    if let Ok(body_text) = body.get_body_raw() {
+                        let body_text = String::from_utf8_lossy(&body_text);
+                        Some(format!("BODY[TEXT] {}", body_text))
+                    } else {
+                        Some(String::from("BODY[TEXT] NIL\r\n"))
+                    }
+                } else {
+                    Some(String::from("BODY[TEXT] NIL\r\n"))
+                }
+            }
+            super::parsers::SectionText::HeaderFields(headers_requested_vec) => {
+                if let Ok(headers_vec) = mail.headers() {
+                    let lower_headers_requested_vec: Vec<_> = headers_requested_vec
+                        .iter()
+                        .map(|header| header.to_lowercase())
+                        .collect();
+                    let headers = headers_vec
+                        .iter()
+                        .filter(|header| {
+                            lower_headers_requested_vec.contains(&header.get_key().to_lowercase())
+                        })
+                        .map(|header| format!("{}: {}", header.get_key(), header.get_value()))
+                        .collect::<Vec<_>>()
+                        .join("\r\n");
+                    let data = format!("{}\r\n", headers);
+                    Some(format!(
+                        "BODY[HEADER] {{{}}}\r\n{}",
+                        data.as_bytes().len(),
+                        data
+                    ))
+                } else {
+                    Some(String::from("BODY[HEADER] NIL\r\n"))
+                }
+            }
+            super::parsers::SectionText::HeaderFieldsNot(headers_requested_vec) => {
+                if let Ok(headers_vec) = mail.headers() {
+                    let lower_headers_requested_vec: Vec<_> = headers_requested_vec
+                        .iter()
+                        .map(|header| header.to_lowercase())
+                        .collect();
+
+                    let headers = headers_vec
+                        .iter()
+                        .filter(|header| {
+                            !lower_headers_requested_vec.contains(&header.get_key().to_lowercase())
+                        })
+                        .map(|header| format!("{}: {}", header.get_key(), header.get_value()))
+                        .collect::<Vec<_>>()
+                        .join("\r\n");
+                    let data = format!("{}\r\n", headers);
+                    Some(format!(
+                        "BODY[HEADER] {{{}}}\r\n{}",
+                        data.as_bytes().len(),
+                        data
+                    ))
+                } else {
+                    Some(String::from("BODY[HEADER] NIL\r\n"))
+                }
+            }
+        }
+    } else if let Ok(body) = mail.parsed() {
+        if let Ok(body_text) = body.get_body() {
+            info!("Body: {}", body_text);
+            Some(format!("BODY[] {}", body_text))
+        } else {
+            Some(String::from("BODY[] NIL\r\n"))
+        }
+    } else {
+        Some(String::from("BODY[] NIL\r\n"))
     }
 }

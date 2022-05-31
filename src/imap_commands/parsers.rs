@@ -89,7 +89,6 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
             map(
                 tuple((
                     tag_no_case("BODY.PEEK"),
-                    space1,
                     section,
                     space1,
                     opt(delimited(
@@ -112,7 +111,6 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
             map(
                 tuple((
                     tag_no_case("RFC822.PEEK"),
-                    space1,
                     section,
                     space1,
                     opt(delimited(
@@ -135,7 +133,6 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
             map(
                 tuple((
                     tag_no_case("BINARY.PEEK"),
-                    space1,
                     section,
                     space1,
                     opt(delimited(
@@ -162,7 +159,6 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
             map(
                 tuple((
                     tag_no_case("BODY"),
-                    space1,
                     section,
                     space1,
                     opt(delimited(
@@ -185,7 +181,6 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
             map(
                 tuple((
                     tag_no_case("BINARY"),
-                    space1,
                     section,
                     space1,
                     opt(delimited(

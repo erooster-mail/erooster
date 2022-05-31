@@ -101,7 +101,7 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                         char('>'),
                     )),
                 )),
-                |(_, _, x, _, y)| {
+                |(_, x, _, y)| {
                     FetchAttributes::BodyPeek(
                         x,
                         y.map(|(a, b)| (a.parse::<u64>().unwrap(), b.parse::<u64>().unwrap())),
@@ -123,7 +123,7 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                         char('>'),
                     )),
                 )),
-                |(_, _, x, _, y)| {
+                |(_, x, _, y)| {
                     FetchAttributes::BodyPeek(
                         x,
                         y.map(|(a, b)| (a.parse::<u64>().unwrap(), b.parse::<u64>().unwrap())),
@@ -145,17 +145,16 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                         char('>'),
                     )),
                 )),
-                |(_, _, x, _, y)| {
+                |(_, x, _, y)| {
                     FetchAttributes::BinaryPeek(
                         x,
                         y.map(|(a, b)| (a.parse::<u64>().unwrap(), b.parse::<u64>().unwrap())),
                     )
                 },
             ),
-            map(
-                tuple((tag_no_case("BINARY.SIZE"), space1, section)),
-                |(_, _, x)| FetchAttributes::BinarySize(x),
-            ),
+            map(tuple((tag_no_case("BINARY.SIZE"), section)), |(_, x)| {
+                FetchAttributes::BinarySize(x)
+            }),
             map(
                 tuple((
                     tag_no_case("BODY"),
@@ -171,7 +170,7 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                         char('>'),
                     )),
                 )),
-                |(_, _, x, _, y)| {
+                |(_, x, _, y)| {
                     FetchAttributes::BodySection(
                         x,
                         y.map(|(a, b)| (a.parse::<u64>().unwrap(), b.parse::<u64>().unwrap())),
@@ -193,7 +192,7 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                         char('>'),
                     )),
                 )),
-                |(_, _, x, _, y)| {
+                |(_, x, _, y)| {
                     FetchAttributes::Binary(
                         x,
                         y.map(|(a, b)| (a.parse::<u64>().unwrap(), b.parse::<u64>().unwrap())),

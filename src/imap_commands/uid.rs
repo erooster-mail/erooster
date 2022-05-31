@@ -9,7 +9,7 @@ use crate::{
 };
 use futures::{channel::mpsc::SendError, stream, Sink, SinkExt, StreamExt};
 use std::{path::Path, sync::Arc};
-use tracing::debug;
+use tracing::{debug, error};
 
 pub struct Uid<'a> {
     pub data: &'a Data,
@@ -92,22 +92,30 @@ impl Uid<'_> {
 
                 let fetch_args = command_data.arguments[2..].to_vec().join(" ");
                 debug!("Fetch args: {}", fetch_args);
-                let (_, args) =
-                    fetch_arguments(fetch_args.clone()).expect("Failed to parse fetch arguments");
-                debug!("Fetch args results: {:?}", args);
-                for mut mail in filtered_mails {
-                    let uid = mail.uid().await?;
-                    if let Some(resp) = generate_response(args.clone(), &mut mail).await {
+                match fetch_arguments(fetch_args.clone()) {
+                    Ok((_, args)) => {
+                        debug!("Fetch args results: {:?}", args);
+                        for mut mail in filtered_mails {
+                            let uid = mail.uid().await?;
+                            if let Some(resp) = generate_response(args.clone(), &mut mail).await {
+                                lines
+                                    .feed(format!("* {} FETCH (UID {} {})", uid, uid, resp))
+                                    .await?;
+                            }
+                        }
+
                         lines
-                            .feed(format!("* {} FETCH (UID {} {})", uid, uid, resp))
+                            .feed(format!("{} Ok UID FETCH completed", command_data.tag))
+                            .await?;
+                        lines.flush().await?;
+                    }
+                    Err(e) => {
+                        error!("Failed to parse fetch arguments: {}", e);
+                        lines
+                            .send(format!("{} BAD Unable to parse", command_data.tag))
                             .await?;
                     }
                 }
-
-                lines
-                    .feed(format!("{} Ok UID FETCH completed", command_data.tag))
-                    .await?;
-                lines.flush().await?;
             } else {
                 lines
                     .feed(format!(

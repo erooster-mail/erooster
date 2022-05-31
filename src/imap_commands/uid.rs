@@ -250,10 +250,10 @@ fn generate_response_for_attributes(
                                 })
                                 .collect::<Vec<_>>()
                                 .join("\r\n");
-
+                            let data = format!("{}\r\n", headers);
                             Some(format!(
                                 "BODY.PEEK[HEADER.FIELDS] {{{}}}\r\n{}",
-                                headers.as_bytes().len(),
+                                data.as_bytes().len(),
                                 headers
                             ))
                         } else {
@@ -278,9 +278,10 @@ fn generate_response_for_attributes(
                                 })
                                 .collect::<Vec<_>>()
                                 .join("\r\n");
+                            let data = format!("{}\r\n", headers);
                             Some(format!(
                                 "BODY.PEEK[HEADER.FIELDS] {{{}}}\r\n{}",
-                                headers.as_bytes().len(),
+                                data.as_bytes().len(),
                                 headers
                             ))
                         } else {

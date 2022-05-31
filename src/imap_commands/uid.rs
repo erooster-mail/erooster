@@ -9,7 +9,7 @@ use crate::{
 };
 use futures::{channel::mpsc::SendError, stream, Sink, SinkExt, StreamExt};
 use std::{path::Path, sync::Arc};
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 pub struct Uid<'a> {
     pub data: &'a Data,
@@ -98,7 +98,7 @@ impl Uid<'_> {
                         debug!("Fetch args results: {:?}", args);
                         for mut mail in filtered_mails {
                             let uid = mail.uid().await?;
-                            if let Some(resp) = generate_response(args.clone(), &mut mail).await {
+                            if let Some(resp) = generate_response(args.clone(), &mut mail) {
                                 lines
                                     .feed(format!("* {} FETCH (UID {} {})", uid, uid, resp))
                                     .await?;
@@ -148,18 +148,16 @@ impl Uid<'_> {
     }
 }
 
-async fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Option<String> {
+fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Option<String> {
     match arg {
         FetchArguments::All => None,
         FetchArguments::Fast => None,
         FetchArguments::Full => None,
-        FetchArguments::Single(single_arg) => {
-            generate_response_for_attributes(single_arg, mail).await
-        }
+        FetchArguments::Single(single_arg) => generate_response_for_attributes(single_arg, mail),
         FetchArguments::List(args) => {
             let mut resp = String::new();
             for arg in args {
-                if let Some(extra_resp) = generate_response_for_attributes(arg, mail).await {
+                if let Some(extra_resp) = generate_response_for_attributes(arg, mail) {
                     if resp.is_empty() {
                         resp = extra_resp;
                     } else {
@@ -172,7 +170,8 @@ async fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Opt
     }
 }
 
-async fn generate_response_for_attributes(
+#[allow(clippy::too_many_lines)]
+fn generate_response_for_attributes(
     attr: FetchAttributes,
     mail: &mut MailEntryType,
 ) -> Option<String> {
@@ -240,7 +239,9 @@ async fn generate_response_for_attributes(
                             let mut lower_headers_requested_vec = headers_requested_vec
                                 .iter()
                                 .map(|header| header.to_lowercase());
+                            info!("Requested headers: {:#?}", lower_headers_requested_vec);
                             for header in headers_vec {
+                                info!("Header: {}", header.get_key().to_lowercase());
                                 if lower_headers_requested_vec
                                     .any(|x| x == header.get_key().to_lowercase())
                                 {

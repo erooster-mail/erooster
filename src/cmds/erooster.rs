@@ -74,31 +74,10 @@ async fn main() -> Result<()> {
             },
         ));
         std::panic::set_hook(Box::new(move |panic_info| {
-            let panic_report = panic_hook.panic_report(panic_info).to_string();
-            eprintln!("{}", panic_report);
             sentry::integrations::panic::panic_handler(panic_info);
-            /*let event = sentry::protocol::Event {
-                exception: vec![sentry::protocol::Exception {
-                    ty: "panic".into(),
-                    mechanism: Some(sentry::protocol::Mechanism {
-                        ty: "panic".into(),
-                        handled: Some(false),
-                        ..Default::default()
-                    }),
-                    value: Some(panic_report),
-                    stacktrace: sentry::integrations::backtrace::current_stacktrace(),
-                    ..Default::default()
-                }]
-                .into(),
-                level: sentry::Level::Fatal,
-                ..Default::default()
-            };
-            sentry::capture_event(event);
-
-            // required because we use `panic = abort`
-            if !guard.flush(None) {
-                warn!("unable to flush sentry events during panic");
-            }*/
+            let panic_report = panic_hook.panic_report(panic_info).to_string();
+            
+            eprintln!("{}", panic_report);
         }));
     } else {
         info!("Sentry logging is disabled. Change the config to enable it.");

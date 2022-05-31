@@ -230,7 +230,7 @@ fn generate_response_for_attributes(
             if let Some(section_text) = section_text {
                 match section_text {
                     super::parsers::SectionText::Header => {
-                        Some(String::from("BODY.FEED[HEADER.FIELDS]\r\n"))
+                        Some(String::from("BODY.PEEK[HEADER.FIELDS]\r\n"))
                     }
                     super::parsers::SectionText::Text => None,
                     super::parsers::SectionText::HeaderFields(headers_requested_vec) => {
@@ -258,9 +258,9 @@ fn generate_response_for_attributes(
                                     ));
                                 }
                             }
-                            Some(format!("BODY.FEED[HEADER.FIELDS]{}", headers))
+                            Some(format!("BODY.PEEK[HEADER.FIELDS]{}", headers))
                         } else {
-                            Some(String::from("BODY.FEED[HEADER.FIELDS]\r\n"))
+                            Some(String::from("BODY.PEEK[HEADER.FIELDS]\r\n"))
                         }
                     }
                     super::parsers::SectionText::HeaderFieldsNot(headers_requested_vec) => {
@@ -281,14 +281,14 @@ fn generate_response_for_attributes(
                                     ));
                                 }
                             }
-                            Some(format!("BODY.FEED[HEADER.FIELDS]{}", headers))
+                            Some(format!("BODY.PEEK[HEADER.FIELDS]{}", headers))
                         } else {
-                            Some(String::from("BODY.FEED[HEADER.FIELDS]\r\n"))
+                            Some(String::from("BODY.PEEK[HEADER.FIELDS]\r\n"))
                         }
                     }
                 }
             } else {
-                Some(String::from("BODY.FEED[HEADER.FIELDS]\r\n"))
+                Some(String::from("BODY.PEEK[HEADER.FIELDS]\r\n"))
             }
         }
         FetchAttributes::Binary(_, _) => None,

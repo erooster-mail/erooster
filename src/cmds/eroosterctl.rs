@@ -99,7 +99,7 @@ async fn main() -> Result<()> {
             .with(tracing_subscriber::fmt::Layer::default())
             .init();
         let _guard = sentry::init((
-            "https://78b5f2057d4e4194a522c6c2341acd6e@o105177.ingest.sentry.io/6458362",
+            "https://49e511ff807e45ffa19be1c63cfda26c@o105177.ingest.sentry.io/6458648",
             sentry::ClientOptions {
                 release: Some(Cow::Owned(format!(
                     "{}@{}:{}",

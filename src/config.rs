@@ -11,6 +11,8 @@ pub struct Config {
     pub listen_ips: Option<Vec<String>>,
     /// Configurations specific to the Database
     pub database: Database,
+    /// If enabled it wil report to sentry
+    pub sentry: bool,
 }
 
 /// Configurations specific to the Database

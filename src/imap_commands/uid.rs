@@ -47,7 +47,7 @@ impl Uid<'_> {
                         .expect("Failed to convert path. Your system may be incompatible"),
                 );
 
-                let filtered_mails: Vec<MailEntryType> = if command_data.arguments[1].contains(":")
+                let filtered_mails: Vec<MailEntryType> = if command_data.arguments[1].contains(':')
                 {
                     let range = command_data.arguments[1].split(':').collect::<Vec<_>>();
                     let start = range[0].parse::<i64>().unwrap_or(1);

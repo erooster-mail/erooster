@@ -61,6 +61,17 @@ _Note: The status subcommand at this time doesn't actually check the server stat
 - Support for POP3
 - Support for Exchange
 
+## Error Reporting
+
+Erosster by default does not auto report an panics or errors.
+It provides however a github reporting link on panics.
+
+Additionally it is able to let ou auto report to a sentry.
+Due to how sentry works this is not public.
+It is disabled b default due to gdpr rules.
+
+To enable sentry please set `sentry: true` in yout config file.
+
 ## Comparisons
 
 As I made a reddit post some comparisons were made in the commands.

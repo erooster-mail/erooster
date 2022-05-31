@@ -35,6 +35,7 @@ use color_eyre::eyre::Result;
 use erooster::{
     backend::database::{get_database, Database},
     config::Config,
+    panic_handler::EroosterPanicMessage,
 };
 use indicatif::{ProgressBar, ProgressStyle};
 use owo_colors::{
@@ -83,10 +84,21 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    color_eyre::install()?;
+    color_eyre::config::HookBuilder::default()
+        .panic_message(EroosterPanicMessage)
+        .install()?;
     tracing_subscriber::fmt::init();
     let cli = Cli::parse();
     let config = erooster::get_config(cli.config).await?;
+    if config.sentry {
+        let _guard = sentry::init((
+            "https://78b5f2057d4e4194a522c6c2341acd6e@o105177.ingest.sentry.io/6458362",
+            sentry::ClientOptions {
+                release: sentry::release_name!(),
+                ..Default::default()
+            },
+        ));
+    }
     match cli.command {
         Commands::Status => {
             status();

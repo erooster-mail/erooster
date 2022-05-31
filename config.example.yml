@@ -6,3 +6,4 @@ mail:
   hostname: "localhost"
 database:
   postgres_url: ""
+sentry: false

@@ -40,7 +40,7 @@ impl Unencrypted {
             let listener = TcpListener::bind(addr).await?;
             info!("[SMTP] Listening on unecrypted Port");
             let stream = TcpListenerStream::new(listener);
-            
+
             let config = Arc::clone(&config);
             let database = Arc::clone(&database);
             let storage = Arc::clone(&storage);

@@ -41,6 +41,8 @@ pub(crate) mod imap_commands;
 // TODO make this only pub for benches and tests
 #[allow(missing_docs)]
 pub mod line_codec;
+/// An custom panic handler for erooster
+pub mod panic_handler;
 pub(crate) mod smtp_commands;
 
 /// The backend logic of the server

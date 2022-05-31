@@ -57,6 +57,9 @@ cfg-if = "1.0.0"
 trust-dns-resolver = "0.21.2"
 mailparse = "0.13.8"
 rustls-native-certs = "0.6.2"
+sentry = "0.26.0"
+url = "2.2.2"
+sys-info = "0.9.1"
 
 [build-dependencies]
 clap_mangen = "0.1"

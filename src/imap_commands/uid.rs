@@ -307,14 +307,10 @@ fn body(
                 }
             }
         }
-    } else if let Ok(body) = mail.parsed() {
-        if let Ok(body_text) = body.get_body() {
-            info!("Path: {:?}", mail.path());
-            info!("Body: {}", body_text);
-            format!("BODY[] {{{}}}\r\n{}", body_text.as_bytes().len(), body_text)
-        } else {
-            String::from("BODY[] NIL\r\n")
-        }
+    } else if let Ok(mail) = mail.parsed() {
+        let mail = String::from_utf8_lossy(mail.raw_bytes);
+
+        format!("BODY[] {{{}}}\r\n{}", mail.as_bytes().len(), mail)
     } else {
         String::from("BODY[] NIL\r\n")
     }

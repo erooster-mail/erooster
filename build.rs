@@ -1,7 +1,9 @@
-use vergen::{vergen, Config};
+use vergen::{vergen, Config, ShaKind};
 
 fn main() -> std::io::Result<()> {
-    vergen(Config::default());
+    let mut config = Config::default();
+    *config.git_mut().sha_kind_mut() = ShaKind::Short;
+    vergen(config).unwrap();
     let out_dir =
         std::path::PathBuf::from(std::env::var_os("OUT_DIR").ok_or(std::io::ErrorKind::NotFound)?);
     let dest_path = out_dir

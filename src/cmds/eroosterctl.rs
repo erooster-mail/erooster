@@ -42,6 +42,7 @@ use owo_colors::{
     colors::{BrightCyan, BrightGreen, BrightRed, BrightWhite},
     DynColors, OwoColorize,
 };
+use std::borrow::Cow;
 use std::io::Write;
 use std::{io, process::exit, sync::Arc};
 use tracing::{error, info, warn};
@@ -100,7 +101,12 @@ async fn main() -> Result<()> {
         let _guard = sentry::init((
             "https://78b5f2057d4e4194a522c6c2341acd6e@o105177.ingest.sentry.io/6458362",
             sentry::ClientOptions {
-                release: sentry::release_name!(),
+                release: Some(Cow::Owned(format!(
+                    "{}@{}:{}",
+                    env!("CARGO_PKG_NAME"),
+                    env!("CARGO_PKG_VERSION"),
+                    env!("VERGEN_GIT_SHA_SHORT")
+                ))),
                 traces_sample_rate: 0.2,
                 ..Default::default()
             },

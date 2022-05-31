@@ -59,14 +59,15 @@ async fn main() -> Result<()> {
     info!("Starting ERooster Server");
     let config = erooster::get_config(args.config).await?;
 
+    let mut _guard;
     if config.sentry {
-        info!("Sentry logging is enabled. Change the config to disable it.");
-
         tracing_subscriber::Registry::default()
             .with(sentry::integrations::tracing::layer())
             .with(tracing_subscriber::fmt::Layer::default())
             .init();
-        let _guard = sentry::init((
+        info!("Sentry logging is enabled. Change the config to disable it.");
+
+        _guard = sentry::init((
             "https://49e511ff807e45ffa19be1c63cfda26c@o105177.ingest.sentry.io/6458648",
             sentry::ClientOptions {
                 release: Some(Cow::Owned(format!(

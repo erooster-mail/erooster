@@ -9,7 +9,7 @@ use crate::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{path::Path, sync::Arc};
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 pub struct Uid<'a> {
     pub data: &'a Data,
@@ -308,8 +308,8 @@ fn generate_response_for_attributes(
                     }
                 }
             } else if let Ok(body) = mail.parsed() {
-                if let Ok(body_text) = body.get_body_raw() {
-                    let body_text = String::from_utf8_lossy(&body_text);
+                if let Ok(body_text) = body.get_body() {
+                    info!("Body: {}",body_text);
                     Some(format!("BODY[] {}", body_text))
                 } else {
                     Some(String::from("BODY[] NIL\r\n"))

@@ -38,7 +38,7 @@ use erooster::{
 };
 use std::sync::Arc;
 use tokio::signal;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Parser, Debug)]
@@ -50,9 +50,10 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    color_eyre::config::HookBuilder::default()
-        .panic_message(EroosterPanicMessage)
-        .install()?;
+    let builder = color_eyre::config::HookBuilder::default().panic_message(EroosterPanicMessage);
+    let (panic_hook, eyre_hook) = builder.into_hooks();
+    eyre_hook.install()?;
+
     let args = Args::parse();
     info!("Starting ERooster Server");
     let config = erooster::get_config(args.config).await?;
@@ -63,7 +64,7 @@ async fn main() -> Result<()> {
             .with(sentry::integrations::tracing::layer())
             .with(tracing_subscriber::fmt::Layer::default())
             .init();
-        let _guard = sentry::init((
+        let guard = sentry::init((
             "https://78b5f2057d4e4194a522c6c2341acd6e@o105177.ingest.sentry.io/6458362",
             sentry::ClientOptions {
                 release: sentry::release_name!(),
@@ -71,6 +72,31 @@ async fn main() -> Result<()> {
                 ..Default::default()
             },
         ));
+        std::panic::set_hook(Box::new(move |panic_info| {
+            let panic_report = panic_hook.panic_report(panic_info).to_string();
+            let event = sentry::protocol::Event {
+                exception: vec![sentry::protocol::Exception {
+                    ty: "panic".into(),
+                    mechanism: Some(sentry::protocol::Mechanism {
+                        ty: "panic".into(),
+                        handled: Some(false),
+                        ..Default::default()
+                    }),
+                    value: Some(panic_report),
+                    stacktrace: sentry::integrations::backtrace::current_stacktrace(),
+                    ..Default::default()
+                }]
+                .into(),
+                level: sentry::Level::Fatal,
+                ..Default::default()
+            };
+            sentry::capture_event(event);
+
+            // required because we use `panic = abort`
+            if !guard.close(None) {
+                warn!("unable to flush sentry events during panic");
+            }
+        }));
     } else {
         info!("Sentry logging is disabled. Change the config to enable it.");
         tracing_subscriber::fmt::init();

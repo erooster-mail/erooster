@@ -49,14 +49,17 @@ impl Close<'_> {
                         .into_string()
                         .expect("Failed to convert path. Your system may be incompatible"),
                 )
+                .await
                 .into_iter()
                 .chain(
-                    storage.list_new(
-                        mailbox_path
-                            .into_os_string()
-                            .into_string()
-                            .expect("Failed to convert path. Your system may be incompatible"),
-                    ),
+                    storage
+                        .list_new(
+                            mailbox_path
+                                .into_os_string()
+                                .into_string()
+                                .expect("Failed to convert path. Your system may be incompatible"),
+                        )
+                        .await,
                 );
             for mail in mails {
                 debug!("Checking mails");

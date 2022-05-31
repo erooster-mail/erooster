@@ -2,7 +2,7 @@ use crate::backend::{
     database::{Database, DB},
     storage::{MailEntry, MailStorage},
 };
-use futures::TryStreamExt;
+use futures::{StreamExt, TryStreamExt};
 use maildir::Maildir;
 use mailparse::ParsedMail;
 use std::{
@@ -111,42 +111,84 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let maildir = Maildir::from(path);
         maildir.count_new()
     }
-    fn list_cur(&self, path: String) -> Vec<MaildirMailEntry> {
+    async fn list_cur(&self, path: String) -> Vec<MaildirMailEntry> {
         let maildir = Maildir::from(path);
+        let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
+            .fetch(self.db.get_pool())
+            .filter_map(|x| async move { x.ok() })
+            .collect()
+            .await;
         maildir
             .list_cur()
             .filter_map(|x| match x {
-                Ok(x) => Some(MaildirMailEntry {
-                    entry: x,
-                    db: Arc::clone(&self.db),
-                }),
+                Ok(x) => {
+                    let maildir_id = x.id();
+                    let uid = mail_rows
+                        .iter()
+                        .find(|y| y.maildir_id == maildir_id)
+                        .map(|y| y.id)
+                        .unwrap_or(0);
+                    Some(MaildirMailEntry {
+                        uid,
+                        entry: x,
+                        db: Arc::clone(&self.db),
+                    })
+                }
                 Err(_) => None,
             })
             .collect()
     }
-    fn list_new(&self, path: String) -> Vec<MaildirMailEntry> {
+    async fn list_new(&self, path: String) -> Vec<MaildirMailEntry> {
         let maildir = Maildir::from(path);
+        let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
+            .fetch(self.db.get_pool())
+            .filter_map(|x| async move { x.ok() })
+            .collect()
+            .await;
         maildir
             .list_new()
             .filter_map(|x| match x {
-                Ok(x) => Some(MaildirMailEntry {
-                    entry: x,
-                    db: Arc::clone(&self.db),
-                }),
+                Ok(x) => {
+                    let maildir_id = x.id();
+                    let uid = mail_rows
+                        .iter()
+                        .find(|y| y.maildir_id == maildir_id)
+                        .map(|y| y.id)
+                        .unwrap_or(0);
+                    Some(MaildirMailEntry {
+                        uid,
+                        entry: x,
+                        db: Arc::clone(&self.db),
+                    })
+                }
                 Err(_) => None,
             })
             .collect()
     }
-    fn list_all(&self, path: String) -> Vec<MaildirMailEntry> {
+    async fn list_all(&self, path: String) -> Vec<MaildirMailEntry> {
         let maildir = Maildir::from(path);
+        let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
+            .fetch(self.db.get_pool())
+            .filter_map(|x| async move { x.ok() })
+            .collect()
+            .await;
         maildir
             .list_new()
             .chain(maildir.list_cur())
             .filter_map(|x| match x {
-                Ok(x) => Some(MaildirMailEntry {
-                    entry: x,
-                    db: Arc::clone(&self.db),
-                }),
+                Ok(x) => {
+                    let maildir_id = x.id();
+                    let uid = mail_rows
+                        .iter()
+                        .find(|y| y.maildir_id == maildir_id)
+                        .map(|y| y.id)
+                        .unwrap_or(0);
+                    Some(MaildirMailEntry {
+                        uid,
+                        entry: x,
+                        db: Arc::clone(&self.db),
+                    })
+                }
                 Err(_) => None,
             })
             .collect()
@@ -163,18 +205,14 @@ struct DbMails {
 /// Wrapper for the mailentries from the Maildir crate
 pub struct MaildirMailEntry {
     entry: maildir::MailEntry,
+    uid: i64,
     db: DB,
 }
 
 #[async_trait::async_trait]
 impl MailEntry for MaildirMailEntry {
-    async fn uid(&self) -> color_eyre::eyre::Result<i64> {
-        let maildir_id = self.entry.id();
-        let mail_row = sqlx::query_as::<_, DbMails>("SELECT * FROM mails WHERE maildir_id = $1")
-            .bind(maildir_id)
-            .fetch_one(self.db.get_pool())
-            .await?;
-        Ok(mail_row.id)
+    fn uid(&self) -> i64 {
+        self.uid
     }
     fn id(&self) -> &str {
         self.entry.id()

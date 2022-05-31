@@ -21,7 +21,7 @@ pub type MailEntryType = MaildirMailEntry;
 #[async_trait::async_trait]
 pub trait MailEntry {
     /// The uid of the mail entry
-    async fn uid(&self) -> color_eyre::eyre::Result<i64>;
+    fn uid(&self) -> i64;
     /// The id of the email
     fn id(&self) -> &str;
     /// The parsed form of the email
@@ -75,11 +75,11 @@ pub trait MailStorage<M: MailEntry> {
     /// Count of new messages
     fn count_new(&self, path: String) -> usize;
     /// Get the current messages
-    fn list_cur(&self, path: String) -> Vec<M>;
+    async fn list_cur(&self, path: String) -> Vec<M>;
     /// Get the new messages
-    fn list_new(&self, path: String) -> Vec<M>;
+    async fn list_new(&self, path: String) -> Vec<M>;
     /// Get the all messages
-    fn list_all(&self, path: String) -> Vec<M>;
+    async fn list_all(&self, path: String) -> Vec<M>;
 }
 
 /// Get the struct of the current storage implementation

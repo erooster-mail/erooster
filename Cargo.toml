@@ -62,6 +62,7 @@ url = "2.2.2"
 sys-info = "0.9.1"
 
 [build-dependencies]
+vergen = "6"
 clap_mangen = "0.1"
 clap = { version = "3.1.6", features = ["derive", "color", "suggestions","env"] }
 

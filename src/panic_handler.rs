@@ -56,12 +56,14 @@ fn custom_url(location: &Location<'_>, message: &str) -> impl fmt::Display {
 |key|value|
 |--|--|
 |**version**|{}|
+|**git commit**|{}|
 |**os_type**|{}|
 |**os_release**|{}|
 |**message**|{}|
 |**location**|{}|
 ## More info
 ",
+                    env!("VERGEN_GIT_SHA_SHORT"),
                     VERSION,
                     os_type().unwrap_or_else(|_| "unavailable".to_string()),
                     os_release().unwrap_or_else(|_| "unavailable".to_string()),

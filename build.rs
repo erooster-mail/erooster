@@ -1,4 +1,7 @@
+use vergen::{vergen, Config};
+
 fn main() -> std::io::Result<()> {
+    vergen(Config::default());
     let out_dir =
         std::path::PathBuf::from(std::env::var_os("OUT_DIR").ok_or(std::io::ErrorKind::NotFound)?);
     let dest_path = out_dir

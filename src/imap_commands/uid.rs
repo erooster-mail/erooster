@@ -159,7 +159,6 @@ fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Option<St
 }
 
 #[allow(clippy::too_many_lines)]
-#[allow(clippy::cast_possible_truncation)]
 fn generate_response_for_attributes(
     attr: FetchAttributes,
     mail: &mut MailEntryType,
@@ -224,6 +223,7 @@ fn generate_response_for_attributes(
     }
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn body(
     section_text: Option<SectionText>,
     range: Option<(u64, u64)>,
@@ -247,7 +247,7 @@ fn body(
                             };
                             let body_text = body_text.get((start as usize)..end).unwrap_or(&[]);
                             let body_text = String::from_utf8_lossy(body_text);
-                            format!("BODY[TEXT] {}", body_text)
+                            format!("BODY[] {{{}}}\r\n{}", body_text.as_bytes().len(), body_text)
                         } else {
                             String::from("BODY[TEXT] NIL\r\n")
                         }
@@ -257,7 +257,7 @@ fn body(
                 } else if let Ok(body) = mail.parsed() {
                     if let Ok(body_text) = body.get_body_raw() {
                         let body_text = String::from_utf8_lossy(&body_text);
-                        format!("BODY[TEXT] {}", body_text)
+                        format!("BODY[] {{{}}}\r\n{}", body_text.as_bytes().len(), body_text)
                     } else {
                         String::from("BODY[TEXT] NIL\r\n")
                     }
@@ -311,7 +311,7 @@ fn body(
         if let Ok(body_text) = body.get_body() {
             info!("Path: {:?}", mail.path());
             info!("Body: {}", body_text);
-            format!("BODY[] {}", body_text)
+            format!("BODY[] {{{}}}\r\n{}", body_text.as_bytes().len(), body_text)
         } else {
             String::from("BODY[] NIL\r\n")
         }

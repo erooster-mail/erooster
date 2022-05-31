@@ -45,7 +45,7 @@ mod tests {
         assert_eq!(
             rx.next().await,
             Some(String::from(
-                "* CAPABILITY AUTH=PLAIN LOGINDISABLED IMAP4rev2"
+                "* CAPABILITY AUTH=PLAIN LOGINDISABLED IMAP4rev2 IMAP4rev1"
             ))
         );
     }

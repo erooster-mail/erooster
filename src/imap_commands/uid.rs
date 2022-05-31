@@ -241,7 +241,7 @@ fn generate_response_for_attributes(
                             Some(format!(
                                 "BODY[HEADER] {{{}}}\r\n{}",
                                 data.as_bytes().len(),
-                                headers
+                                data
                             ))
                         } else {
                             Some(String::from("BODY[HEADER] NIL\r\n"))
@@ -269,7 +269,7 @@ fn generate_response_for_attributes(
                             Some(format!(
                                 "BODY[HEADER] {{{}}}\r\n{}",
                                 data.as_bytes().len(),
-                                headers
+                                data
                             ))
                         } else {
                             Some(String::from("BODY[HEADER] NIL\r\n"))

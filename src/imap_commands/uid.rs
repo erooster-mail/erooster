@@ -177,10 +177,12 @@ fn generate_response_for_attributes(
         FetchAttributes::Envelope => None,
         FetchAttributes::RFC822Header => {
             if let Ok(headers_vec) = mail.headers() {
-                let mut headers = String::new();
-                for header in headers_vec {
-                    headers.push_str(&format!("\r\n{}: {}", header.get_key(), header.get_value()));
-                }
+                let headers = headers_vec
+                    .iter()
+                    .map(|header| format!("{}: {}", header.get_key(), header.get_value()))
+                    .collect::<Vec<_>>()
+                    .join("\r\n");
+
                 Some(format!("RFC822.HEADER{}", headers))
             } else {
                 Some(String::from("RFC822.HEADER\r\n"))
@@ -233,46 +235,54 @@ fn generate_response_for_attributes(
                     super::parsers::SectionText::Text => None,
                     super::parsers::SectionText::HeaderFields(headers_requested_vec) => {
                         if let Ok(headers_vec) = mail.headers() {
-                            let mut headers = String::new();
                             let lower_headers_requested_vec: Vec<_> = headers_requested_vec
                                 .iter()
                                 .map(|header| header.to_lowercase())
                                 .collect();
-                            for header in headers_vec {
-                                if lower_headers_requested_vec
-                                    .contains(&header.get_key().to_lowercase())
-                                {
-                                    headers.push_str(&format!(
-                                        "\r\n{}: {}",
-                                        header.get_key(),
-                                        header.get_value()
-                                    ));
-                                }
-                            }
-                            Some(format!("BODY.PEEK[HEADER.FIELDS]{}", headers))
+                            let headers = headers_vec
+                                .iter()
+                                .filter(|header| {
+                                    lower_headers_requested_vec
+                                        .contains(&header.get_key().to_lowercase())
+                                })
+                                .map(|header| {
+                                    format!("{}: {}", header.get_key(), header.get_value())
+                                })
+                                .collect::<Vec<_>>()
+                                .join("\r\n");
+
+                            Some(format!(
+                                "BODY.PEEK[HEADER.FIELDS] {{{}}}\r\n{}",
+                                headers.as_bytes().len(),
+                                headers
+                            ))
                         } else {
                             Some(String::from("BODY.PEEK[HEADER.FIELDS]\r\n"))
                         }
                     }
                     super::parsers::SectionText::HeaderFieldsNot(headers_requested_vec) => {
                         if let Ok(headers_vec) = mail.headers() {
-                            let mut headers = String::new();
                             let lower_headers_requested_vec: Vec<_> = headers_requested_vec
                                 .iter()
                                 .map(|header| header.to_lowercase())
                                 .collect();
-                            for header in headers_vec {
-                                if !lower_headers_requested_vec
-                                    .contains(&header.get_key().to_lowercase())
-                                {
-                                    headers.push_str(&format!(
-                                        "\r\n{}: {}",
-                                        header.get_key(),
-                                        header.get_value()
-                                    ));
-                                }
-                            }
-                            Some(format!("BODY.PEEK[HEADER.FIELDS]{}", headers))
+
+                            let headers = headers_vec
+                                .iter()
+                                .filter(|header| {
+                                    !lower_headers_requested_vec
+                                        .contains(&header.get_key().to_lowercase())
+                                })
+                                .map(|header| {
+                                    format!("{}: {}", header.get_key(), header.get_value())
+                                })
+                                .collect::<Vec<_>>()
+                                .join("\r\n");
+                            Some(format!(
+                                "BODY.PEEK[HEADER.FIELDS] {{{}}}\r\n{}",
+                                headers.as_bytes().len(),
+                                headers
+                            ))
                         } else {
                             Some(String::from("BODY.PEEK[HEADER.FIELDS]\r\n"))
                         }

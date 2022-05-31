@@ -101,8 +101,7 @@ mod tests {
                 con_state: Arc::new(RwLock::new(Connection {
                     state: State::Selected("INBOX".to_string(), Access::ReadWrite),
                     secure: true,
-                    // TODO this may be invalid actuallly
-                    username: None,
+                    username: Some(String::from("test")),
                 })),
             },
         };
@@ -133,8 +132,7 @@ mod tests {
                 con_state: Arc::new(RwLock::new(Connection {
                     state: State::Selected("INBOX".to_string(), Access::ReadOnly),
                     secure: true,
-                    // TODO this may be invalid actuallly
-                    username: None,
+                    username: Some(String::from("test")),
                 })),
             },
         };
@@ -162,7 +160,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_invalid_state() {
+    async fn test_no_auth() {
         let caps = Close {
             data: &Data {
                 con_state: Arc::new(RwLock::new(Connection {

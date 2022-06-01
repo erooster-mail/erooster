@@ -1,15 +1,13 @@
-use std::{collections::HashMap, error::Error, io, net::IpAddr, sync::Arc};
-
+use crate::line_codec::{LinesCodec, LinesCodecError};
 use futures::{Sink, SinkExt, Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use sqlxmq::{job, CurrentJob};
+use std::{collections::HashMap, error::Error, io, net::IpAddr, sync::Arc};
 use tokio::net::TcpStream;
 use tokio_rustls::TlsConnector;
 use tokio_util::codec::Framed;
 use tracing::{debug, error};
 use trust_dns_resolver::TokioAsyncResolver;
-
-use crate::line_codec::{LinesCodec, LinesCodecError};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EmailPayload {
@@ -343,19 +341,19 @@ pub async fn send_email_job(
                                 if let Err(e) =
                                     send_email(unsecure_con, &email, &current_job, to, false).await
                                 {
-                                    error!(
+                                    return Err(From::from(format!(
                                         "[{}] Error sending email via tcp on port 25: {}",
                                         current_job.id(),
                                         e
-                                    );
+                                    )));
                                 }
                             }
                             Err(e) => {
-                                error!(
+                                return Err(From::from(format!(
                                     "[{}] Error sending email via tcp on port 25: {}",
                                     current_job.id(),
                                     e
-                                );
+                                )));
                             }
                         }
                     }
@@ -370,11 +368,11 @@ pub async fn send_email_job(
                         get_unsecure_connection(address.unwrap(), &current_job, target).await?;
                     if let Err(e) = send_email(unsecure_con, &email, &current_job, to, false).await
                     {
-                        error!(
+                        return Err(From::from(format!(
                             "[{}] Error sending email via tcp on port 25: {}",
                             current_job.id(),
                             e
-                        );
+                        )));
                     }
                 }
             }

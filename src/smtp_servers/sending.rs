@@ -1,5 +1,6 @@
 use crate::line_codec::{LinesCodec, LinesCodecError};
 use futures::{Sink, SinkExt, Stream, StreamExt};
+use rustls::OwnedTrustAnchor;
 use serde::{Deserialize, Serialize};
 use sqlxmq::{job, CurrentJob};
 use std::{collections::HashMap, error::Error, io, net::IpAddr, sync::Arc};
@@ -431,9 +432,13 @@ async fn get_secure_connection(
     Box<dyn Error + Send + Sync + 'static>,
 > {
     let mut roots = rustls::RootCertStore::empty();
-    for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs") {
-        roots.add(&rustls::Certificate(cert.0)).unwrap();
-    }
+    roots.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
+        OwnedTrustAnchor::from_subject_spki_name_constraints(
+            ta.subject,
+            ta.spki,
+            ta.name_constraints,
+        )
+    }));
     let config = rustls::ClientConfig::builder()
         .with_safe_defaults()
         .with_root_certificates(roots)

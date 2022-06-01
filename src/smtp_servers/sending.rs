@@ -304,9 +304,12 @@ pub async fn send_email_job(
                         address = Some(IpAddr::V6(
                             *response.iter().next().ok_or("No address found")?,
                         ));
-                        if let Some(record) = record.exchange().to_utf8().strip_suffix('.') {
-                            tls_domain = record.to_string();
-                        }
+                        let exchange_record = record.exchange().to_utf8();
+                        tls_domain = if let Some(record) = exchange_record.strip_suffix('.') {
+                            record.to_string()
+                        } else {
+                            exchange_record
+                        };
                         debug!("[{}] Got {:?} for {}", current_job.id(), address, target);
                     } else {
                         debug!("[{}] Looking up A records for {}", current_job.id(), target);
@@ -315,9 +318,12 @@ pub async fn send_email_job(
                             address = Some(IpAddr::V4(
                                 *response.iter().next().ok_or("No address found")?,
                             ));
-                            if let Some(record) = record.exchange().to_utf8().strip_suffix('.') {
-                                tls_domain = record.to_string();
-                            }
+                            let exchange_record = record.exchange().to_utf8();
+                            tls_domain = if let Some(record) = exchange_record.strip_suffix('.') {
+                                record.to_string()
+                            } else {
+                                exchange_record
+                            };
                             debug!("[{}] Got {:?} for {}", current_job.id(), address, target);
                         }
                     }

@@ -89,7 +89,7 @@ impl TryFrom<&str> for Commands {
 type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
 
 /// Gets the command
-    #[instrument(skip(input))]
+#[instrument(skip(input))]
 fn command(input: &str) -> Res<Result<Commands, String>> {
     context(
         "command",
@@ -106,7 +106,7 @@ fn command(input: &str) -> Res<Result<Commands, String>> {
 }
 
 /// Gets the input arguments
-    #[instrument(skip(input))]
+#[instrument(skip(input))]
 fn arguments(input: &str) -> Res<Vec<&str>> {
     context(
         "arguments",

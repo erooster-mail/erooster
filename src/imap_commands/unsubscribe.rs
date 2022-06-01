@@ -4,8 +4,8 @@ use crate::{
     imap_commands::{CommandData, Data},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use tracing::instrument;
 use std::{path::Path, sync::Arc};
+use tracing::instrument;
 
 pub struct Unsubscribe<'a> {
     pub data: &'a Data,

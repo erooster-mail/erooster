@@ -201,13 +201,7 @@ fn generate_response_for_attributes(
         FetchAttributes::InternalDate => None,
         FetchAttributes::RFC822Size => {
             if let Ok(parsed) = mail.parsed() {
-                let size = match parsed.get_body_encoded() {
-                    mailparse::body::Body::Base64(b) => b.get_raw().len(),
-                    mailparse::body::Body::QuotedPrintable(q) => q.get_raw().len(),
-                    mailparse::body::Body::SevenBit(s) => s.get_raw().len(),
-                    mailparse::body::Body::EightBit(e) => e.get_raw().len(),
-                    mailparse::body::Body::Binary(b) => b.get_raw().len(),
-                };
+                let size = parsed.raw_bytes.len();
                 Some(format!("RFC822.SIZE {}", size))
             } else {
                 Some(String::from("RFC822.SIZE 0"))

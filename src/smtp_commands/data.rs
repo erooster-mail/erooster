@@ -54,11 +54,6 @@ impl DataCommand<'_> {
         debug!("Reading incoming data");
         {
             let mut write_lock = self.data.con_state.write().await;
-            if let Some(data) = &write_lock.data {
-                write_lock.data = Some(format!("{}\r\n{}", data, line));
-            } else {
-                write_lock.data = Some(line.to_string());
-            }
             if line == "." {
                 debug!("Got end of line");
                 let receipts = if let Some(receipts) = write_lock.receipts.clone() {
@@ -136,6 +131,10 @@ impl DataCommand<'_> {
                     lines.send(String::from("250 OK")).await?;
                     color_eyre::eyre::bail!("Invalid state");
                 };
+            } else if let Some(data) = &write_lock.data {
+                write_lock.data = Some(format!("{}\r\n{}", data, line));
+            } else {
+                write_lock.data = Some(line.to_string());
             }
         };
         Ok(())

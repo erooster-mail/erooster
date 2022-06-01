@@ -209,8 +209,12 @@ fn generate_response_for_attributes(
         }
         FetchAttributes::Uid => None,
         FetchAttributes::BodyStructure => None,
-        FetchAttributes::BodySection(section_text, range)=> Some(body(section_text, range, mail,true)),
-        FetchAttributes::BodyPeek(section_text, range) => Some(body(section_text, range, mail,false)),
+        FetchAttributes::BodySection(section_text, range) => {
+            Some(body(section_text, range, mail, true))
+        }
+        FetchAttributes::BodyPeek(section_text, range) => {
+            Some(body(section_text, range, mail, false))
+        }
         FetchAttributes::Binary(_, _) => None,
         FetchAttributes::BinaryPeek(_, _) => None,
         FetchAttributes::BinarySize(_) => None,

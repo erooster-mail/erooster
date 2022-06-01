@@ -57,7 +57,7 @@ cfg-if = "1.0.0"
 trust-dns-resolver = "0.21.2"
 mailparse = "0.13.8"
 webpki-roots = "0.22.3"
-sentry = { version = "0.26.0", features = ["tracing", "backtrace", "contexts", "panic", "reqwest", "rustls"]}
+sentry = { version = "0.26.0", default-features = false, features = ["tracing", "backtrace", "contexts", "panic", "reqwest", "rustls"]}
 url = "2.2.2"
 sys-info = "0.9.1"
 

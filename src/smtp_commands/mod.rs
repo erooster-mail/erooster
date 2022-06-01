@@ -124,7 +124,7 @@ impl Data {
         context("parse", tuple((command, arguments)))(line)
     }
 
-    #[instrument(skip(lines, config, database, storage, line))]
+    #[instrument(skip(self, lines, config, database, storage, line))]
     #[allow(clippy::too_many_lines)]
     pub async fn parse<S>(
         &self,

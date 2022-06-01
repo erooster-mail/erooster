@@ -200,7 +200,7 @@ where
     }
 
     lines_sender.send(email.body.clone()).await?;
-    lines_sender.send(".").await?;
+    lines_sender.send(String::from(".")).await?;
     debug!(
         "[{}] [{}] Sent body and ending",
         current_job.id(),

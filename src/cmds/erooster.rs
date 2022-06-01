@@ -36,6 +36,7 @@ use erooster::{
     backend::{database::get_database, storage::get_storage},
     panic_handler::EroosterPanicMessage,
 };
+use tracing_error::ErrorLayer;
 use std::borrow::Cow;
 use std::sync::Arc;
 use tokio::signal;
@@ -67,6 +68,7 @@ async fn main() -> Result<()> {
             .with(sentry::integrations::tracing::layer())
             .with(filter_layer)
             .with(tracing_subscriber::fmt::Layer::default())
+            .with(ErrorLayer::default())
             .init();
         info!("Sentry logging is enabled. Change the config to disable it.");
 

@@ -42,6 +42,7 @@ use owo_colors::{
     colors::{BrightCyan, BrightGreen, BrightRed, BrightWhite},
     DynColors, OwoColorize,
 };
+use tracing_error::ErrorLayer;
 use std::borrow::Cow;
 use std::io::Write;
 use std::{io, process::exit, sync::Arc};
@@ -101,6 +102,7 @@ async fn main() -> Result<()> {
             .with(sentry::integrations::tracing::layer())
             .with(filter_layer)
             .with(tracing_subscriber::fmt::Layer::default())
+            .with(ErrorLayer::default())
             .init();
         info!("Sentry logging is enabled. Change the config to disable it.");
 

@@ -28,5 +28,5 @@ EXPOSE 25
 EXPOSE 465
 
 WORKDIR /app
-COPY --from=builder /app/target/release/erooster /usr/local/bin
+COPY --from=builder /app/target/release/erooster/erooster /usr/local/bin
 ENTRYPOINT ["/usr/local/bin/erooster"]

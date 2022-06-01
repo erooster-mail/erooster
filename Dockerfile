@@ -27,6 +27,6 @@ EXPOSE 143
 EXPOSE 25
 EXPOSE 465
 
-WORKDIR /app
+WORKDIR /
 COPY --from=builder /app/target/release/erooster /
 ENTRYPOINT ["/erooster"]

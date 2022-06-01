@@ -9,7 +9,7 @@ use crate::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{path::Path, sync::Arc};
-use tracing::{debug, error};
+use tracing::{debug, error, instrument};
 
 pub struct Uid<'a> {
     pub data: &'a Data,
@@ -17,6 +17,7 @@ pub struct Uid<'a> {
 
 impl Uid<'_> {
     #[allow(clippy::too_many_lines)]
+    #[instrument(skip(self, lines, config, command_data, storage))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
@@ -136,6 +137,7 @@ impl Uid<'_> {
     }
 }
 
+#[instrument(skip(arg, mail))]
 fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Option<String> {
     match arg {
         FetchArguments::All => None,
@@ -159,6 +161,7 @@ fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Option<St
 }
 
 #[allow(clippy::too_many_lines)]
+#[instrument(skip(attr, mail))]
 fn generate_response_for_attributes(
     attr: FetchAttributes,
     mail: &mut MailEntryType,
@@ -222,6 +225,7 @@ fn generate_response_for_attributes(
 }
 
 #[allow(clippy::cast_possible_truncation)]
+#[instrument(skip(section_text, range, mail))]
 fn body(
     section_text: Option<SectionText>,
     range: Option<(u64, u64)>,

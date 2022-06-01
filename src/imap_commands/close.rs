@@ -7,13 +7,14 @@ use crate::{
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{path::Path, sync::Arc};
 use tokio::fs;
-use tracing::debug;
+use tracing::{debug, instrument};
 
 pub struct Close<'a> {
     pub data: &'a Data,
 }
 
 impl Close<'_> {
+    #[instrument(skip(self, lines, storage, config, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,

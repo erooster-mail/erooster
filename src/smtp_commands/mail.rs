@@ -1,5 +1,5 @@
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::smtp_commands::{parsers::localpart_arguments, CommandData, Data};
 
@@ -8,6 +8,7 @@ pub struct Mail<'a> {
 }
 
 impl Mail<'_> {
+    #[instrument(skip(self, lines, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,

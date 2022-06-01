@@ -3,6 +3,7 @@ use crate::{
     imap_commands::{CommandData, Data},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use tracing::instrument;
 use std::{path::Path, sync::Arc};
 use tokio::fs;
 
@@ -11,6 +12,7 @@ pub struct Delete<'a> {
 }
 
 impl Delete<'_> {
+    #[instrument(skip(self, lines, config, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,

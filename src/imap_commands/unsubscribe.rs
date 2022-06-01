@@ -4,6 +4,7 @@ use crate::{
     imap_commands::{CommandData, Data},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use tracing::instrument;
 use std::{path::Path, sync::Arc};
 
 pub struct Unsubscribe<'a> {
@@ -11,6 +12,7 @@ pub struct Unsubscribe<'a> {
 }
 
 impl Unsubscribe<'_> {
+    #[instrument(skip(self, lines, config, storage, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,

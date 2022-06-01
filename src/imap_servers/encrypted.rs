@@ -33,13 +33,14 @@ use tokio_rustls::{
 };
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, instrument};
 
 /// An encrypted imap Server
 pub struct Encrypted;
 
 impl Encrypted {
     // Loads the certfile from the filesystem
+    #[instrument(skip(path))]
     fn load_certs(path: &Path) -> color_eyre::eyre::Result<Vec<Certificate>> {
         let certfile = fs::File::open(path)?;
         let mut reader = BufReader::new(certfile);
@@ -48,7 +49,7 @@ impl Encrypted {
             .map(|v| rustls::Certificate(v.clone()))
             .collect())
     }
-
+    #[instrument(skip(path))]
     fn load_key(path: &Path) -> color_eyre::eyre::Result<PrivateKey> {
         let keyfile = fs::File::open(path)?;
         let mut reader = BufReader::new(keyfile);
@@ -80,6 +81,7 @@ impl Server for Encrypted {
     ///
     /// Returns an error if the cert setup fails
     #[allow(clippy::too_many_lines)]
+    #[instrument(skip(config, database, storage, file_watcher))]
     async fn run(
         config: Arc<Config>,
         database: DB,
@@ -137,6 +139,7 @@ impl Server for Encrypted {
     }
 }
 
+#[instrument(skip(stream, database, storage, file_watcher, acceptor))]
 async fn listen(
     mut stream: TcpListenerStream,
     config: Arc<Config>,

@@ -3,12 +3,14 @@ use crate::{
     imap_servers::state::State,
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use tracing::instrument;
 
 pub struct Check<'a> {
     pub data: &'a Data,
 }
 
 impl Check<'_> {
+    #[instrument(skip(self, lines, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,

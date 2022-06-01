@@ -8,9 +8,11 @@ use nom::{
     sequence::{delimited, separated_pair, tuple},
     IResult,
 };
+use tracing::instrument;
 
 type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
 
+#[instrument(skip(input))]
 fn header_list(input: &str) -> Res<Vec<&str>> {
     context(
         "header_list",
@@ -33,6 +35,7 @@ pub enum SectionText {
     HeaderFieldsNot(Vec<String>),
 }
 
+#[instrument(skip(input))]
 fn section_text(input: &str) -> Res<SectionText> {
     context(
         "section_text",
@@ -51,6 +54,7 @@ fn section_text(input: &str) -> Res<SectionText> {
     )(input)
 }
 
+#[instrument(skip(input))]
 fn section(input: &str) -> Res<Option<SectionText>> {
     context(
         "section",
@@ -76,6 +80,7 @@ pub enum FetchAttributes {
 }
 
 #[allow(clippy::too_many_lines)]
+#[instrument(skip(input))]
 fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
     context(
         "fetch_attributes",
@@ -229,6 +234,7 @@ pub enum FetchArguments {
     List(Vec<FetchAttributes>),
 }
 
+#[instrument(skip(input))]
 fn inner_fetch_arguments(input: &str) -> Res<FetchArguments> {
     context(
         "inner_fetch_arguments",
@@ -253,6 +259,7 @@ fn inner_fetch_arguments(input: &str) -> Res<FetchArguments> {
     )(input)
 }
 
+#[instrument(skip(input))]
 pub fn fetch_arguments(input: &str) -> Res<FetchArguments> {
     context("fetch_arguments", inner_fetch_arguments)(input)
 }

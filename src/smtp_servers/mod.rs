@@ -10,6 +10,7 @@ use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use sqlxmq::{JobRegistry, OwnedHandle};
 use std::error::Error;
 use std::sync::Arc;
+use tracing::instrument;
 
 pub(crate) mod encrypted;
 pub(crate) mod sending;
@@ -37,6 +38,7 @@ where
 /// # Errors
 ///
 /// Returns an error if the server startup fails
+#[instrument(skip(config, database, storage))]
 pub async fn start(
     config: Arc<Config>,
     database: DB,

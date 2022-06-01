@@ -20,13 +20,14 @@ use tokio_rustls::{
 };
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, instrument};
 
 /// An encrypted smtp Server
 pub struct Encrypted;
 
 impl Encrypted {
     // Loads the certfile from the filesystem
+    #[instrument(skip(path))]
     fn load_certs(path: &Path) -> color_eyre::eyre::Result<Vec<Certificate>> {
         let certfile = fs::File::open(path)?;
         let mut reader = BufReader::new(certfile);
@@ -36,6 +37,7 @@ impl Encrypted {
             .collect())
     }
 
+    #[instrument(skip(path))]
     fn load_key(path: &Path) -> color_eyre::eyre::Result<PrivateKey> {
         let keyfile = fs::File::open(path)?;
         let mut reader = BufReader::new(keyfile);
@@ -60,6 +62,7 @@ impl Encrypted {
     /// # Errors
     ///
     /// Returns an error if the cert setup fails
+    #[instrument(skip(config, database, storage))]
     pub(crate) async fn run(
         config: Arc<Config>,
         database: DB,
@@ -113,6 +116,7 @@ impl Encrypted {
     }
 }
 
+#[instrument(skip(stream, config, database, storage, acceptor))]
 async fn listen(
     mut stream: TcpListenerStream,
     config: Arc<Config>,

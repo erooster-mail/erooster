@@ -5,7 +5,7 @@ use crate::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use simdutf8::compat::from_utf8;
-use tracing::{debug, error};
+use tracing::{debug, error, instrument};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum AuthenticationMethod {
@@ -18,6 +18,7 @@ pub struct Authenticate<'a> {
 }
 
 impl Authenticate<'_> {
+    #[instrument(skip(self, lines, database, command_data))]
     pub async fn plain<S>(
         &self,
         lines: &mut S,
@@ -110,6 +111,7 @@ impl Authenticate<'_> {
 }
 
 impl Authenticate<'_> {
+    #[instrument(skip(self, lines, database, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,

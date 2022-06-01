@@ -19,13 +19,14 @@ use tokio::{
 };
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
-use tracing::{debug, info};
+use tracing::{debug, info, instrument};
 
 /// An unencrypted imap Server
 pub struct Unencrypted;
 
 #[async_trait]
 impl Server for Unencrypted {
+    #[instrument(skip(config, database, storage, file_watcher))]
     async fn run(
         config: Arc<Config>,
         database: DB,
@@ -65,6 +66,7 @@ impl Server for Unencrypted {
     }
 }
 
+#[instrument(skip(stream, config, database, storage, _file_watcher))]
 async fn listen(
     mut stream: TcpListenerStream,
     config: Arc<Config>,

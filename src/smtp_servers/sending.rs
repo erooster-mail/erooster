@@ -6,7 +6,7 @@ use std::{collections::HashMap, error::Error, io, net::IpAddr, sync::Arc};
 use tokio::net::TcpStream;
 use tokio_rustls::TlsConnector;
 use tokio_util::codec::Framed;
-use tracing::{debug, error};
+use tracing::{debug, error, instrument};
 use trust_dns_resolver::TokioAsyncResolver;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -19,6 +19,7 @@ pub struct EmailPayload {
 }
 
 #[allow(clippy::too_many_lines)]
+#[instrument(skip(con, email, to))]
 async fn send_email<T>(
     con: T,
     email: &EmailPayload,
@@ -233,6 +234,7 @@ where
 // Note this is a hack to get max retries. Please fix this
 #[job(retries = 4294967295, backoff_secs = 1200)]
 #[allow(clippy::too_many_lines)]
+#[instrument(skip(_message))]
 pub async fn send_email_job(
     // The first argument should always be the current job.
     mut current_job: CurrentJob,
@@ -392,6 +394,7 @@ pub async fn send_email_job(
     Ok(())
 }
 
+#[instrument(skip(addr, target))]
 async fn get_unsecure_connection(
     addr: IpAddr,
     current_job: &CurrentJob,
@@ -411,6 +414,7 @@ async fn get_unsecure_connection(
     Ok(Framed::new(stream, LinesCodec::new()))
 }
 
+#[instrument(skip(addr, target, tls_domain))]
 async fn get_secure_connection(
     addr: IpAddr,
     current_job: &CurrentJob,

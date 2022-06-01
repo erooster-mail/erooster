@@ -6,12 +6,14 @@ use crate::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use tokio::fs;
+use tracing::instrument;
 
 pub struct Rename<'a> {
     pub data: &'a Data,
 }
 
 impl Rename<'_> {
+    #[instrument(skip(self, lines, command_data, config))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,

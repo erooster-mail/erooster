@@ -5,12 +5,13 @@ use crate::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{path::Path, sync::Arc};
-use tracing::error;
+use tracing::{error, instrument};
 
 pub struct Create<'a> {
     pub data: &'a Data,
 }
 impl Create<'_> {
+    #[instrument(skip(self, lines, config, storage, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,

@@ -13,7 +13,7 @@ use std::{net::SocketAddr, sync::Arc};
 use tokio::{net::TcpListener, sync::RwLock};
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, instrument};
 
 /// An unencrypted smtp Server
 pub struct Unencrypted;
@@ -22,6 +22,7 @@ impl Unencrypted {
     // TODO make this only pub for benches and tests
     #[allow(missing_docs)]
     #[allow(clippy::missing_errors_doc)]
+    #[instrument(skip(config, database, storage))]
     pub async fn run(
         config: Arc<Config>,
         database: DB,
@@ -59,6 +60,7 @@ impl Unencrypted {
     }
 }
 
+#[instrument(skip(stream, config, database, storage))]
 async fn listen(
     mut stream: TcpListenerStream,
     config: Arc<Config>,

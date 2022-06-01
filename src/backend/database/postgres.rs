@@ -4,7 +4,7 @@ use color_eyre::Result;
 use rand_core::OsRng;
 use sqlx::PgPool;
 use std::sync::Arc;
-use tracing::{debug, error};
+use tracing::{debug, error, instrument};
 
 /// Postgres specific database implementation
 /// Holds data to connect to the database
@@ -14,6 +14,7 @@ pub struct Postgres {
 
 #[async_trait::async_trait]
 impl Database<sqlx::Postgres> for Postgres {
+    #[instrument(skip(config))]
     async fn new(config: Arc<Config>) -> Result<Self> {
         let pool = PgPool::connect_lazy(&config.database.postgres_url)
             .expect("Failed to connect to postgres");
@@ -22,10 +23,12 @@ impl Database<sqlx::Postgres> for Postgres {
         Ok(Self { pool })
     }
 
+    #[instrument(skip(self))]
     fn get_pool(&self) -> &PgPool {
         &self.pool
     }
 
+    #[instrument(skip(self, username, password))]
     async fn verify_user(&self, username: &str, password: &str) -> bool {
         let hash: std::result::Result<(String,), sqlx::Error> =
             sqlx::query_as("SELECT hash FROM users WHERE username = $1")
@@ -53,6 +56,7 @@ impl Database<sqlx::Postgres> for Postgres {
         }
     }
 
+    #[instrument(skip(self, username, password))]
     async fn change_password(
         &self,
         username: &str,
@@ -71,6 +75,7 @@ impl Database<sqlx::Postgres> for Postgres {
         Ok(())
     }
 
+    #[instrument(skip(self, username))]
     async fn add_user(&self, username: &str) -> color_eyre::eyre::Result<()> {
         sqlx::query("INSERT INTO users (username) VALUES ($1)")
             .bind(username)
@@ -79,6 +84,7 @@ impl Database<sqlx::Postgres> for Postgres {
         Ok(())
     }
 
+    #[instrument(skip(self, username))]
     async fn user_exists(&self, username: &str) -> bool {
         let exists: std::result::Result<bool, sqlx::Error> =
             sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)")

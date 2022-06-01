@@ -33,7 +33,7 @@
 use std::{path::Path, sync::Arc};
 
 use color_eyre::Result;
-use tracing::error;
+use tracing::{error, instrument};
 
 use crate::config::Config;
 
@@ -60,6 +60,7 @@ pub mod smtp_servers;
 pub mod config;
 
 /// Returns the config struct from the provided location or defaults
+#[instrument(skip(config_path))]
 pub async fn get_config(config_path: String) -> Result<Arc<Config>> {
     let config = if Path::new(&config_path).exists() {
         Arc::new(Config::load(config_path).await?)

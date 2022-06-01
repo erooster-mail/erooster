@@ -10,11 +10,13 @@ use std::{
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
+use tracing::instrument;
 
 pub struct Select<'a> {
     pub data: &'a Data,
 }
 
+#[instrument(skip(data, lines, config, storage, rw, command_data))]
 async fn select<S>(
     data: &Data,
     lines: &mut S,
@@ -70,6 +72,7 @@ where
     Ok(())
 }
 
+#[instrument(skip(lines, folder, storage, mailbox_path, rw, command_data))]
 async fn send_success<S>(
     lines: &mut S,
     folder: String,
@@ -125,6 +128,7 @@ where
 }
 
 impl Select<'_> {
+    #[instrument(skip(self, lines, config, storage, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
@@ -151,6 +155,7 @@ pub struct Examine<'a> {
 }
 
 impl Examine<'_> {
+    #[instrument(skip(self, lines, config, storage, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,

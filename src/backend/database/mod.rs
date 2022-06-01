@@ -2,6 +2,7 @@ use crate::config::Config;
 use color_eyre::Result;
 use sqlx::Pool;
 use std::sync::Arc;
+use tracing::instrument;
 
 /// Postgres specific database implementation
 pub mod postgres;
@@ -34,8 +35,9 @@ pub trait Database<S: sqlx::Database> {
     async fn add_user(&self, username: &str) -> color_eyre::eyre::Result<()>;
 }
 
-#[allow(clippy::module_name_repetitions)]
 /// Get a postgres database connection pool and the higher level wrapper
+#[allow(clippy::module_name_repetitions)]
+#[instrument(skip(config))]
 pub async fn get_database(config: Arc<Config>) -> Result<postgres::Postgres> {
     postgres::Postgres::new(config).await
 }

@@ -4,6 +4,7 @@ use crate::backend::{
 };
 use mailparse::{MailHeader, ParsedMail};
 use std::path::{Path, PathBuf};
+use tracing::instrument;
 
 /// The maildir format
 #[cfg(feature = "maildir")]
@@ -85,6 +86,7 @@ pub trait MailStorage<M: MailEntry> {
 /// Get the struct of the current storage implementation
 #[cfg(feature = "maildir")]
 #[must_use]
-pub const fn get_storage(db: DB) -> Storage {
+#[instrument(skip(db))]
+pub fn get_storage(db: DB) -> Storage {
     MaildirStorage::new(db)
 }

@@ -18,7 +18,7 @@ use nom::{
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, instrument, warn};
 
 #[cfg(test)]
 use std::fmt::Display;
@@ -68,6 +68,7 @@ pub enum Commands {
 impl TryFrom<&str> for Commands {
     type Error = String;
 
+    #[instrument(skip(i))]
     fn try_from(i: &str) -> Result<Self, Self::Error> {
         match i.to_lowercase().as_str() {
             "ehlo" => Ok(Commands::EHLO),
@@ -88,6 +89,7 @@ impl TryFrom<&str> for Commands {
 type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
 
 /// Gets the command
+    #[instrument(skip(input))]
 fn command(input: &str) -> Res<Result<Commands, String>> {
     context(
         "command",
@@ -104,6 +106,7 @@ fn command(input: &str) -> Res<Result<Commands, String>> {
 }
 
 /// Gets the input arguments
+    #[instrument(skip(input))]
 fn arguments(input: &str) -> Res<Vec<&str>> {
     context(
         "arguments",
@@ -116,10 +119,12 @@ fn arguments(input: &str) -> Res<Vec<&str>> {
 }
 
 impl Data {
+    #[instrument(skip(line))]
     fn parse_internal(line: &str) -> Res<(Result<Commands, String>, Vec<&str>)> {
         context("parse", tuple((command, arguments)))(line)
     }
 
+    #[instrument(skip(lines, config, database, storage, line))]
     #[allow(clippy::too_many_lines)]
     pub async fn parse<S>(
         &self,

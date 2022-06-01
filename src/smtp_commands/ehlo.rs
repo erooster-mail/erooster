@@ -1,8 +1,10 @@
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use tracing::instrument;
 
 pub struct Ehlo;
 
 impl Ehlo {
+    #[instrument(skip(self, hostname, lines))]
     pub async fn exec<S>(&self, hostname: String, lines: &mut S) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,

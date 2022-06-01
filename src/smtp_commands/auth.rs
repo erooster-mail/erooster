@@ -5,11 +5,13 @@ use crate::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use simdutf8::compat::from_utf8;
+use tracing::instrument;
 pub struct Auth<'a> {
     pub data: &'a Data,
 }
 
 impl Auth<'_> {
+    #[instrument(skip(self, lines, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
@@ -43,6 +45,7 @@ impl Auth<'_> {
         Ok(())
     }
 
+    #[instrument(skip(self, lines, line))]
     pub async fn username<S>(&self, lines: &mut S, line: &str) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
@@ -67,6 +70,7 @@ impl Auth<'_> {
         Ok(())
     }
 
+    #[instrument(skip(self, lines, database, line))]
     pub async fn password<S>(
         &self,
         lines: &mut S,

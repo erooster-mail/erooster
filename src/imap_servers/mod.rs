@@ -8,6 +8,7 @@ use const_format::formatcp;
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{path::Path, sync::Arc};
 use tokio::sync::broadcast;
+use tracing::instrument;
 
 pub(crate) mod encrypted;
 pub(crate) mod state;
@@ -36,6 +37,7 @@ pub trait Server {
 /// # Errors
 ///
 /// Returns an error if the server startup fails
+#[instrument(skip(config, database, storage))]
 pub fn start(
     config: Arc<Config>,
     database: DB,

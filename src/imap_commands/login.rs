@@ -1,9 +1,11 @@
 use crate::imap_commands::CommandData;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use tracing::instrument;
 
 pub struct Login;
 
 impl Login {
+    #[instrument(skip(self, lines, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,

@@ -6,10 +6,12 @@ use nom::{
     sequence::delimited,
     IResult,
 };
+use tracing::instrument;
 
 type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
 
 // TODO parse relay vs no relay
+#[instrument(skip(input))]
 fn localpart(input: &str) -> Res<Vec<&str>> {
     context(
         "localpart",
@@ -18,6 +20,7 @@ fn localpart(input: &str) -> Res<Vec<&str>> {
     .map(|(x, y)| (x, y))
 }
 
+#[instrument(skip(input))]
 pub fn localpart_arguments(input: &str) -> Res<Vec<&str>> {
     context(
         "localpart_arguments",

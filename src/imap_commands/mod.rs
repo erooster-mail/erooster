@@ -32,7 +32,7 @@ use nom::{
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, instrument, warn};
 
 #[cfg(test)]
 use std::fmt::Display;
@@ -100,6 +100,7 @@ pub enum Commands {
 impl TryFrom<&str> for Commands {
     type Error = String;
 
+    #[instrument(skip(i))]
     fn try_from(i: &str) -> Result<Self, Self::Error> {
         match i.to_lowercase().as_str() {
             "capability" => Ok(Commands::Capability),
@@ -129,6 +130,7 @@ impl TryFrom<&str> for Commands {
 
 type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
 
+#[instrument(skip(c))]
 fn is_imaptag_char(c: char) -> bool {
     (c.is_ascii() || c == '1' || c == '*' || c == ']')
         && c != '+'
@@ -143,6 +145,7 @@ fn is_imaptag_char(c: char) -> bool {
 }
 
 /// Takes as input the full string
+#[instrument(skip(input))]
 fn imaptag(input: &str) -> Res<&str> {
     //alphanumeric1, none_of("+(){ %\\\""), one_of("1*]")
     context(
@@ -153,12 +156,14 @@ fn imaptag(input: &str) -> Res<&str> {
 }
 
 /// Gets the input minus the tag
+#[instrument(skip(input))]
 fn command(input: &str) -> Res<Result<Commands, String>> {
     context("command", alt((terminated(alpha1, tag(" ")), alpha1)))(input)
         .map(|(next_input, res)| (next_input, res.try_into()))
 }
 
 /// Gets the input minus the tag and minus the command
+#[instrument(skip(input))]
 fn arguments(input: &str) -> Res<Vec<&str>> {
     context(
         "arguments",
@@ -169,11 +174,15 @@ fn arguments(input: &str) -> Res<Vec<&str>> {
     )(input)
     .map(|(x, y)| (x, y))
 }
+
 impl Data {
+    #[instrument(skip(line))]
     fn parse_internal(line: &str) -> Res<(&str, Result<Commands, String>, Vec<&str>)> {
         context("parse", tuple((imaptag, command, arguments)))(line)
     }
+
     #[allow(clippy::too_many_lines)]
+    #[instrument(skip(self, lines, config, database, storage, line))]
     pub async fn parse<S>(
         &self,
         lines: &mut S,

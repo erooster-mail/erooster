@@ -4,13 +4,14 @@ use crate::{
     smtp_servers::state::State,
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use tracing::info;
+use tracing::{info, instrument};
 
 pub struct Rcpt<'a> {
     pub data: &'a Data,
 }
 
 impl Rcpt<'_> {
+    #[instrument(skip(self, lines, database, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,

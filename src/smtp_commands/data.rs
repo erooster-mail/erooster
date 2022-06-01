@@ -12,7 +12,7 @@ use crate::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{collections::HashMap, path::Path, sync::Arc};
-use tracing::debug;
+use tracing::{debug, instrument};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct DataCommand<'a> {
@@ -20,6 +20,7 @@ pub struct DataCommand<'a> {
 }
 
 impl DataCommand<'_> {
+    #[instrument(skip(self, lines))]
     pub async fn exec<S>(&self, lines: &mut S) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
@@ -40,6 +41,7 @@ impl DataCommand<'_> {
         Ok(())
     }
 
+    #[instrument(skip(self, config, lines, line, database, storage))]
     pub async fn receive<S>(
         &self,
         config: Arc<Config>,

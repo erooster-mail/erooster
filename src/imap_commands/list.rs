@@ -6,9 +6,10 @@ use crate::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{path::Path, sync::Arc};
-use tracing::debug;
+use tracing::{debug, instrument};
 
 #[allow(clippy::too_many_lines)]
+#[instrument(skip(data, lines, config, storage, command_data))]
 pub async fn basic<S>(
     data: &Data,
     lines: &mut S,
@@ -221,6 +222,7 @@ impl List<'_> {
     // TODO parse all arguments
 
     // TODO setup
+    #[instrument(skip(self, lines, command_data))]
     pub async fn extended<S>(
         &self,
         lines: &mut S,
@@ -254,6 +256,7 @@ impl List<'_> {
 }
 
 impl List<'_> {
+    #[instrument(skip(self, lines, config, storage, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
@@ -287,6 +290,7 @@ pub struct LSub<'a> {
 }
 
 impl LSub<'_> {
+    #[instrument(skip(self, lines, config, storage, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,

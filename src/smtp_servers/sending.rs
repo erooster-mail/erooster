@@ -19,7 +19,7 @@ pub struct EmailPayload {
 }
 
 #[allow(clippy::too_many_lines)]
-#[instrument(skip(con, email, to))]
+#[instrument(skip(con, email, current_job, to))]
 async fn send_email<T>(
     con: T,
     email: &EmailPayload,
@@ -234,7 +234,7 @@ where
 // Note this is a hack to get max retries. Please fix this
 #[job(retries = 4294967295, backoff_secs = 1200)]
 #[allow(clippy::too_many_lines)]
-#[instrument(skip(_message))]
+#[instrument(skip(current_job, _message))]
 pub async fn send_email_job(
     // The first argument should always be the current job.
     mut current_job: CurrentJob,
@@ -400,7 +400,7 @@ pub async fn send_email_job(
     Ok(())
 }
 
-#[instrument(skip(addr, target))]
+#[instrument(skip(addr, current_job, target))]
 async fn get_unsecure_connection(
     addr: IpAddr,
     current_job: &CurrentJob,
@@ -420,7 +420,7 @@ async fn get_unsecure_connection(
     Ok(Framed::new(stream, LinesCodec::new()))
 }
 
-#[instrument(skip(addr, target, tls_domain))]
+#[instrument(skip(addr, target, current_job, tls_domain))]
 async fn get_secure_connection(
     addr: IpAddr,
     current_job: &CurrentJob,

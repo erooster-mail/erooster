@@ -18,7 +18,15 @@ COPY . .
 RUN cargo build --release --bin erooster
 
 # We do not need the Rust toolchain to run the binary!
-FROM gcr.io/distroless/cc
+FROM gcr.io/distroless/cc:nonroot
+LABEL maintainer="mtrnord@nordgedanken.dev"
+USER nonroot
+
+EXPOSE 993
+EXPOSE 143
+EXPOSE 25
+EXPOSE 465
+
 WORKDIR /app
 COPY --from=builder /app/target/release/erooster /usr/local/bin
 ENTRYPOINT ["/usr/local/bin/erooster"]

@@ -1,4 +1,4 @@
-FROM rust:slim AS chef 
+FROM rustlang/rust:nightly-slim AS chef 
 
 # We only pay the installation cost once, 
 # it will be cached from the second build onwards

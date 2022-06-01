@@ -61,8 +61,11 @@ async fn main() -> Result<()> {
 
     let mut _guard;
     if config.sentry {
+        let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
+            .or_else(|_| tracing_subscriber::EnvFilter::try_new("info"))?;
         tracing_subscriber::Registry::default()
             .with(sentry::integrations::tracing::layer())
+            .with(filter_layer)
             .with(tracing_subscriber::fmt::Layer::default())
             .init();
         info!("Sentry logging is enabled. Change the config to disable it.");

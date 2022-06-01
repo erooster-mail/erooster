@@ -1,8 +1,8 @@
-FROM rustlang/rust:nightly-slim AS chef 
+FROM rustlang/rust:nightly-slim AS chef
 
-# We only pay the installation cost once, 
+# We only pay the installation cost once,
 # it will be cached from the second build onwards
-RUN cargo install cargo-chef 
+RUN cargo install cargo-chef
 WORKDIR /app
 
 FROM chef AS planner
@@ -28,5 +28,5 @@ EXPOSE 25
 EXPOSE 465
 
 WORKDIR /app
-COPY --from=builder /app/target/release/erooster/erooster /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/erooster"]
+COPY --from=builder /app/target/release/erooster /
+ENTRYPOINT ["/erooster"]

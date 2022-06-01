@@ -267,6 +267,7 @@ pub async fn send_email_job(
                 target
             );
             let mut address: Option<IpAddr> = None;
+            let mut tls_domain: String = target.to_string();
             let response = resolver.ipv6_lookup(target.clone()).await;
             if let Ok(response) = response {
                 address = Some(IpAddr::V6(
@@ -302,6 +303,9 @@ pub async fn send_email_job(
                         address = Some(IpAddr::V6(
                             *response.iter().next().ok_or("No address found")?,
                         ));
+                        if let Some(record) = record.exchange().to_utf8().strip_suffix('.') {
+                            tls_domain = record.to_string();
+                        }
                         debug!("[{}] Got {:?} for {}", current_job.id(), address, target);
                     } else {
                         debug!("[{}] Looking up A records for {}", current_job.id(), target);
@@ -310,6 +314,9 @@ pub async fn send_email_job(
                             address = Some(IpAddr::V4(
                                 *response.iter().next().ok_or("No address found")?,
                             ));
+                            if let Some(record) = record.exchange().to_utf8().strip_suffix('.') {
+                                tls_domain = record.to_string();
+                            }
                             debug!("[{}] Got {:?} for {}", current_job.id(), address, target);
                         }
                     }
@@ -321,7 +328,7 @@ pub async fn send_email_job(
                 continue;
             }
 
-            match get_secure_connection(address.unwrap(), &current_job, target).await {
+            match get_secure_connection(address.unwrap(), &current_job, target, &tls_domain).await {
                 Ok(secure_con) => {
                     if let Err(e) = send_email(secure_con, &email, &current_job, to, true).await {
                         error!(
@@ -408,7 +415,8 @@ async fn get_unsecure_connection(
 async fn get_secure_connection(
     addr: IpAddr,
     current_job: &CurrentJob,
-    target: &String,
+    target: &str,
+    tls_domain: &str,
 ) -> Result<
     impl Stream<Item = Result<String, LinesCodecError>> + Sink<String, Error = LinesCodecError>,
     Box<dyn Error + Send + Sync + 'static>,
@@ -431,7 +439,7 @@ async fn get_secure_connection(
         stream.local_addr()?
     );
 
-    let domain = rustls::ServerName::try_from(target.as_str())
+    let domain = rustls::ServerName::try_from(tls_domain)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid dnsname"))?;
 
     let stream = connector.connect(domain, stream).await?;

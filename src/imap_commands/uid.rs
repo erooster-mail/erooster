@@ -209,8 +209,8 @@ fn generate_response_for_attributes(
         }
         FetchAttributes::Uid => None,
         FetchAttributes::BodyStructure => None,
-        FetchAttributes::BodySection(section_text, range)
-        | FetchAttributes::BodyPeek(section_text, range) => Some(body(section_text, range, mail)),
+        FetchAttributes::BodySection(section_text, range)=> Some(body(section_text, range, mail,true)),
+        FetchAttributes::BodyPeek(section_text, range) => Some(body(section_text, range, mail,false)),
         FetchAttributes::Binary(_, _) => None,
         FetchAttributes::BinaryPeek(_, _) => None,
         FetchAttributes::BinarySize(_) => None,
@@ -222,6 +222,7 @@ fn body(
     section_text: Option<SectionText>,
     range: Option<(u64, u64)>,
     mail: &mut MailEntryType,
+    seen: bool,
 ) -> String {
     if let Some(section_text) = section_text {
         match section_text {
@@ -230,8 +231,8 @@ fn body(
                 String::from("BODY[HEADER] NIL\r\n")
             }
             super::parsers::SectionText::Text => {
+                // TODO we need to figure out multipart emails
                 if let Some((start, end)) = range {
-                    // TODO get range of octets
                     if let Ok(body) = mail.parsed() {
                         if let Ok(body_text) = body.get_body_raw() {
                             let end = if body_text.len() < (end as usize) {

@@ -2,7 +2,7 @@ use crate::{
     backend::{database::DB, storage::Storage},
     config::Config,
     smtp_commands::{
-        auth::Auth, data::DataCommand, ehlo::Ehlo, mail::Mail, noop::Noop, quit::Quit, rcpt::Rcpt,
+        auth::Auth, data::DataCommand, ehlo::Ehlo, mail::Mail, noop::Noop, quit::Quit, rcpt::Rcpt, rset::Rset,
     },
     smtp_servers::state::{AuthState, Connection, State},
 };
@@ -31,6 +31,7 @@ mod noop;
 mod parsers;
 mod quit;
 mod rcpt;
+mod rset;
 
 #[derive(Debug)]
 pub struct Data {
@@ -63,6 +64,7 @@ pub enum Commands {
     DATA,
     AUTH,
     NOOP,
+    RSET,
 }
 
 impl TryFrom<&str> for Commands {
@@ -78,6 +80,7 @@ impl TryFrom<&str> for Commands {
             "data" => Ok(Commands::DATA),
             "auth" => Ok(Commands::AUTH),
             "noop" => Ok(Commands::NOOP),
+            "rset" => Ok(Commands::RSET),
             _ => {
                 warn!("[SMTP⦘ Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
@@ -177,6 +180,9 @@ impl Data {
                 };
 
                 match command_data.command {
+                    Commands::RSET => {
+                        Rset.exec(config.mail.hostname.clone(), lines).await?;
+                    }
                     Commands::EHLO => {
                         Ehlo.exec(config.mail.hostname.clone(), lines).await?;
                     }

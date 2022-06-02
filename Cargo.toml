@@ -43,7 +43,7 @@ async-trait = "0.1.52"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
 clap = { version = "3.1.6", features = ["derive", "color", "suggestions","env"] }
-notify = "5.0.0-pre.13"
+notify = "5.0.0-pre.15"
 const_format = "0.2.22"
 sqlx = { version = "0.5", features = [ "runtime-tokio-rustls"] }
 argon2 = { version = "0.4", features = ["std"] }
@@ -89,7 +89,7 @@ maildir = ["dep:maildir"]
 
 [dev-dependencies]
 criterion = {version = "0.3", features = ["async_tokio"]}
-enum-iterator = "0.8.1"
+enum-iterator = "1.1.1"
 enum-display-derive = "0.1.1"
 convert_case = "0.5.0"
 

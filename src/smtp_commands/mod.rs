@@ -50,7 +50,7 @@ pub struct CommandData<'a> {
 #[cfg_attr(
     test,
     derive(
-        enum_iterator::IntoEnumIterator,
+        enum_iterator::Sequence,
         enum_display_derive::Display,
         Clone,
         Copy,
@@ -227,11 +227,11 @@ impl Data {
 mod tests {
     use super::*;
     use convert_case::{Case, Casing};
-    use enum_iterator::IntoEnumIterator;
+    use enum_iterator::all;
 
     #[test]
     fn test_parsing_commands() {
-        for command_variant in Commands::into_enum_iter() {
+        for command_variant in all::<Commands>() {
             if let Commands::MAILFROM = command_variant {
                 // This command has a space
                 assert_eq!(

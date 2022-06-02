@@ -34,6 +34,7 @@ pub struct Webserver {
     /// The ip the webserver should listen on
     #[serde(default = "default_webserver_ip")]
     pub ip: String,
+    /// If enabled the webserver will use TLS
     #[serde(default)]
     pub tls: bool,
 }

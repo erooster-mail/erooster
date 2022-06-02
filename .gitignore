@@ -7,3 +7,4 @@
 /flamegraph*.svg
 /perf.data*
 /db.sqlite
+/*.patch

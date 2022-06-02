@@ -65,7 +65,7 @@ tower-http = { version = "0.3.0", features = ["trace"] }
 axum ={ version = "0.5.6", features = ["http2"]}
 axum-server = { version = "0.4", features = ["tls-rustls"] }
 opentelemetry = { version = "0.17", features = ["metrics", "tokio"] }
-opentelemetry-jaeger = { version = "0.16", features = ["tokio"] }
+opentelemetry-jaeger = { version = "0.16", features = ["tokio"], optional = true }
 tracing-opentelemetry = "0.17"
 axum-opentelemetry-middleware = { git="https://gitlab.com/famedly/company/backend/libraries/axum-opentelemetry-middleware.git" }
 
@@ -83,6 +83,7 @@ optional = true
 [features]
 default = ["maildir"]
 maildir = ["dep:maildir"]
+jaeger = ["dep:opentelemetry-jaeger"]
 
 #[profile.release]
 #debug = true

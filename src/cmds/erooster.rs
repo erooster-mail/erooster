@@ -57,10 +57,6 @@ async fn main() -> Result<()> {
     let (panic_hook, eyre_hook) = builder.into_hooks();
     eyre_hook.install()?;
 
-    let tracer = opentelemetry_jaeger::new_pipeline()
-        .with_service_name(env!("CARGO_PKG_NAME"))
-        .install_simple()?;
-
     // Get arfs and config
     let args = Args::parse();
     info!("Starting ERooster Server");
@@ -71,13 +67,27 @@ async fn main() -> Result<()> {
     if config.sentry {
         let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
             .or_else(|_| tracing_subscriber::EnvFilter::try_new("info"))?;
-        tracing_subscriber::Registry::default()
-            .with(sentry::integrations::tracing::layer())
-            .with(filter_layer)
-            .with(tracing_subscriber::fmt::Layer::default())
-            .with(ErrorLayer::default())
-            .with(tracing_opentelemetry::layer().with_tracer(tracer))
-            .init();
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "jaeger")] {
+                let tracer = opentelemetry_jaeger::new_pipeline().with_service_name(env!("CARGO_PKG_NAME")).install_simple()?;
+                tracing_subscriber::Registry::default()
+                    .with(sentry::integrations::tracing::layer())
+                    .with(filter_layer)
+                    .with(tracing_subscriber::fmt::Layer::default())
+                    .with(ErrorLayer::default())
+                    .with(tracing_opentelemetry::layer().with_tracer(tracer))
+                    .init();
+            } else {
+                 tracing_subscriber::Registry::default()
+                    .with(sentry::integrations::tracing::layer())
+                    .with(filter_layer)
+                    .with(tracing_subscriber::fmt::Layer::default())
+                    .with(ErrorLayer::default())
+                    .with(tracing_opentelemetry::layer())
+                    .init();
+            }
+        }
+
         info!("Sentry logging is enabled. Change the config to disable it.");
 
         _guard = sentry::init((
@@ -97,12 +107,26 @@ async fn main() -> Result<()> {
         info!("Sentry logging is disabled. Change the config to enable it.");
         let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
             .or_else(|_| tracing_subscriber::EnvFilter::try_new("info"))?;
-        tracing_subscriber::Registry::default()
-            .with(filter_layer)
-            .with(tracing_subscriber::fmt::Layer::default())
-            .with(ErrorLayer::default())
-            .with(tracing_opentelemetry::layer().with_tracer(tracer))
-            .init();
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "jaeger")] {
+                let tracer = opentelemetry_jaeger::new_pipeline().with_service_name(env!("CARGO_PKG_NAME")).install_simple()?;
+                tracing_subscriber::Registry::default()
+                    .with(sentry::integrations::tracing::layer())
+                    .with(filter_layer)
+                    .with(tracing_subscriber::fmt::Layer::default())
+                    .with(ErrorLayer::default())
+                    .with(tracing_opentelemetry::layer().with_tracer(tracer))
+                    .init();
+            } else {
+                 tracing_subscriber::Registry::default()
+                    .with(sentry::integrations::tracing::layer())
+                    .with(filter_layer)
+                    .with(tracing_subscriber::fmt::Layer::default())
+                    .with(ErrorLayer::default())
+                    .with(tracing_opentelemetry::layer())
+                    .init();
+            }
+        }
     }
     // Make panics pretty
     let next = std::panic::take_hook();

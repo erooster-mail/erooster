@@ -131,8 +131,16 @@ async fn main() -> Result<()> {
     // Make panics pretty
     let next = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |panic_info| {
-        eprintln!("{}", panic_hook.panic_report(panic_info));
-        next(panic_info);
+        let report = panic_hook.panic_report(panic_info);
+        if report
+            .to_string()
+            .contains("Job `erooster::smtp_servers::sending::send_email_job` failed")
+        {
+            error!("Job `erooster::smtp_servers::sending::send_email_job` failed");
+        } else {
+            eprintln!("{}", report);
+            next(panic_info);
+        }
     }));
 
     // Continue loading database and storage

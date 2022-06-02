@@ -155,7 +155,7 @@ dependencies = [
 [[package]]
 name = "axum-opentelemetry-middleware"
 version = "0.1.0"
-source = "git+https://gitlab.com/famedly/company/backend/libraries/axum-opentelemetry-middleware.git#5abdddf67604c46e43e613267d2f6076d1adf67c"
+source = "git+https://gitlab.com/famedly/company/backend/libraries/axum-opentelemetry-middleware.git#263b8507c01d0e9a6d3ed86b4ad878f567b217b4"
 dependencies = [
  "axum",
  "base64",

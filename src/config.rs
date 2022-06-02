@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
 
+const fn default_webserver_port() -> u16 {
+    8080
+}
+
 /// The config for the mailserver
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -14,6 +18,9 @@ pub struct Config {
     /// If enabled it wil report to sentry
     #[serde(default)]
     pub sentry: bool,
+    /// The port of the webserver
+    #[serde(default = "default_webserver_port")]
+    pub webserver_port: u16,
 }
 
 /// Configurations specific to the Database

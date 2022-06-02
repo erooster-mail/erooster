@@ -52,14 +52,21 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Setup logging and metrics
     let builder = color_eyre::config::HookBuilder::default().panic_message(EroosterPanicMessage);
     let (panic_hook, eyre_hook) = builder.into_hooks();
     eyre_hook.install()?;
 
+    let tracer = opentelemetry_jaeger::new_pipeline()
+        .with_service_name(env!("CARGO_PKG_NAME"))
+        .install_simple()?;
+
+    // Get arfs and config
     let args = Args::parse();
     info!("Starting ERooster Server");
     let config = erooster::get_config(args.config).await?;
 
+    // Setup the rest of our logging
     let mut _guard;
     if config.sentry {
         let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
@@ -69,6 +76,7 @@ async fn main() -> Result<()> {
             .with(filter_layer)
             .with(tracing_subscriber::fmt::Layer::default())
             .with(ErrorLayer::default())
+            .with(tracing_opentelemetry::layer().with_tracer(tracer))
             .init();
         info!("Sentry logging is enabled. Change the config to disable it.");
 
@@ -87,23 +95,36 @@ async fn main() -> Result<()> {
         ));
     } else {
         info!("Sentry logging is disabled. Change the config to enable it.");
-        tracing_subscriber::fmt::init();
+        let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
+            .or_else(|_| tracing_subscriber::EnvFilter::try_new("info"))?;
+        tracing_subscriber::Registry::default()
+            .with(filter_layer)
+            .with(tracing_subscriber::fmt::Layer::default())
+            .with(ErrorLayer::default())
+            .with(tracing_opentelemetry::layer().with_tracer(tracer))
+            .init();
     }
+    // Make panics pretty
     let next = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |panic_info| {
         eprintln!("{}", panic_hook.panic_report(panic_info));
         next(panic_info);
     }));
 
+    // Continue loading database and storage
     let database = Arc::new(get_database(Arc::clone(&config)).await?);
     let storage = Arc::new(get_storage(Arc::clone(&database)));
+
+    // Startup servers
     erooster::imap_servers::start(
         Arc::clone(&config),
         Arc::clone(&database),
         Arc::clone(&storage),
     )?;
     // We do need the let here to make sure that the runner is bound to the lifetime of main.
-    let _runner = erooster::smtp_servers::start(config, database, storage).await?;
+    let _runner = erooster::smtp_servers::start(Arc::clone(&config), database, storage).await?;
+
+    erooster::webserver::start(Arc::clone(&config)).await?;
 
     match signal::ctrl_c().await {
         Ok(()) => {}

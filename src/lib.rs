@@ -59,6 +59,9 @@ pub mod smtp_servers;
 /// The configuration file for the server
 pub mod config;
 
+/// The webserver logic
+pub mod webserver;
+
 /// Returns the config struct from the provided location or defaults
 #[instrument(skip(config_path))]
 pub async fn get_config(config_path: String) -> Result<Arc<Config>> {

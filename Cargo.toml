@@ -61,9 +61,15 @@ webpki-roots = "0.22.3"
 sentry = { version = "0.26.0", default-features = false, features = ["tracing", "backtrace", "contexts", "panic", "reqwest", "rustls"]}
 url = "2.2.2"
 sys-info = "0.9.1"
+tower-http = { version = "0.3.0", features = ["trace"] }
+axum = "0.5.6"
+opentelemetry = { version = "0.17", features = ["metrics", "tokio"] }
+opentelemetry-jaeger = { version = "0.16", features = ["tokio"] }
+tracing-opentelemetry = "0.17"
+axum-opentelemetry-middleware = { git="https://gitlab.com/famedly/company/backend/libraries/axum-opentelemetry-middleware.git" }
 
 [build-dependencies]
-vergen = "6"
+vergen = "7"
 clap_mangen = "0.1"
 clap = { version = "3.1.6", features = ["derive", "color", "suggestions","env"] }
 

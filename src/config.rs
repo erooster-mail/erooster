@@ -3,9 +3,6 @@ use serde::{Deserialize, Serialize};
 const fn default_webserver_port() -> u16 {
     8080
 }
-fn default_webserver_ip() -> String {
-    String::from("127.0.0.1")
-}
 
 /// The config for the mailserver
 #[derive(Debug, Serialize, Deserialize)]
@@ -31,9 +28,6 @@ pub struct Webserver {
     /// The port of the webserver
     #[serde(default = "default_webserver_port")]
     pub port: u16,
-    /// The ip the webserver should listen on
-    #[serde(default = "default_webserver_ip")]
-    pub ip: String,
     /// If enabled the webserver will use TLS
     #[serde(default)]
     pub tls: bool,

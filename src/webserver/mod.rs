@@ -1,7 +1,7 @@
 use crate::config::Config;
 use axum::{response::Html, routing::get, Router};
 use axum_server::tls_rustls::RustlsConfig;
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 use tower_http::trace::TraceLayer;
 use tracing::info;
 
@@ -12,29 +12,49 @@ pub async fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         axum_opentelemetry_middleware::RecorderMiddlewareBuilder::new(env!("CARGO_PKG_NAME"));
     let metrics_middleware = metrics_middleware.build();
 
-    let app = Router::new()
-        .route("/", get(handler))
-        .route(
-            "/metrics",
-            get(axum_opentelemetry_middleware::metrics_endpoint),
-        )
-        .layer(metrics_middleware)
-        .layer(TraceLayer::new_for_http());
-
-    let addr = format!("{}:{}", config.webserver.ip, config.webserver.port).parse()?;
-
-    if config.webserver.tls {
-        let config =
-            RustlsConfig::from_pem_file(config.tls.cert_path.clone(), config.tls.key_path.clone())
-                .await?;
-        info!("[Webserver] Listening on {}", addr);
-        axum_server::bind_rustls(addr, config)
-            .serve(app.into_make_service())
-            .await?;
+    let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
+        listen_ips
+            .iter()
+            .map(|ip| format!("{}:{}", ip, config.webserver.port).parse().unwrap())
+            .collect()
     } else {
-        axum::Server::bind(&addr)
-            .serve(app.into_make_service())
-            .await?;
+        vec![format!("0.0.0.0:{}", config.webserver.port).parse()?]
+    };
+    for addr in addrs {
+        let config = Arc::clone(&config);
+        let metrics_middleware = metrics_middleware.clone();
+        tokio::spawn(async move {
+            let config = Arc::clone(&config);
+            let app = Router::new()
+                .route("/", get(handler))
+                .route(
+                    "/metrics",
+                    get(axum_opentelemetry_middleware::metrics_endpoint),
+                )
+                .layer(metrics_middleware.clone())
+                .layer(TraceLayer::new_for_http());
+
+            if config.webserver.tls {
+                let tls_config = RustlsConfig::from_pem_file(
+                    config.tls.cert_path.clone(),
+                    config.tls.key_path.clone(),
+                )
+                .await
+                .unwrap();
+
+                info!("[Webserver] Listening on {}", addr);
+                axum_server::bind_rustls(addr, tls_config)
+                    .serve(app.into_make_service())
+                    .await
+                    .unwrap();
+            } else {
+                info!("[Webserver] Listening on {}", addr);
+                axum_server::bind(addr)
+                    .serve(app.into_make_service())
+                    .await
+                    .unwrap();
+            }
+        });
     }
 
     Ok(())

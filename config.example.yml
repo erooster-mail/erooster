@@ -6,8 +6,10 @@ mail:
   hostname: "localhost"
 database:
   postgres_url: ""
+listen_ips:
+  - "[::1]"
+  - "127.0.0.1"
 webserver:
-  ip: "127.0.0.1"
   port: "80"
   tls: false
 sentry: false

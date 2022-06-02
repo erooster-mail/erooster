@@ -42,11 +42,11 @@ use owo_colors::{
     colors::{BrightCyan, BrightGreen, BrightRed, BrightWhite},
     DynColors, OwoColorize,
 };
-use tracing_error::ErrorLayer;
 use std::borrow::Cow;
 use std::io::Write;
 use std::{io, process::exit, sync::Arc};
 use tracing::{error, info, warn};
+use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Parser, Debug)]

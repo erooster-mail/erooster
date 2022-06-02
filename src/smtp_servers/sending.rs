@@ -312,21 +312,23 @@ pub async fn send_email_job(
                             exchange_record
                         };
                         debug!("[{}] Got {:?} for {}", current_job.id(), address, target);
-                    } else {
-                        debug!("[{}] Looking up A records for {}", current_job.id(), target);
-                        let response = resolver.ipv4_lookup(record.exchange().clone()).await;
-                        if let Ok(response) = response {
-                            address = Some(IpAddr::V4(
-                                *response.iter().next().ok_or("No address found")?,
-                            ));
-                            let exchange_record = record.exchange().to_utf8();
-                            tls_domain = if let Some(record) = exchange_record.strip_suffix('.') {
-                                record.to_string()
-                            } else {
-                                exchange_record
-                            };
-                            debug!("[{}] Got {:?} for {}", current_job.id(), address, target);
-                        }
+                        break;
+                    }
+
+                    debug!("[{}] Looking up A records for {}", current_job.id(), target);
+                    let response = resolver.ipv4_lookup(record.exchange().clone()).await;
+                    if let Ok(response) = response {
+                        address = Some(IpAddr::V4(
+                            *response.iter().next().ok_or("No address found")?,
+                        ));
+                        let exchange_record = record.exchange().to_utf8();
+                        tls_domain = if let Some(record) = exchange_record.strip_suffix('.') {
+                            record.to_string()
+                        } else {
+                            exchange_record
+                        };
+                        debug!("[{}] Got {:?} for {}", current_job.id(), address, target);
+                        break;
                     }
                 }
             }

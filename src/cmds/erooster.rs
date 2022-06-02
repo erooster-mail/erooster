@@ -36,11 +36,11 @@ use erooster::{
     backend::{database::get_database, storage::get_storage},
     panic_handler::EroosterPanicMessage,
 };
-use tracing_error::ErrorLayer;
 use std::borrow::Cow;
 use std::sync::Arc;
 use tokio::signal;
 use tracing::{error, info, warn};
+use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Parser, Debug)]

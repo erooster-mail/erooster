@@ -4,8 +4,8 @@ use tracing::instrument;
 pub struct Rset;
 
 impl Rset {
-    #[instrument(skip(self, hostname, lines))]
-    pub async fn exec<S>(&self, hostname: String, lines: &mut S) -> color_eyre::eyre::Result<()>
+    #[instrument(skip(self, lines))]
+    pub async fn exec<S>(&self, lines: &mut S) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {

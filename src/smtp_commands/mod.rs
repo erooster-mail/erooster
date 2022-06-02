@@ -2,7 +2,8 @@ use crate::{
     backend::{database::DB, storage::Storage},
     config::Config,
     smtp_commands::{
-        auth::Auth, data::DataCommand, ehlo::Ehlo, mail::Mail, noop::Noop, quit::Quit, rcpt::Rcpt, rset::Rset,
+        auth::Auth, data::DataCommand, ehlo::Ehlo, mail::Mail, noop::Noop, quit::Quit, rcpt::Rcpt,
+        rset::Rset,
     },
     smtp_servers::state::{AuthState, Connection, State},
 };
@@ -181,7 +182,7 @@ impl Data {
 
                 match command_data.command {
                     Commands::RSET => {
-                        Rset.exec(config.mail.hostname.clone(), lines).await?;
+                        Rset.exec(lines).await?;
                     }
                     Commands::EHLO => {
                         Ehlo.exec(config.mail.hostname.clone(), lines).await?;

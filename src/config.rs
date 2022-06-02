@@ -3,6 +3,9 @@ use serde::{Deserialize, Serialize};
 const fn default_webserver_port() -> u16 {
     8080
 }
+fn default_webserver_ip() -> String {
+    String::from("127.0.0.1")
+}
 
 /// The config for the mailserver
 #[derive(Debug, Serialize, Deserialize)]
@@ -18,9 +21,21 @@ pub struct Config {
     /// If enabled it wil report to sentry
     #[serde(default)]
     pub sentry: bool,
+    /// The config of the webserver
+    pub webserver: Webserver,
+}
+
+/// The config for the webserver
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Webserver {
     /// The port of the webserver
     #[serde(default = "default_webserver_port")]
-    pub webserver_port: u16,
+    pub port: u16,
+    /// The ip the webserver should listen on
+    #[serde(default = "default_webserver_ip")]
+    pub ip: String,
+    #[serde(default)]
+    pub tls: bool,
 }
 
 /// Configurations specific to the Database

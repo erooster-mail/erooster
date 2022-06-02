@@ -59,6 +59,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d301b3b94cb4b2f23d7917810addbbaff90738e0ca2be692bd027e70d7e0330c"
 
 [[package]]
+name = "arc-swap"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5d78ce20460b82d3fa150275ed9d55e21064fc7951177baacf86a145c4a4b1f"
+
+[[package]]
 name = "argon2"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -167,6 +173,26 @@ dependencies = [
  "time 0.3.9",
  "tokio",
  "tower",
+]
+
+[[package]]
+name = "axum-server"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "abf18303ef7e23b045301555bf8a0dfbc1444ea1a37b3c81757a32680ace4d7d"
+dependencies = [
+ "arc-swap",
+ "bytes",
+ "futures-util",
+ "http",
+ "http-body",
+ "hyper",
+ "pin-project-lite",
+ "rustls 0.20.6",
+ "rustls-pemfile 1.0.0",
+ "tokio",
+ "tokio-rustls 0.23.4",
+ "tower-service",
 ]
 
 [[package]]
@@ -762,6 +788,7 @@ dependencies = [
  "async-trait",
  "axum",
  "axum-opentelemetry-middleware",
+ "axum-server",
  "base64",
  "bytes",
  "cfg-if 1.0.0",

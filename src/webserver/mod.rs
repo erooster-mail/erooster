@@ -1,10 +1,9 @@
-use std::{net::SocketAddr, sync::Arc};
-
+use crate::config::Config;
 use axum::{response::Html, routing::get, Router};
+use axum_server::tls_rustls::RustlsConfig;
+use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 use tracing::info;
-
-use crate::config::Config;
 
 /// Starts the webserver used for the admin page and metrics
 #[tracing::instrument(skip(config))]
@@ -22,12 +21,22 @@ pub async fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         .layer(metrics_middleware)
         .layer(TraceLayer::new_for_http());
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], config.webserver_port));
-    info!("Webserver listening on {}", addr);
+    let addr = format!("{}:{}", config.webserver.ip, config.webserver.port).parse()?;
 
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await?;
+    if config.webserver.tls {
+        let config =
+            RustlsConfig::from_pem_file(config.tls.cert_path.clone(), config.tls.key_path.clone())
+                .await?;
+        info!("[Webserver] Listening on {}", addr);
+        axum_server::bind_rustls(addr, config)
+            .serve(app.into_make_service())
+            .await?;
+    } else {
+        axum::Server::bind(&addr)
+            .serve(app.into_make_service())
+            .await?;
+    }
+
     Ok(())
 }
 

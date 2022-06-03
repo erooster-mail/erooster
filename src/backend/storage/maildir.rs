@@ -206,15 +206,16 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let maildir_flags = imap_flags
             .iter()
             .filter_map(|flag| {
-                if flag.to_lowercase() == "\\seen" {
+                let normalized_flag = flag.to_lowercase().replace("(", "").replace(")", "");
+                if normalized_flag == "\\seen" {
                     Some("S")
-                } else if flag.to_lowercase() == "\\deleted" {
+                } else if normalized_flag == "\\deleted" {
                     Some("T")
-                } else if flag.to_lowercase() == "\\flagged" {
+                } else if normalized_flag == "\\flagged" {
                     Some("F")
-                } else if flag.to_lowercase() == "\\draft" {
+                } else if normalized_flag == "\\draft" {
                     Some("D")
-                } else if flag.to_lowercase() == "\\answered" {
+                } else if normalized_flag == "\\answered" {
                     Some("R")
                 } else {
                     None
@@ -237,16 +238,16 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let maildir_flags = imap_flags
             .iter()
             .filter_map(|flag| {
-                debug!("{}", flag.to_lowercase());
-                if flag.to_lowercase() == "\\seen" {
+                let normalized_flag = flag.to_lowercase().replace("(", "").replace(")", "");
+                if normalized_flag == "\\seen" {
                     Some("S")
-                } else if flag.to_lowercase() == "\\deleted" {
+                } else if normalized_flag == "\\deleted" {
                     Some("T")
-                } else if flag.to_lowercase() == "\\flagged" {
+                } else if normalized_flag == "\\flagged" {
                     Some("F")
-                } else if flag.to_lowercase() == "\\draft" {
+                } else if normalized_flag == "\\draft" {
                     Some("D")
-                } else if flag.to_lowercase() == "\\answered" {
+                } else if normalized_flag == "\\answered" {
                     Some("R")
                 } else {
                     None
@@ -270,15 +271,16 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let maildir_flags = imap_flags
             .iter()
             .filter_map(|flag| {
-                if flag.to_lowercase() == "\\seen" {
+                let normalized_flag = flag.to_lowercase().replace("(", "").replace(")", "");
+                if normalized_flag == "\\seen" {
                     Some("S")
-                } else if flag.to_lowercase() == "\\deleted" {
+                } else if normalized_flag == "\\deleted" {
                     Some("T")
-                } else if flag.to_lowercase() == "\\flagged" {
+                } else if normalized_flag == "\\flagged" {
                     Some("F")
-                } else if flag.to_lowercase() == "\\draft" {
+                } else if normalized_flag == "\\draft" {
                     Some("D")
-                } else if flag.to_lowercase() == "\\answered" {
+                } else if normalized_flag == "\\answered" {
                     Some("R")
                 } else {
                     None
@@ -301,15 +303,16 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let maildir_flags = imap_flags
             .iter()
             .filter_map(|flag| {
-                if flag.to_lowercase() == "\\seen" {
+                let normalized_flag = flag.to_lowercase().replace("(", "").replace(")", "");
+                if normalized_flag == "\\seen" {
                     Some("S")
-                } else if flag.to_lowercase() == "\\deleted" {
+                } else if normalized_flag == "\\deleted" {
                     Some("T")
-                } else if flag.to_lowercase() == "\\flagged" {
+                } else if normalized_flag == "\\flagged" {
                     Some("F")
-                } else if flag.to_lowercase() == "\\draft" {
+                } else if normalized_flag == "\\draft" {
                     Some("D")
-                } else if flag.to_lowercase() == "\\answered" {
+                } else if normalized_flag == "\\answered" {
                     Some("R")
                 } else {
                     None

@@ -80,24 +80,24 @@ pub struct CommandData<'a> {
     )
 )]
 pub enum Commands {
-    Capability,
-    Login,
     Authenticate,
-    List,
-    LSub,
-    Logout,
-    Select,
-    Examine,
-    Noop,
+    Capability,
     Check,
+    Close,
     Create,
     Delete,
+    Examine,
+    Fetch,
+    List,
+    Login,
+    Logout,
+    LSub,
+    Noop,
+    Rename,
+    Select,
     Subscribe,
     Unsubscribe,
-    Close,
-    Rename,
     Uid,
-    Fetch,
 }
 
 impl TryFrom<&str> for Commands {

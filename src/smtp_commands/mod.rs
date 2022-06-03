@@ -58,13 +58,13 @@ pub struct CommandData<'a> {
     )
 )]
 pub enum Commands {
-    EHLO,
-    QUIT,
-    MAILFROM,
-    RCPTTO,
-    DATA,
     AUTH,
+    DATA,
+    EHLO,
+    MAILFROM,
     NOOP,
+    QUIT,
+    RCPTTO,
     RSET,
 }
 

@@ -253,6 +253,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             })
             .collect::<Vec<_>>()
             .join("");
+        debug!("flags: {:?}", maildir_flags);
         maildir.add_flags(id, &maildir_flags)?;
         Ok(())
     }
@@ -315,7 +316,6 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             })
             .collect::<Vec<_>>()
             .join("");
-        debug!("flags: {:?}", maildir_flags);
         maildir.set_flags(id, &maildir_flags)?;
         Ok(())
     }

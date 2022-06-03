@@ -58,6 +58,9 @@ jobs:
           echo '  hostname: "localhost"' >> config.yml
           echo 'database:' >> config.yml
           echo '  postgres_url: "postgres://postgres:postgres@postgres/erooster"' >> config.yml
+          echo 'webserver:' >> config.yml
+          echo '  port: "80"' >> config.yml
+          echo '  tls: false' >> config.yml
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage

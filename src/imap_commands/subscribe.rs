@@ -32,6 +32,11 @@ impl Subscribe<'_> {
             let mailbox_path = Path::new(&config.mail.maildir_folders)
                 .join(self.data.con_state.read().await.username.clone().unwrap())
                 .join(folder.clone());
+
+            // This is a spec violation. However we need to do this currently due to how the storage is set up
+            if !mailbox_path.exists() {
+                storage.create_dirs(folder)?;
+            }
             storage.add_flag(&mailbox_path, "\\Subscribed").await?;
             lines
                 .send(format!("{} OK SUBSCRIBE completed", command_data.tag))

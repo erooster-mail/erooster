@@ -122,8 +122,8 @@ impl Append<'_> {
                 buffer.append(&mut bytes);
                 debug!("[Append] Appended {} bytes to buffer", buffer_length);
                 debug!("[Append] Buffer length: {}", buffer.len());
-                debug!("[Append] Exoected Buffersize: {}", state.datalen);
-                if buffer_length + bytes.len() > state.datalen {
+                debug!("[Append] Expected Buffersize: {}", state.datalen);
+                if buffer_length + bytes.len() >= state.datalen {
                     let folder = &state.folder;
                     let mut folder = folder.replace('/', ".");
                     folder.insert(0, '.');

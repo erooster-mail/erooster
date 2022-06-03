@@ -5,7 +5,7 @@ use crate::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{path::Path, sync::Arc};
-use tracing::instrument;
+use tracing::{debug, instrument};
 
 pub struct Subscribe<'a> {
     pub data: &'a Data,
@@ -32,10 +32,16 @@ impl Subscribe<'_> {
             let mailbox_path = Path::new(&config.mail.maildir_folders)
                 .join(self.data.con_state.read().await.username.clone().unwrap())
                 .join(folder.clone());
+            let mailbox_path_string = mailbox_path
+                .clone()
+                .into_os_string()
+                .into_string()
+                .expect("Failed to convert path. Your system may be incompatible");
 
             // This is a spec violation. However we need to do this currently due to how the storage is set up
+            debug!("mailbox_path: {}", mailbox_path_string);
             if !mailbox_path.exists() {
-                storage.create_dirs(folder)?;
+                storage.create_dirs(mailbox_path_string)?;
             }
             storage.add_flag(&mailbox_path, "\\Subscribed").await?;
             lines

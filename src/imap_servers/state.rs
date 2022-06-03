@@ -1,4 +1,4 @@
-use crate::imap_commands::auth::AuthenticationMethod;
+use crate::imap_commands::{auth::AuthenticationMethod, parsers::DateTime};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -30,6 +30,12 @@ pub enum State {
     Authenticated,
     /// Folder selected
     Selected(String, Access),
+    /// An Email is getting appended to the folder
+    /// Fields are left to right:
+    /// - folder
+    /// - flags
+    /// - datetime
+    Appending(String, Option<Vec<String>>, Option<DateTime>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

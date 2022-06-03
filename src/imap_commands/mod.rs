@@ -2,6 +2,7 @@ use crate::{
     backend::{database::DB, storage::Storage},
     config::Config,
     imap_commands::{
+        append::Append,
         auth::{Authenticate, AuthenticationMethod},
         capability::Capability,
         check::Check,
@@ -39,6 +40,7 @@ use tracing::{debug, error, instrument, warn};
 #[cfg(test)]
 use std::fmt::Display;
 
+mod append;
 pub mod auth;
 pub mod capability;
 mod check;
@@ -50,7 +52,7 @@ mod list;
 mod login;
 mod logout;
 mod noop;
-mod parsers;
+pub mod parsers;
 mod rename;
 mod select;
 mod store;
@@ -82,6 +84,7 @@ pub struct CommandData<'a> {
     )
 )]
 pub enum Commands {
+    Append,
     Authenticate,
     Capability,
     Check,
@@ -128,6 +131,7 @@ impl TryFrom<&str> for Commands {
             "uid" => Ok(Commands::Uid),
             "fetch" => Ok(Commands::Fetch),
             "store" => Ok(Commands::Store),
+            "append" => Ok(Commands::Append),
             _ => {
                 warn!("[IMAP] Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
@@ -330,6 +334,11 @@ impl Data {
                     Commands::Fetch => {
                         Fetch { data: self }
                             .exec(lines, config, &command_data, storage)
+                            .await?;
+                    }
+                    Commands::Append => {
+                        Append { data: self }
+                            .exec(lines, storage, config, &command_data)
                             .await?;
                     }
                 }

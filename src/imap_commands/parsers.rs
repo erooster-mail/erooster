@@ -1,11 +1,11 @@
 use nom::{
     branch::alt,
     bytes::complete::{tag_no_case, take_while1},
-    character::complete::{char, space1},
+    character::complete::{char, digit1, space1},
     combinator::{map, opt},
     error::{context, VerboseError},
     multi::separated_list0,
-    sequence::{delimited, separated_pair, tuple},
+    sequence::{delimited, pair, separated_pair, tuple},
     IResult,
 };
 use tracing::instrument;
@@ -262,6 +262,133 @@ fn inner_fetch_arguments(input: &str) -> Res<FetchArguments> {
 #[instrument(skip(input))]
 pub fn fetch_arguments(input: &str) -> Res<FetchArguments> {
     context("fetch_arguments", inner_fetch_arguments)(input)
+}
+
+#[instrument(skip(input))]
+pub fn day_of_week(input: &str) -> Res<&str> {
+    context(
+        "day_of_week",
+        alt((
+            tag_no_case("Mon"),
+            tag_no_case("Tue"),
+            tag_no_case("Wed"),
+            tag_no_case("Thu"),
+            tag_no_case("Fri"),
+            tag_no_case("Sat"),
+            tag_no_case("Sun"),
+        )),
+    )(input)
+}
+
+#[instrument(skip(input))]
+pub fn month(input: &str) -> Res<&str> {
+    context(
+        "month",
+        alt((
+            tag_no_case("Jan"),
+            tag_no_case("Feb"),
+            tag_no_case("Mar"),
+            tag_no_case("Apr"),
+            tag_no_case("May"),
+            tag_no_case("Jun"),
+            tag_no_case("Jul"),
+            tag_no_case("Aug"),
+            tag_no_case("Sep"),
+            tag_no_case("Oct"),
+            tag_no_case("Nov"),
+            tag_no_case("Dec"),
+        )),
+    )(input)
+}
+
+struct Time(String);
+
+#[instrument(skip(input))]
+fn time(input: &str) -> Res<Time> {
+    context(
+        "time",
+        map(
+            tuple((
+                digit1,
+                tag_no_case(":"),
+                digit1,
+                opt(pair(tag_no_case(":"), digit1)),
+            )),
+            |(hours, _, minutes, seconds)| {
+                if let Some((_, seconds)) = seconds {
+                    Time(format!("{}:{}:{}", hours, minutes, seconds))
+                } else {
+                    Time(format!("{}:{}", hours, minutes))
+                }
+            },
+        ),
+    )(input)
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum DateTime {
+    DayName(String),
+    DateTime(String),
+}
+
+#[instrument(skip(input))]
+fn date_time(input: &str) -> Res<DateTime> {
+    context(
+        "date_time",
+        map(
+            tuple((
+                opt(tuple((day_of_week, tag_no_case(","), space1))),
+                digit1,
+                space1,
+                month,
+                space1,
+                digit1,
+                space1,
+                time,
+                space1,
+                tuple((alt((tag_no_case("+"), tag_no_case("-"))), digit1)),
+            )),
+            |(day_of_week, day, _, month, _, year, _, time, _, (zone_dir, zone_offset))| {
+                if let Some((dayname, _, _)) = day_of_week {
+                    DateTime::DayName(format!(
+                        "{}, {} {} {} {} {}{}",
+                        dayname, day, month, year, time.0, zone_dir, zone_offset
+                    ))
+                } else {
+                    DateTime::DateTime(format!(
+                        "{} {} {} {} {}{}",
+                        day, month, year, time.0, zone_dir, zone_offset
+                    ))
+                }
+            },
+        ),
+    )(input)
+}
+
+#[instrument(skip(input))]
+pub fn append_arguments(input: &str) -> Res<(Option<Vec<&str>>, Option<DateTime>, &str)> {
+    context(
+        "append_arguments",
+        map(
+            tuple((
+                opt(delimited(
+                    char('('),
+                    separated_list0(
+                        space1,
+                        take_while1(|c: char| c != ')' && !c.is_whitespace()),
+                    ),
+                    char(')'),
+                )),
+                opt(space1),
+                opt(date_time),
+                opt(space1),
+                tag_no_case("{"),
+                take_while1(|c: char| c.is_ascii_digit() || c == '+'),
+                tag_no_case("}"),
+            )),
+            |(flags, _, datetime, _, _, literal, _)| (flags, datetime, literal),
+        ),
+    )(input)
 }
 
 #[cfg(test)]

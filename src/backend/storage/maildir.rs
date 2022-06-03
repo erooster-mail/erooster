@@ -10,7 +10,7 @@ use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 use tokio_stream::wrappers::LinesStream;
-use tracing::instrument;
+use tracing::{debug, instrument};
 
 /// The Storage handler for the maildir format
 pub struct MaildirStorage {
@@ -315,6 +315,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             })
             .collect::<Vec<_>>()
             .join("");
+        debug!("flags: {:?}", maildir_flags);
         maildir.set_flags(id, &maildir_flags)?;
         Ok(())
     }

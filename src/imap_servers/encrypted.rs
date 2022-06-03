@@ -139,7 +139,7 @@ impl Server for Encrypted {
     }
 }
 
-#[instrument(skip(stream, database, storage, file_watcher, acceptor))]
+#[instrument(skip(stream, config, database, storage, file_watcher, acceptor))]
 async fn listen(
     mut stream: TcpListenerStream,
     config: Arc<Config>,

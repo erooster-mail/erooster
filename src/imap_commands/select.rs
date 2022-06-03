@@ -48,7 +48,7 @@ where
     // Special INBOX check to make sure we have a mailbox
     let mailbox_path = Path::new(&config.mail.maildir_folders)
         .join(write_lock.username.clone().unwrap())
-        .join(folder.replace(".INBOX", "INBOX").clone());
+        .join(folder.replace(".INBOX", "INBOX"));
     if folder == "INBOX" && !mailbox_path.exists() {
         storage.create_dirs(
             mailbox_path
@@ -62,7 +62,7 @@ where
     }
     send_success(
         lines,
-        folder,
+        folder.replace(".INBOX", "INBOX"),
         storage,
         mailbox_path
             .into_os_string()

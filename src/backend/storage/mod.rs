@@ -81,6 +81,34 @@ pub trait MailStorage<M: MailEntry> {
     async fn list_new(&self, path: String) -> Vec<M>;
     /// Get the all messages
     async fn list_all(&self, path: String) -> Vec<M>;
+    /// Move mail to current folder and set flags
+    fn move_new_to_cur_with_flags(
+        &self,
+        path: String,
+        id: &str,
+        imap_flags: &[&str],
+    ) -> color_eyre::eyre::Result<()>;
+    /// Add flags to email
+    fn add_flags(
+        &self,
+        path: String,
+        id: &str,
+        imap_flags: &[&str],
+    ) -> color_eyre::eyre::Result<()>;
+    /// Set flags of an email
+    fn set_flags(
+        &self,
+        path: String,
+        id: &str,
+        imap_flags: &[&str],
+    ) -> color_eyre::eyre::Result<()>;
+    /// Remove flags of an email
+    fn remove_flags(
+        &self,
+        path: String,
+        id: &str,
+        imap_flags: &[&str],
+    ) -> color_eyre::eyre::Result<()>;
 }
 
 /// Get the struct of the current storage implementation

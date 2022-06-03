@@ -194,6 +194,130 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             })
             .collect()
     }
+
+    #[instrument(skip(self, path))]
+    fn move_new_to_cur_with_flags(
+        &self,
+        path: String,
+        id: &str,
+        imap_flags: &[&str],
+    ) -> color_eyre::eyre::Result<()> {
+        let maildir = Maildir::from(path);
+        let maildir_flags = imap_flags
+            .iter()
+            .filter_map(|flag| {
+                if flag.to_lowercase() == "\\seen" {
+                    Some("S")
+                } else if flag.to_lowercase() == "\\deleted" {
+                    Some("T")
+                } else if flag.to_lowercase() == "\\flagged" {
+                    Some("F")
+                } else if flag.to_lowercase() == "\\draft" {
+                    Some("D")
+                } else if flag.to_lowercase() == "\\answered" {
+                    Some("R")
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("");
+        maildir.move_new_to_cur_with_flags(id, &maildir_flags)?;
+        Ok(())
+    }
+
+    #[instrument(skip(self, path))]
+    fn add_flags(
+        &self,
+        path: String,
+        id: &str,
+        imap_flags: &[&str],
+    ) -> color_eyre::eyre::Result<()> {
+        let maildir = Maildir::from(path);
+        let maildir_flags = imap_flags
+            .iter()
+            .filter_map(|flag| {
+                if flag.to_lowercase() == "\\seen" {
+                    Some("S")
+                } else if flag.to_lowercase() == "\\deleted" {
+                    Some("T")
+                } else if flag.to_lowercase() == "\\flagged" {
+                    Some("F")
+                } else if flag.to_lowercase() == "\\draft" {
+                    Some("D")
+                } else if flag.to_lowercase() == "\\answered" {
+                    Some("R")
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("");
+        maildir.add_flags(id, &maildir_flags)?;
+        Ok(())
+    }
+
+    #[instrument(skip(self, path))]
+    fn set_flags(
+        &self,
+        path: String,
+        id: &str,
+        imap_flags: &[&str],
+    ) -> color_eyre::eyre::Result<()> {
+        let maildir = Maildir::from(path);
+        let maildir_flags = imap_flags
+            .iter()
+            .filter_map(|flag| {
+                if flag.to_lowercase() == "\\seen" {
+                    Some("S")
+                } else if flag.to_lowercase() == "\\deleted" {
+                    Some("T")
+                } else if flag.to_lowercase() == "\\flagged" {
+                    Some("F")
+                } else if flag.to_lowercase() == "\\draft" {
+                    Some("D")
+                } else if flag.to_lowercase() == "\\answered" {
+                    Some("R")
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("");
+        maildir.set_flags(id, &maildir_flags)?;
+        Ok(())
+    }
+
+    #[instrument(skip(self, path))]
+    fn remove_flags(
+        &self,
+        path: String,
+        id: &str,
+        imap_flags: &[&str],
+    ) -> color_eyre::eyre::Result<()> {
+        let maildir = Maildir::from(path);
+        let maildir_flags = imap_flags
+            .iter()
+            .filter_map(|flag| {
+                if flag.to_lowercase() == "\\seen" {
+                    Some("S")
+                } else if flag.to_lowercase() == "\\deleted" {
+                    Some("T")
+                } else if flag.to_lowercase() == "\\flagged" {
+                    Some("F")
+                } else if flag.to_lowercase() == "\\draft" {
+                    Some("D")
+                } else if flag.to_lowercase() == "\\answered" {
+                    Some("R")
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("");
+        maildir.set_flags(id, &maildir_flags)?;
+        Ok(())
+    }
 }
 
 #[derive(sqlx::FromRow)]

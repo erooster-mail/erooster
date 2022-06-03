@@ -15,6 +15,7 @@ use crate::{
         noop::Noop,
         rename::Rename,
         select::{Examine, Select},
+        store::Store,
         subscribe::Subscribe,
         uid::Uid,
         unsubscribe::Unsubscribe,
@@ -52,6 +53,7 @@ mod noop;
 mod parsers;
 mod rename;
 mod select;
+mod store;
 mod subscribe;
 mod uid;
 mod unsubscribe;
@@ -95,6 +97,7 @@ pub enum Commands {
     Noop,
     Rename,
     Select,
+    Store,
     Subscribe,
     Unsubscribe,
     Uid,
@@ -124,6 +127,7 @@ impl TryFrom<&str> for Commands {
             "rename" => Ok(Commands::Rename),
             "uid" => Ok(Commands::Uid),
             "fetch" => Ok(Commands::Fetch),
+            "store" => Ok(Commands::Store),
             _ => {
                 warn!("[IMAP] Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
@@ -269,6 +273,11 @@ impl Data {
                     }
                     Commands::Select => {
                         Select { data: self }
+                            .exec(lines, config, storage, &command_data)
+                            .await?;
+                    }
+                    Commands::Store => {
+                        Store { data: self }
                             .exec(lines, config, storage, &command_data)
                             .await?;
                     }

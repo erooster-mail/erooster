@@ -12,10 +12,11 @@ pub struct Append<'a> {
     pub data: &'a Data,
 }
 impl Append<'_> {
-    #[instrument(skip(self, lines, config, command_data))]
+    #[instrument(skip(self, lines, storage, config, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
+        storage: Arc<Storage>,
         config: Arc<Config>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
@@ -40,16 +41,23 @@ impl Append<'_> {
             let mailbox_path = Path::new(&config.mail.maildir_folders)
                 .join(write_lock.username.clone().unwrap())
                 .join(folder.clone());
+            let mailbox_path_string = mailbox_path
+                .clone()
+                .into_os_string()
+                .into_string()
+                .expect("Failed to convert path. Your system may be incompatible");
             debug!("Appending to folder: {:?}", mailbox_path);
 
+            // Spec violation but thunderbird would prompt a user error otherwise :/
             if !mailbox_path.exists() {
-                lines
+                /*lines
                     .send(format!(
                         "{} NO [TRYCREATE] folder is not yet created",
                         command_data.tag
                     ))
                     .await?;
-                return Ok(());
+                return Ok(());*/
+                storage.create_dirs(mailbox_path_string)?;
             }
 
             let append_args = command_data.arguments[1..].join(" ");

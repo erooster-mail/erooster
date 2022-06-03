@@ -346,7 +346,7 @@ impl Data {
                     }
                     Commands::Append => {
                         Append { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, storage, config, &command_data)
                             .await?;
                     }
                 }

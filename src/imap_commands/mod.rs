@@ -177,10 +177,11 @@ fn command(input: &str) -> Res<Result<Commands, String>> {
 /// Gets the input minus the tag and minus the command
 #[instrument(skip(input))]
 fn arguments(input: &str) -> Res<Vec<&str>> {
+    debug!("parsing arguments");
     context(
         "arguments",
         many0(alt((
-            terminated(take_while1(|c: char| c != ' '), tag(" ")),
+            terminated(take_while1(|c: char| !c.is_whitespace()), tag(" ")),
             take_while1(|c: char| c != ' '),
         ))),
     )(input)
@@ -250,6 +251,7 @@ impl Data {
                         return Ok(false);
                     }
                 };
+                debug!("Command data: {:?}", command_data);
                 match command_data.command {
                     Commands::Capability => {
                         Capability.exec(lines, &command_data).await?;

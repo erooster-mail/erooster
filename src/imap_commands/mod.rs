@@ -8,6 +8,7 @@ use crate::{
         close::Close,
         create::Create,
         delete::Delete,
+        fetch::Fetch,
         list::{LSub, List},
         login::Login,
         logout::Logout,
@@ -43,6 +44,7 @@ mod check;
 mod close;
 mod create;
 mod delete;
+mod fetch;
 mod list;
 mod login;
 mod logout;
@@ -95,6 +97,7 @@ pub enum Commands {
     Close,
     Rename,
     Uid,
+    Fetch,
 }
 
 impl TryFrom<&str> for Commands {
@@ -120,6 +123,7 @@ impl TryFrom<&str> for Commands {
             "close" => Ok(Commands::Close),
             "rename" => Ok(Commands::Rename),
             "uid" => Ok(Commands::Uid),
+            "fetch" => Ok(Commands::Fetch),
             _ => {
                 warn!("[IMAP] Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
@@ -311,6 +315,11 @@ impl Data {
                     }
                     Commands::Uid => {
                         Uid { data: self }
+                            .exec(lines, config, &command_data, storage)
+                            .await?;
+                    }
+                    Commands::Fetch => {
+                        Fetch { data: self }
                             .exec(lines, config, &command_data, storage)
                             .await?;
                     }

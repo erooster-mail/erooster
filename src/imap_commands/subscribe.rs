@@ -42,6 +42,17 @@ impl Subscribe<'_> {
             debug!("mailbox_path: {}", mailbox_path_string);
             if !mailbox_path.exists() {
                 storage.create_dirs(mailbox_path_string)?;
+                if folder.to_lowercase() == ".sent" {
+                    storage.add_flag(&mailbox_path, "\\Sent").await?;
+                } else if folder.to_lowercase() == ".junk" {
+                    storage.add_flag(&mailbox_path, "\\Junk").await?;
+                } else if folder.to_lowercase() == ".drafts" {
+                    storage.add_flag(&mailbox_path, "\\Drafts").await?;
+                } else if folder.to_lowercase() == ".archive" {
+                    storage.add_flag(&mailbox_path, "\\Archive").await?;
+                } else if folder.to_lowercase() == ".trash" {
+                    storage.add_flag(&mailbox_path, "\\Trash").await?;
+                }
             }
             storage.add_flag(&mailbox_path, "\\Subscribed").await?;
             lines

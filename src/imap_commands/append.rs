@@ -12,7 +12,7 @@ pub struct Append<'a> {
     pub data: &'a Data,
 }
 impl Append<'_> {
-    #[instrument(skip(self, lines, command_data))]
+    #[instrument(skip(self, lines, config, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
@@ -38,7 +38,7 @@ impl Append<'_> {
             folder.remove_matches('"');
             folder = folder.replace(".INBOX", "INBOX");
             let mailbox_path = Path::new(&config.mail.maildir_folders)
-                .join(self.data.con_state.read().await.username.clone().unwrap())
+                .join(write_lock.username.clone().unwrap())
                 .join(folder.clone());
             debug!("Appending to folder: {:?}", mailbox_path);
 
@@ -94,6 +94,7 @@ impl Append<'_> {
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         let mut write_lock = self.data.con_state.write().await;
+        let username = write_lock.username.clone().unwrap();
         if let State::Appending(state) = &mut write_lock.state {
             if let Some(buffer) = &mut state.data {
                 let mut bytes = append_data.as_bytes().to_vec();
@@ -106,7 +107,7 @@ impl Append<'_> {
                     folder.remove_matches('"');
                     folder = folder.replace(".INBOX", "INBOX");
                     let mailbox_path = Path::new(&config.mail.maildir_folders)
-                        .join(self.data.con_state.read().await.username.clone().unwrap())
+                        .join(username)
                         .join(folder.clone());
                     if let Some(flags) = &state.flags {
                         let message_id = storage

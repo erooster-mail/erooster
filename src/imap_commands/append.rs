@@ -119,7 +119,7 @@ impl Append<'_> {
             if let Some(buffer) = &mut state.data {
                 let mut bytes = format!("{}\r\n", append_data).as_bytes().to_vec();
                 buffer.append(&mut bytes);
-                if bytes.len() + bytes.len() >= state.datalen {
+                if buffer.len() + bytes.len() >= state.datalen {
                     debug!("[Append] Saving data");
                     let folder = &state.folder;
                     let mut folder = folder.replace('/', ".");

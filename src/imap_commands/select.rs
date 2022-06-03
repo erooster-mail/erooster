@@ -32,8 +32,8 @@ where
     let mut write_lock = data.con_state.write().await;
 
     assert!(args.len() == 1);
-    let folder = args.first().expect("server selects a folder");
-    let folder = folder.replace('"', "").replace('/', ".");
+    let folder_arg = args.first().expect("server selects a folder");
+    let folder = folder_arg.replace('"', "");
     let access = if rw {
         Access::ReadWrite
     } else {
@@ -43,8 +43,10 @@ where
         write_lock.state = State::Selected(folder.clone(), access);
     };
 
-    let mut folder_on_disk = folder.clone();
-    folder_on_disk.insert(0, '.');
+    let mut folder_on_disk = folder_arg.replace('/', ".");
+            folder_on_disk.insert(0, '.');
+            folder_on_disk.remove_matches('"');
+            folder_on_disk = folder_on_disk.replace(".INBOX", "INBOX");
     // Special INBOX check to make sure we have a mailbox
     let mailbox_path = Path::new(&config.mail.maildir_folders)
         .join(write_lock.username.clone().unwrap())

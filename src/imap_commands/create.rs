@@ -30,7 +30,7 @@ impl Create<'_> {
             folder.remove_matches('"');
             let mailbox_path = Path::new(&config.mail.maildir_folders)
                 .join(self.data.con_state.read().await.username.clone().unwrap())
-                .join(folder.clone());
+                .join(folder.replace(".INBOX", "INBOX"));
             let mailbox_path_string = mailbox_path
                 .clone()
                 .into_os_string()

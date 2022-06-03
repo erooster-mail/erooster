@@ -68,6 +68,8 @@ opentelemetry = { version = "0.17", features = ["metrics", "tokio"] }
 opentelemetry-jaeger = { version = "0.16", features = ["tokio"], optional = true }
 tracing-opentelemetry = "0.17"
 axum-opentelemetry-middleware = { git="https://gitlab.com/famedly/company/backend/libraries/axum-opentelemetry-middleware.git" }
+askama = "0.11"
+mime = "0.3.16"
 
 [build-dependencies]
 vergen = "7"

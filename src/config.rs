@@ -56,6 +56,8 @@ pub struct Mail {
     pub maildir_folders: String,
     /// Hostname the SMTP server lives at.
     pub hostname: String,
+    /// The Displayname to be used in software like thunderbird
+    pub displayname: String,
 }
 
 impl Config {

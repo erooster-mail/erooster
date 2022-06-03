@@ -1,5 +1,11 @@
 use crate::config::Config;
-use axum::{response::Html, routing::get, Router};
+use askama::Template;
+use axum::{
+    http::{header, HeaderValue, StatusCode},
+    response::{Html, IntoResponse, Response},
+    routing::get,
+    Extension, Router,
+};
 use axum_server::tls_rustls::RustlsConfig;
 use std::{net::SocketAddr, sync::Arc};
 use tower_http::trace::TraceLayer;
@@ -28,9 +34,14 @@ pub async fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
             let app = Router::new()
                 .route("/", get(handler))
                 .route(
+                    "/.well-known/autoconfig/mail/config-v1.1.xml",
+                    get(autoconfig),
+                )
+                .route(
                     "/metrics",
                     get(axum_opentelemetry_middleware::metrics_endpoint),
                 )
+                .layer(Extension(Arc::clone(&config)))
                 .layer(metrics_middleware.clone())
                 .layer(TraceLayer::new_for_http());
 
@@ -63,4 +74,46 @@ pub async fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
 #[allow(clippy::unused_async)]
 async fn handler() -> Html<&'static str> {
     Html("<h1>Hello, World!</h1>")
+}
+
+#[allow(clippy::unused_async)]
+async fn autoconfig(Extension(config): Extension<Arc<Config>>) -> impl IntoResponse {
+    let template = AutoconfigTemplate {
+        domain: config.mail.hostname.clone(),
+        displayname: config.mail.displayname.clone(),
+    };
+    XmlTemplate(template)
+}
+
+#[derive(Template)]
+#[allow(dead_code)]
+#[template(path = "autoconfig.xml")]
+struct AutoconfigTemplate {
+    domain: String,
+    displayname: String,
+}
+
+struct XmlTemplate<T>(T);
+
+impl<T> IntoResponse for XmlTemplate<T>
+where
+    T: Template,
+{
+    fn into_response(self) -> Response {
+        match self.0.render() {
+            Ok(xml) => (
+                [(
+                    header::CONTENT_TYPE,
+                    HeaderValue::from_static(mime::TEXT_XML.as_ref()),
+                )],
+                xml,
+            )
+                .into_response(),
+            Err(err) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to render template. Error: {}", err),
+            )
+                .into_response(),
+        }
+    }
 }

@@ -1,7 +1,7 @@
 use crate::{
-    backend::storage::Storage,
+    backend::storage::{MailStorage, Storage},
     imap_commands::{parsers::append_arguments, CommandData, Data},
-    imap_servers::state::State,
+    imap_servers::state::{AppendingState, State},
     Config,
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
@@ -12,11 +12,10 @@ pub struct Append<'a> {
     pub data: &'a Data,
 }
 impl Append<'_> {
-    #[instrument(skip(self, lines, storage, command_data))]
+    #[instrument(skip(self, lines, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
-        storage: Arc<Storage>,
         config: Arc<Config>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
@@ -47,13 +46,15 @@ impl Append<'_> {
             let append_args = command_data.arguments[1..].join(" ");
             debug!("Append args: {}", append_args);
             if let Ok((_, (flags, datetime, literal))) = append_arguments(&append_args) {
-                write_lock.state = State::Appending(
-                    folder.to_string(),
-                    flags.map(|x| x.iter().map(ToString::to_string).collect::<Vec<_>>()),
+                write_lock.state = State::Appending(AppendingState {
+                    folder: folder.to_string(),
+                    flags: flags.map(|x| x.iter().map(ToString::to_string).collect::<Vec<_>>()),
                     datetime,
-                );
-                if literal.contains('+') {
-                } else {
+                    data: None,
+                    datalen: literal.length,
+                    tag: command_data.tag.to_string(),
+                });
+                if !literal.continuation {
                     lines.send(String::from("+ Ready for literal data")).await?;
                 }
             } else {
@@ -72,17 +73,68 @@ impl Append<'_> {
         Ok(())
     }
 
-    #[instrument(skip(self, lines, storage, append_data, command_data))]
+    #[instrument(skip(self, lines, storage, config, append_data))]
     pub async fn append<S>(
         &self,
         lines: &mut S,
         storage: Arc<Storage>,
         append_data: &str,
-        command_data: &CommandData<'_>,
+        config: Arc<Config>,
+        tag: String,
     ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
+        let mut write_lock = self.data.con_state.write().await;
+        if let State::Appending(state) = &mut write_lock.state {
+            if let Some(buffer) = &mut state.data {
+                let mut bytes = append_data.as_bytes().to_vec();
+                let buffer_length = bytes.len();
+                buffer.append(&mut bytes);
+                if buffer_length + bytes.len() > state.datalen {
+                    let folder = &state.folder;
+                    let mut folder = folder.replace('/', ".");
+                    folder.insert(0, '.');
+                    folder.remove_matches('"');
+                    folder = folder.replace(".INBOX", "INBOX");
+                    let mailbox_path = Path::new(&config.mail.maildir_folders)
+                        .join(self.data.con_state.read().await.username.clone().unwrap())
+                        .join(folder.clone());
+                    if let Some(flags) = &state.flags {
+                        let message_id = storage
+                            .store_cur_with_flags(
+                                mailbox_path.clone().into_os_string().into_string().expect(
+                                    "Failed to convert path. Your system may be incompatible",
+                                ),
+                                buffer,
+                                flags.clone(),
+                            )
+                            .await?;
+                        debug!("Stored message via append: {}", message_id);
+                    } else {
+                        let message_id = storage
+                            .store_cur_with_flags(
+                                mailbox_path.clone().into_os_string().into_string().expect(
+                                    "Failed to convert path. Your system may be incompatible",
+                                ),
+                                buffer,
+                                vec![],
+                            )
+                            .await?;
+                        debug!("Stored message via append: {}", message_id);
+                    }
+                    lines.send(format!("{} OK APPEND completed", tag)).await?;
+                }
+            } else {
+                let mut buffer = Vec::with_capacity(state.datalen);
+                let mut bytes = append_data.as_bytes().to_vec();
+                buffer.append(&mut bytes);
+
+                state.data = Some(buffer);
+            }
+        } else {
+            lines.send(format!("{} NO invalid state", tag)).await?;
+        }
         Ok(())
     }
 }

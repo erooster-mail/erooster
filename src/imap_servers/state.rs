@@ -35,7 +35,17 @@ pub enum State {
     /// - folder
     /// - flags
     /// - datetime
-    Appending(String, Option<Vec<String>>, Option<DateTime>),
+    Appending(AppendingState),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct AppendingState {
+    pub folder: String,
+    pub flags: Option<Vec<String>>,
+    pub datetime: Option<DateTime>,
+    pub data: Option<Vec<u8>>,
+    pub datalen: usize,
+    pub tag: String,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

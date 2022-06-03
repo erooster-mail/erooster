@@ -365,8 +365,13 @@ fn date_time(input: &str) -> Res<DateTime> {
     )(input)
 }
 
+pub struct LiteralSize {
+    pub length: usize,
+    pub continuation: bool,
+}
+
 #[instrument(skip(input))]
-pub fn append_arguments(input: &str) -> Res<(Option<Vec<&str>>, Option<DateTime>, &str)> {
+pub fn append_arguments(input: &str) -> Res<(Option<Vec<&str>>, Option<DateTime>, LiteralSize)> {
     context(
         "append_arguments",
         map(
@@ -383,7 +388,18 @@ pub fn append_arguments(input: &str) -> Res<(Option<Vec<&str>>, Option<DateTime>
                 opt(date_time),
                 opt(space1),
                 tag_no_case("{"),
-                take_while1(|c: char| c.is_ascii_digit() || c == '+'),
+                map(
+                    pair(
+                        map(take_while1(|c: char| c.is_ascii_digit()), |s: &str| {
+                            s.parse::<usize>().unwrap()
+                        }),
+                        map(opt(tag_no_case("+")), |x| x.is_some()),
+                    ),
+                    |(length, continuation)| LiteralSize {
+                        length,
+                        continuation,
+                    },
+                ),
                 tag_no_case("}"),
             )),
             |(flags, _, datetime, _, _, literal, _)| (flags, datetime, literal),

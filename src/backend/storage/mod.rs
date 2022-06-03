@@ -69,6 +69,13 @@ pub trait MailStorage<M: MailEntry> {
     fn create_dirs(&self, path: String) -> color_eyre::eyre::Result<()>;
     /// Store new message
     async fn store_new(&self, path: String, data: &[u8]) -> color_eyre::eyre::Result<String>;
+    /// Store a message
+    async fn store_cur_with_flags(
+        &self,
+        path: String,
+        data: &[u8],
+        flags: Vec<String>,
+    ) -> color_eyre::eyre::Result<String>;
     /// List the subfolders
     fn list_subdirs(&self, path: String) -> color_eyre::eyre::Result<Vec<PathBuf>>;
     /// Count of current messages

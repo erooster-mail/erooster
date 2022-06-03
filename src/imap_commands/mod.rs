@@ -226,7 +226,13 @@ impl Data {
             .await?;
             // We are done here
             return Ok(false);
-        };
+        } else if let State::Appending(state) = state {
+            Append { data: self }
+                .append(lines, storage, &line, config, state.tag)
+                .await?;
+            // We are done here
+            return Ok(false);
+        }
         debug!("Starting to parse");
         match Data::parse_internal(&line) {
             Ok((_, (tag, command, arguments))) => {
@@ -338,7 +344,7 @@ impl Data {
                     }
                     Commands::Append => {
                         Append { data: self }
-                            .exec(lines, storage, config, &command_data)
+                            .exec(lines, config, &command_data)
                             .await?;
                     }
                 }

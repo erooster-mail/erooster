@@ -88,6 +88,42 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     }
 
     #[instrument(skip(self, path, data))]
+    async fn store_cur_with_flags(
+        &self,
+        path: String,
+        data: &[u8],
+        imap_flags: Vec<String>,
+    ) -> color_eyre::eyre::Result<String> {
+        let maildir = Maildir::from(path);
+        let maildir_flags = imap_flags
+            .iter()
+            .filter_map(|flag| {
+                let normalized_flag = flag.to_lowercase().replace('(', "").replace(')', "");
+                if normalized_flag == "\\seen" {
+                    Some("S")
+                } else if normalized_flag == "\\deleted" {
+                    Some("T")
+                } else if normalized_flag == "\\flagged" {
+                    Some("F")
+                } else if normalized_flag == "\\draft" {
+                    Some("D")
+                } else if normalized_flag == "\\answered" {
+                    Some("R")
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("");
+        let maildir_id = maildir.store_cur_with_flags(data, &maildir_flags)?;
+        sqlx::query("INSERT INTO mails (maildir_id) VALUES ($1)")
+            .bind(maildir_id.clone())
+            .execute(self.db.get_pool())
+            .await?;
+        Ok(maildir_id)
+    }
+
+    #[instrument(skip(self, path, data))]
     async fn store_new(&self, path: String, data: &[u8]) -> color_eyre::eyre::Result<String> {
         let maildir = Maildir::from(path);
         let maildir_id = maildir.store_new(data)?;

@@ -23,9 +23,16 @@ impl Append<'_> {
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         let mut write_lock = self.data.con_state.write().await;
+        debug!("Append command start");
         if write_lock.state == State::Authenticated {
+            debug!("[Append] User is authenticated");
+            debug!(
+                "[Append] User added {} arguments",
+                command_data.arguments.len()
+            );
             assert!(command_data.arguments.len() >= 3);
             let folder = command_data.arguments[0].replace('"', "");
+            debug!("[Append] User wants to append to folder: {}", folder);
             let mut folder = folder.replace('/', ".");
             folder.insert(0, '.');
             folder.remove_matches('"');

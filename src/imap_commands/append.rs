@@ -117,7 +117,7 @@ impl Append<'_> {
         let username = write_lock.username.clone().unwrap();
         if let State::Appending(state) = &mut write_lock.state {
             if let Some(buffer) = &mut state.data {
-                let mut bytes = append_data.as_bytes().to_vec();
+                let mut bytes = format!("{}\r\n", append_data).as_bytes().to_vec();
                 let buffer_length = bytes.len();
                 buffer.append(&mut bytes);
                 if buffer_length + bytes.len() > state.datalen {

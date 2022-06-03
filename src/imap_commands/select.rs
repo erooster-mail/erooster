@@ -33,7 +33,7 @@ where
 
     assert!(args.len() == 1);
     let folder = args.first().expect("server selects a folder");
-    let folder = folder.replace('"', "");
+    let folder = folder.replace('"', "").replace('/', ".");
     let access = if rw {
         Access::ReadWrite
     } else {
@@ -43,12 +43,12 @@ where
         write_lock.state = State::Selected(folder.clone(), access);
     };
 
-    let mut folder = folder.replace('/', ".");
-    folder.insert(0, '.');
+    let mut folder_on_disk = folder.clone();
+    folder_on_disk.insert(0, '.');
     // Special INBOX check to make sure we have a mailbox
     let mailbox_path = Path::new(&config.mail.maildir_folders)
         .join(write_lock.username.clone().unwrap())
-        .join(folder.replace(".INBOX", "INBOX"));
+        .join(folder_on_disk.replace(".INBOX", "INBOX"));
     if folder == "INBOX" && !mailbox_path.exists() {
         storage.create_dirs(
             mailbox_path
@@ -62,7 +62,7 @@ where
     }
     send_success(
         lines,
-        folder.replace(".INBOX", "INBOX"),
+        folder,
         storage,
         mailbox_path
             .into_os_string()

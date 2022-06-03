@@ -97,7 +97,7 @@ impl Store<'_> {
                         if uid {
                             lines
                                 .feed(format!(
-                                    "* {} FETCH (UID {} FLAGS ({}))",
+                                    "* {} FETCH (UID {} FLAGS {})",
                                     mail.uid(),
                                     mail.uid(),
                                     flags_string
@@ -105,7 +105,7 @@ impl Store<'_> {
                                 .await?;
                         } else {
                             lines
-                                .feed(format!("* {} FETCH (FLAGS ({}))", mail.uid(), flags_string))
+                                .feed(format!("* {} FETCH (FLAGS {})", mail.uid(), flags_string))
                                 .await?;
                         }
                     }
@@ -157,7 +157,7 @@ impl Store<'_> {
                         if uid {
                             lines
                                 .feed(format!(
-                                    "* {} FETCH (UID {} FLAGS ({}))",
+                                    "* {} FETCH (UID {} FLAGS {})",
                                     mail.uid(),
                                     mail.uid(),
                                     flags_string
@@ -165,7 +165,7 @@ impl Store<'_> {
                                 .await?;
                         } else {
                             lines
-                                .feed(format!("* {} FETCH (FLAGS ({}))", mail.uid(), flags_string))
+                                .feed(format!("* {} FETCH (FLAGS {})", mail.uid(), flags_string))
                                 .await?;
                         }
                     }
@@ -209,7 +209,14 @@ impl Store<'_> {
                         let new_flags = current_flags
                             .iter()
                             .copied()
-                            .filter(|x| !flags.contains(x))
+                            .filter_map(|x| {
+                                let x = x.replace('(', "").replace(')', "");
+                                if !flags.contains(x) {
+                                    Some(x)
+                                } else {
+                                    None
+                                }
+                            })
                             .collect::<Vec<_>>();
 
                         if let Err(e) =

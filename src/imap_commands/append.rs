@@ -118,12 +118,9 @@ impl Append<'_> {
         if let State::Appending(state) = &mut write_lock.state {
             if let Some(buffer) = &mut state.data {
                 let mut bytes = format!("{}\r\n", append_data).as_bytes().to_vec();
-                let buffer_length = bytes.len();
                 buffer.append(&mut bytes);
-                debug!("[Append] Appended {} bytes to buffer", buffer_length);
-                debug!("[Append] Buffer length: {}", buffer.len());
-                debug!("[Append] Expected Buffersize: {}", state.datalen);
-                if buffer_length + bytes.len() >= state.datalen {
+                if bytes.len() + bytes.len() >= state.datalen {
+                    debug!("[Append] Saving data");
                     let folder = &state.folder;
                     let mut folder = folder.replace('/', ".");
                     folder.insert(0, '.');
@@ -132,6 +129,7 @@ impl Append<'_> {
                     let mailbox_path = Path::new(&config.mail.maildir_folders)
                         .join(username)
                         .join(folder.clone());
+                    debug!("[Append] Mailbox path: {:?}", mailbox_path);
                     if let Some(flags) = &state.flags {
                         let message_id = storage
                             .store_cur_with_flags(

@@ -25,7 +25,7 @@ impl Append<'_> {
         let mut write_lock = self.data.con_state.write().await;
         if write_lock.state == State::Authenticated {
             assert!(command_data.arguments.len() >= 3);
-            let folder = command_data.arguments[0];
+            let folder = command_data.arguments[0].replace('"', "");
             let mut folder = folder.replace('/', ".");
             folder.insert(0, '.');
             folder.remove_matches('"');
@@ -33,6 +33,7 @@ impl Append<'_> {
             let mailbox_path = Path::new(&config.mail.maildir_folders)
                 .join(self.data.con_state.read().await.username.clone().unwrap())
                 .join(folder.clone());
+            debug!("Appending to folder: {:?}", mailbox_path);
 
             if !mailbox_path.exists() {
                 lines

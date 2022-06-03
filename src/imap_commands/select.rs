@@ -33,7 +33,10 @@ where
 
     assert!(args.len() == 1);
     let folder = args.first().expect("server selects a folder");
-    let folder = folder.replace('"', "");
+    let mut folder = folder
+        .replace('"', "")
+        .replace('/', ".")
+        .replace(".INBOX", "INBOX");
     let access = if rw {
         Access::ReadWrite
     } else {
@@ -43,6 +46,8 @@ where
         write_lock.state = State::Selected(folder.clone(), access);
     };
 
+    folder.insert(0, '.');
+    folder.remove_matches('"');
     // Special INBOX check to make sure we have a mailbox
     let mailbox_path = Path::new(&config.mail.maildir_folders)
         .join(write_lock.username.clone().unwrap())

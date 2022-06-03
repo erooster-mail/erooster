@@ -25,56 +25,56 @@ path = "src/lib.rs"
 bench = false
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
-nom = "7.1.0"
-color-eyre = "0.6"
-tokio-util = { version = "0.7.0", features = ["full"] }
-tokio-stream = { version = "0.1.8", features = ["net", "io-util"] }
-futures = { version = "0.3.0", features = ["thread-pool"]}
-rustls-pemfile = "1.0.0"
-tokio-rustls ={ version = "0.23.1", features = ["tls12"] }
-base64 = "0.13.0"
-tracing = "0.1"
-tracing-subscriber = {version = "0.3", features=["env-filter"]}
-tracing-error = "0.2.0"
-simdutf8 = { version = "0.1.3" }
-bytes = "1.1.0"
-async-trait = "0.1.52"
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.8"
-clap = { version = "3.1.6", features = ["derive", "color", "suggestions","env"] }
-notify = "5.0.0-pre.15"
-const_format = "0.2.22"
-sqlx = { version = "0.5", features = [ "runtime-tokio-rustls"] }
 argon2 = { version = "0.4", features = ["std"] }
-rand_core = { version = "0.6", features = ["std"] }
-sqlxmq = { version = "0.3", default-features = false, features = [ "runtime-tokio-rustls"] }
-owo-colors = "3"
-rpassword = "6.0.1"
-indicatif = "0.16.2"
-clearscreen = "1.0.9"
-rustls = "0.20.6"
-cfg-if = "1.0.0"
-trust-dns-resolver = "0.21.2"
-mailparse = "0.13.8"
-webpki-roots = "0.22.3"
-sentry = { version = "0.26.0", default-features = false, features = ["tracing", "backtrace", "contexts", "panic", "reqwest", "rustls"]}
-url = "2.2.2"
-sys-info = "0.9.1"
-tower-http = { version = "0.3.0", features = ["trace"] }
+askama = "0.11"
+async-trait = "0.1.52"
 axum ={ version = "0.5.6", features = ["http2"]}
+axum-opentelemetry-middleware = { git="https://gitlab.com/famedly/company/backend/libraries/axum-opentelemetry-middleware.git" }
 axum-server = { version = "0.4", features = ["tls-rustls"] }
+base64 = "0.13.0"
+bytes = "1.1.0"
+cfg-if = "1.0.0"
+clearscreen = "1.0.9"
+clap = { version = "3.1.6", features = ["derive", "color", "suggestions","env"] }
+color-eyre = "0.6"
+const_format = "0.2.22"
+futures = { version = "0.3.0", features = ["thread-pool"]}
+indicatif = "0.16.2"
+mailparse = "0.13.8"
+mime = "0.3.16"
+nom = "7.1.0"
+notify = "5.0.0-pre.15"
 opentelemetry = { version = "0.17", features = ["metrics", "tokio"] }
 opentelemetry-jaeger = { version = "0.16", features = ["tokio"], optional = true }
+owo-colors = "3"
+rand_core = { version = "0.6", features = ["std"] }
+rpassword = "6.0.1"
+rustls = "0.20.6"
+rustls-pemfile = "1.0.0"
+sentry = { version = "0.26.0", default-features = false, features = ["tracing", "backtrace", "contexts", "panic", "reqwest", "rustls"]}
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.8"
+simdutf8 = { version = "0.1.3" }
+sqlx = { version = "0.5", features = [ "runtime-tokio-rustls"] }
+sqlxmq = { version = "0.3", default-features = false, features = [ "runtime-tokio-rustls"] }
+sys-info = "0.9.1"
+tokio = { version = "1", features = ["full"] }
+tokio-rustls ={ version = "0.23.1", features = ["tls12"] }
+tokio-stream = { version = "0.1.8", features = ["net", "io-util"] }
+tokio-util = { version = "0.7.0", features = ["full"] }
+tower-http = { version = "0.3.0", features = ["trace"] }
+tracing = "0.1"
+tracing-error = "0.2.0"
 tracing-opentelemetry = "0.17"
-axum-opentelemetry-middleware = { git="https://gitlab.com/famedly/company/backend/libraries/axum-opentelemetry-middleware.git" }
-askama = "0.11"
-mime = "0.3.16"
+tracing-subscriber = {version = "0.3", features=["env-filter"]}
+trust-dns-resolver = "0.21.2"
+url = "2.2.2"
+webpki-roots = "0.22.3"
 
 [build-dependencies]
-vergen = "7"
-clap_mangen = "0.1"
 clap = { version = "3.1.6", features = ["derive", "color", "suggestions","env"] }
+clap_mangen = "0.1"
+vergen = "7"
 
 [dependencies.maildir]
 version = "0.6.1"
@@ -91,10 +91,10 @@ jaeger = ["dep:opentelemetry-jaeger"]
 #debug = true
 
 [dev-dependencies]
+convert_case = "0.5.0"
 criterion = {version = "0.3", features = ["async_tokio"]}
 enum-iterator = "1.1.1"
 enum-display-derive = "0.1.1"
-convert_case = "0.5.0"
 
 [[bench]]
 name = "smtp_bench"

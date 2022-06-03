@@ -308,8 +308,10 @@ async fn register(username: Option<String>, password: Option<String>, config: Ar
 
 async fn actual_register(username: String, password: String, config: Arc<Config>) -> Result<()> {
     let database = get_database(config).await?;
-    database.add_user(&username).await?;
-    database.change_password(&username, &password).await?;
+    database.add_user(&username.to_lowercase()).await?;
+    database
+        .change_password(&username.to_lowercase(), &password)
+        .await?;
     Ok(())
 }
 
@@ -357,7 +359,13 @@ async fn change_password(
         .expect("Couldn't read line");
 
         // TODO repromt as needed
-        if !verify_password(username.clone(), current_password, Arc::clone(&config)).await {
+        if !verify_password(
+            username.to_lowercase(),
+            current_password,
+            Arc::clone(&config),
+        )
+        .await
+        {
             error!(
                 "{}",
                 "The password was incorrect. Please try again".fg::<BrightRed>()
@@ -451,6 +459,8 @@ async fn actual_change_password(
     config: Arc<Config>,
 ) -> Result<()> {
     let database = get_database(config).await?;
-    database.change_password(&username, &new_password).await?;
+    database
+        .change_password(&username.to_lowercase(), &new_password)
+        .await?;
     Ok(())
 }

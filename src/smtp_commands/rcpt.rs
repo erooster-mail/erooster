@@ -34,7 +34,7 @@ impl Rcpt<'_> {
             let mut write_lock = self.data.con_state.write().await;
             if matches!(&write_lock.state, State::NotAuthenticated) {
                 for receipt in &receipts {
-                    if !database.user_exists(receipt).await {
+                    if !database.user_exists(&receipt.to_lowercase()).await {
                         lines.send(String::from("550 No such user here")).await?;
                         return Ok(());
                     }

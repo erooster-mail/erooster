@@ -278,7 +278,7 @@ impl Data {
                     }
                     Commands::Store => {
                         Store { data: self }
-                            .exec(lines, config, storage, &command_data)
+                            .exec(lines, config, storage, &command_data, false)
                             .await?;
                     }
                     Commands::Examine => {

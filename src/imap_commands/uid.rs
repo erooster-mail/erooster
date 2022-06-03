@@ -1,7 +1,9 @@
 use crate::{
     backend::storage::{MailEntry, MailEntryType, MailStorage, Storage},
     config::Config,
-    imap_commands::{fetch::generate_response, parsers::fetch_arguments, CommandData, Data},
+    imap_commands::{
+        fetch::generate_response, parsers::fetch_arguments, store::Store, CommandData, Data,
+    },
     imap_servers::state::State,
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
@@ -123,8 +125,8 @@ impl Uid<'_> {
                 .send(format!("{} BAD Not supported", command_data.tag))
                 .await?;
         } else if command_data.arguments[0].to_lowercase() == "store" {
-            lines
-                .send(format!("{} BAD Not supported", command_data.tag))
+            Store { data: self.data }
+                .exec(lines, config, storage, command_data, true)
                 .await?;
         }
         Ok(())

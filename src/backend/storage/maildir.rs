@@ -237,6 +237,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let maildir_flags = imap_flags
             .iter()
             .filter_map(|flag| {
+                debug!("{}", flag.to_lowercase());
                 if flag.to_lowercase() == "\\seen" {
                     Some("S")
                 } else if flag.to_lowercase() == "\\deleted" {

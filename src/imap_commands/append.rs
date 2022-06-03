@@ -49,6 +49,7 @@ impl Append<'_> {
                         command_data.tag
                     ))
                     .await?;
+                return Ok(());
             }
 
             let append_args = command_data.arguments[1..].join(" ");

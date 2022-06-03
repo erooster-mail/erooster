@@ -1,5 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use erooster::database::{get_database, Database};
+use erooster::backend::database::{get_database, Database, DB};
+use erooster::backend::storage::get_storage;
 use erooster::{config::Config, line_codec::LinesCodec};
 use futures::{SinkExt, StreamExt};
 use std::{path::Path, sync::Arc, thread, time::Duration};
@@ -14,20 +15,23 @@ async fn login() {
 
     let stream_codec = Framed::new(stream, LinesCodec::new());
     let (mut sender, mut reader) = stream_codec.split();
-    sender.send(String::from("EHLO localhost")).await;
+    sender.send(String::from("EHLO localhost")).await.unwrap();
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("220 localhost ESMTP Erooster"));
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("250-localhost"));
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("250 AUTH LOGIN"));
-    sender.send(String::from("AUTH LOGIN")).await;
+    sender.send(String::from("AUTH LOGIN")).await.unwrap();
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("334 VXNlcm5hbWU6"));
-    sender.send(String::from("dGVzdEBsb2NhbGhvc3Q=")).await;
+    sender
+        .send(String::from("dGVzdEBsb2NhbGhvc3Q="))
+        .await
+        .unwrap();
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("334 UGFzc3dvcmQ6"));
-    sender.send(String::from("dGVzdA==")).await;
+    sender.send(String::from("dGVzdA==")).await.unwrap();
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("235 ok"));
 }
@@ -54,16 +58,19 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
             match get_database(Arc::clone(&config)).await {
                 Ok(db) => {
-                    let database = Arc::new(db);
+                    let database: DB = Arc::new(db);
                     database.add_user("test@localhost").await.unwrap();
                     database
                         .change_password("test@localhost", "test")
                         .await
                         .unwrap();
 
-                    if let Err(e) =
-                        erooster::smtp_servers::unencrypted::Unencrypted::run(config, database)
-                            .await
+                    let storage = Arc::new(get_storage(Arc::clone(&database)));
+
+                    if let Err(e) = erooster::smtp_servers::unencrypted::Unencrypted::run(
+                        config, database, storage,
+                    )
+                    .await
                     {
                         panic!("Unable to start server: {:?}", e);
                     }
@@ -72,7 +79,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             }
         });
         thread::sleep(Duration::from_millis(500));
-        b.to_async(rt).iter(|| login())
+        b.to_async(rt).iter(login)
     });
 }
 

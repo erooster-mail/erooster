@@ -5,6 +5,7 @@ use crate::{
 use erooster_core::backend::storage::{MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{
+    path::PathBuf,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -57,18 +58,7 @@ where
         storage.add_flag(&mailbox_path, "\\Subscribed").await?;
         storage.add_flag(&mailbox_path, "\\NoInferiors").await?;
     }
-    send_success(
-        lines,
-        folder,
-        storage,
-        mailbox_path
-            .into_os_string()
-            .into_string()
-            .expect("Failed to convert path. Your system may be incompatible"),
-        rw,
-        command_data,
-    )
-    .await?;
+    send_success(lines, folder, storage, mailbox_path, rw, command_data).await?;
     Ok(())
 }
 
@@ -77,14 +67,26 @@ async fn send_success<S>(
     lines: &mut S,
     folder: String,
     storage: Arc<Storage>,
-    mailbox_path: String,
+    mailbox_path: PathBuf,
     rw: bool,
     command_data: &CommandData<'_>,
 ) -> color_eyre::eyre::Result<()>
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    let count = storage.count_cur(mailbox_path.clone()) + storage.count_new(mailbox_path.clone());
+    let count = storage.count_cur(
+        mailbox_path
+            .clone()
+            .into_os_string()
+            .into_string()
+            .expect("Failed to convert path. Your system may be incompatible"),
+    ) + storage.count_new(
+        mailbox_path
+            .clone()
+            .into_os_string()
+            .into_string()
+            .expect("Failed to convert path. Your system may be incompatible"),
+    );
     lines.feed(format!("* {} EXISTS", count)).await?;
     let current_time = SystemTime::now();
     let unix_timestamp = current_time.duration_since(UNIX_EPOCH)?;
@@ -93,7 +95,13 @@ where
     lines
         .feed(format!("* OK [UIDVALIDITY {}] UIDs valid", timestamp))
         .await?;
-    let current_uid = storage.get_uid_for_folder(mailbox_path)?;
+    let current_uid = storage.get_uid_for_folder(
+        mailbox_path
+            .clone()
+            .into_os_string()
+            .into_string()
+            .expect("Failed to convert path. Your system may be incompatible"),
+    )?;
     lines
         .feed(format!(
             "* OK [UIDNEXT {}] Predicted next UID",
@@ -114,6 +122,28 @@ where
     lines
         .feed(format!("* LIST () \".\" \"{}\"", folder))
         .await?;
+    let sub_folders = storage.list_subdirs(
+        mailbox_path
+            .into_os_string()
+            .into_string()
+            .expect("Failed to convert path. Your system may be incompatible"),
+    )?;
+    for sub_folder in sub_folders {
+        let flags_raw = storage.get_flags(&sub_folder).await;
+        let flags = if let Ok(flags_raw) = flags_raw {
+            flags_raw
+        } else {
+            vec![]
+        };
+        let folder_name = sub_folder.file_name().unwrap().to_string_lossy();
+        lines
+            .feed(format!(
+                "* LIST ({}) \".\" \"{}\"",
+                flags.join(" "),
+                folder_name.trim_start_matches('.')
+            ))
+            .await?;
+    }
 
     let resp = if rw {
         format!("{} OK [READ-WRITE] SELECT completed", command_data.tag)

@@ -52,13 +52,13 @@ where
         let mut folder = Path::new(&config.mail.maildir_folders)
             .join(data.con_state.read().await.username.clone().unwrap());
         if !reference_name.is_empty() {
-            let mut reference_name_folder = reference_name.clone().replace('/', ".");
+            let mut reference_name_folder = reference_name.clone();
             reference_name_folder.insert(0, '.');
             reference_name_folder.remove_matches('"');
             folder = folder.join(reference_name_folder);
         }
         if mailbox_patterns != "*" {
-            let mut mailbox_patterns_folder = mailbox_patterns.clone().replace('/', ".");
+            let mut mailbox_patterns_folder = mailbox_patterns.clone();
             mailbox_patterns_folder.insert(0, '.');
             mailbox_patterns_folder.remove_matches('"');
             mailbox_patterns_folder.remove_matches(".*");
@@ -74,14 +74,10 @@ where
         )?;
         if reference_name.is_empty() && mailbox_patterns == "*" {
             lines
-                .feed(format!(
-                    "* {} (\\NoInferiors \\Subscribed) \".\" \"INBOX\"",
-                    command_resp,
-                ))
+                .feed(format!("* {} (\\Subscribed) \".\" \"INBOX\"", command_resp,))
                 .await?;
         }
         for sub_folder in sub_folders {
-            // TODO calc flags
             let flags_raw = storage.get_flags(&sub_folder).await;
             let flags = if let Ok(flags_raw) = flags_raw {
                 flags_raw
@@ -94,7 +90,7 @@ where
                     "* {} ({}) \".\" \"{}\"",
                     command_resp,
                     flags.join(" "),
-                    folder_name.trim_start_matches('.').replace('.', "/")
+                    folder_name.trim_start_matches('.')
                 ))
                 .await?;
         }
@@ -102,13 +98,13 @@ where
         let mut folder = Path::new(&config.mail.maildir_folders)
             .join(data.con_state.read().await.username.clone().unwrap());
         if !reference_name.is_empty() {
-            let mut reference_name_folder = reference_name.clone().replace('/', ".");
+            let mut reference_name_folder = reference_name.clone();
             reference_name_folder.insert(0, '.');
             reference_name_folder.remove_matches('"');
             folder = folder.join(reference_name_folder);
 
             if mailbox_patterns != "%" {
-                let mut mailbox_patterns_folder = mailbox_patterns.clone().replace('/', ".");
+                let mut mailbox_patterns_folder = mailbox_patterns.clone();
                 mailbox_patterns_folder.insert(0, '.');
                 mailbox_patterns_folder.remove_matches('"');
                 mailbox_patterns_folder.remove_matches(".%");
@@ -122,7 +118,7 @@ where
             }
         }
         if mailbox_patterns != "%" {
-            let mut mailbox_patterns_folder = mailbox_patterns.clone().replace('/', ".");
+            let mut mailbox_patterns_folder = mailbox_patterns.clone();
             mailbox_patterns_folder.insert(0, '.');
             mailbox_patterns_folder.remove_matches('"');
             mailbox_patterns_folder.remove_matches(".%");
@@ -138,10 +134,7 @@ where
         )?;
         if reference_name.is_empty() && mailbox_patterns == "%" {
             lines
-                .feed(format!(
-                    "* {} (\\NoInferiors \\Subscribed) \".\" \"INBOX\"",
-                    command_resp,
-                ))
+                .feed(format!("* {} (\\Subscribed) \".\" \"INBOX\"", command_resp,))
                 .await?;
         }
         for sub_folder in sub_folders {
@@ -162,7 +155,6 @@ where
                         .unwrap()
                         .to_string_lossy()
                         .trim_start_matches('.')
-                        .replace('.', "/")
                 ))
                 .await?;
         }
@@ -170,12 +162,12 @@ where
         let mut folder = Path::new(&config.mail.maildir_folders)
             .join(data.con_state.read().await.username.clone().unwrap());
         if !reference_name.is_empty() {
-            let mut reference_name_folder = reference_name.clone().replace('/', ".");
+            let mut reference_name_folder = reference_name.clone();
             reference_name_folder.remove_matches('"');
             reference_name_folder.insert(0, '.');
             folder = folder.join(reference_name_folder);
         }
-        let mut mailbox_patterns_folder = mailbox_patterns.clone().replace('/', ".");
+        let mut mailbox_patterns_folder = mailbox_patterns.clone();
         mailbox_patterns_folder.remove_matches('"');
         if mailbox_patterns_folder != "INBOX" {
             mailbox_patterns_folder.insert(0, '.');
@@ -208,7 +200,6 @@ where
                     .unwrap()
                     .to_string_lossy()
                     .trim_start_matches('.')
-                    .replace('.', "/")
             ))
             .await?;
     }

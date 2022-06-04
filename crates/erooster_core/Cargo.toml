@@ -1,0 +1,65 @@
+[package]
+name = "erooster_core"
+version = "0.1.0"
+edition = "2021"
+description = "An IMAP4v2 compatible mail server"
+license = "Apache-2.0"
+authors = ["MTRNord <mtrnord@nordgedanken.dev>"]
+repository = "https://github.com/MTRNord/erooster/"
+keywords = ["email","imap","smtp","simple","fast"]
+categories = ["email", "network-programming"]
+
+[lib]
+bench = false
+
+[dependencies]
+argon2 = { version = "0.4", features = ["std"] }
+async-trait = "0.1"
+base64 = "0.13"
+bytes = "1.1"
+cfg-if = "1.0"
+color-eyre = "0.6"
+futures = { version = "0.3", features = ["thread-pool"]}
+mailparse = "0.13"
+nom = "7.1"
+opentelemetry-jaeger = { version = "0.16", features = ["tokio"], optional = true }
+owo-colors = "3"
+rand_core = { version = "0.6", features = ["std"] }
+rustls = "0.20"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.8"
+simdutf8 = { version = "0.1" }
+sqlx = { version = "0.5", features = [ "runtime-tokio-rustls"] }
+sys-info = "0.9"
+tokio = { version = "1", features = ["full"] }
+tokio-rustls ={ version = "0.23", features = ["tls12"] }
+tokio-stream = { version = "0.1", features = ["net", "io-util"] }
+tokio-util = { version = "0.7", features = ["full"] }
+tracing = "0.1"
+tracing-error = "0.2"
+tracing-subscriber = {version = "0.3", features=["env-filter"]}
+url = "2.2"
+webpki-roots = "0.22"
+
+[build-dependencies]
+vergen = "7"
+
+[dependencies.maildir]
+version = "0.6"
+#git = "https://github.com/soywod/maildir"
+#rev = "179625c3cc15212fb26eca5b819f7fe0d6f802e1"
+optional = true
+
+[features]
+default = ["maildir"]
+maildir = ["dep:maildir"]
+jaeger = ["dep:opentelemetry-jaeger"]
+
+#[profile.release]
+#debug = true
+
+[dev-dependencies]
+convert_case = "0.5"
+criterion = {version = "0.3", features = ["async_tokio"]}
+enum-iterator = "1.1"
+enum-display-derive = "0.1"

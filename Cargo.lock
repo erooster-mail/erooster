@@ -832,58 +832,153 @@ dependencies = [
 name = "erooster"
 version = "0.1.0"
 dependencies = [
- "argon2",
- "askama",
- "async-trait",
- "axum",
- "axum-opentelemetry-middleware",
- "axum-server",
- "base64",
- "bytes",
  "cfg-if 1.0.0",
  "clap 3.1.18",
  "clap_mangen",
- "clearscreen",
  "color-eyre",
- "const_format",
+ "erooster_core",
+ "erooster_imap",
+ "erooster_smtp",
+ "erooster_web",
+ "opentelemetry",
+ "opentelemetry-jaeger",
+ "sentry",
+ "serde",
+ "tokio",
+ "tracing",
+ "tracing-error",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "vergen",
+]
+
+[[package]]
+name = "erooster_core"
+version = "0.1.0"
+dependencies = [
+ "argon2",
+ "async-trait",
+ "base64",
+ "bytes",
+ "cfg-if 1.0.0",
+ "color-eyre",
  "convert_case",
  "criterion",
  "enum-display-derive",
  "enum-iterator 1.1.1",
  "futures",
- "indicatif",
  "maildir",
  "mailparse",
- "mime",
  "nom 7.1.1",
- "notify",
- "opentelemetry",
  "opentelemetry-jaeger",
  "owo-colors",
  "rand_core 0.6.3",
- "rpassword",
  "rustls 0.20.6",
- "rustls-pemfile 1.0.0",
- "sentry",
  "serde",
  "serde_yaml",
  "simdutf8",
  "sqlx",
- "sqlxmq",
  "sys-info",
  "tokio",
  "tokio-rustls 0.23.4",
  "tokio-stream",
  "tokio-util",
- "tower-http",
  "tracing",
  "tracing-error",
- "tracing-opentelemetry",
  "tracing-subscriber",
- "trust-dns-resolver",
  "url",
  "vergen",
  "webpki-roots 0.22.3",
+]
+
+[[package]]
+name = "erooster_imap"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "base64",
+ "color-eyre",
+ "const_format",
+ "convert_case",
+ "enum-display-derive",
+ "enum-iterator 1.1.1",
+ "erooster_core",
+ "futures",
+ "nom 7.1.1",
+ "notify",
+ "rustls 0.20.6",
+ "rustls-pemfile 1.0.0",
+ "simdutf8",
+ "tokio",
+ "tokio-rustls 0.23.4",
+ "tokio-stream",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
+name = "erooster_smtp"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "color-eyre",
+ "convert_case",
+ "criterion",
+ "enum-display-derive",
+ "enum-iterator 1.1.1",
+ "erooster_core",
+ "futures",
+ "nom 7.1.1",
+ "rustls 0.20.6",
+ "rustls-pemfile 1.0.0",
+ "serde",
+ "simdutf8",
+ "sqlxmq",
+ "tokio",
+ "tokio-rustls 0.23.4",
+ "tokio-stream",
+ "tokio-util",
+ "tracing",
+ "trust-dns-resolver",
+ "webpki-roots 0.22.3",
+]
+
+[[package]]
+name = "erooster_web"
+version = "0.1.0"
+dependencies = [
+ "askama",
+ "axum",
+ "axum-opentelemetry-middleware",
+ "axum-server",
+ "color-eyre",
+ "erooster_core",
+ "mime",
+ "tokio",
+ "tower-http",
+ "tracing",
+]
+
+[[package]]
+name = "eroosterctl"
+version = "0.1.0"
+dependencies = [
+ "clap 3.1.18",
+ "clearscreen",
+ "color-eyre",
+ "erooster_core",
+ "indicatif",
+ "opentelemetry",
+ "opentelemetry-jaeger",
+ "owo-colors",
+ "rpassword",
+ "sentry",
+ "sys-info",
+ "tokio",
+ "tracing",
+ "tracing-error",
+ "tracing-subscriber",
+ "vergen",
 ]
 
 [[package]]
@@ -3033,9 +3128,9 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "1.18.2"
+version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4903bf0427cf68dddd5aa6a93220756f8be0c34fcfa9f5e6191e103e15a31395"
+checksum = "0f392c8f16bda3456c0b00c6de39cb100449b98de55ac41c6cdd2bfcf53a1245"
 dependencies = [
  "bytes",
  "libc",

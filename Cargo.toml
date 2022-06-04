@@ -1,104 +1,13 @@
-[package]
-name = "erooster"
-version = "0.1.0"
-edition = "2021"
-description = "An IMAP4v2 compatible mail server"
-license = "Apache-2.0"
-authors = ["MTRNord <mtrnord@nordgedanken.dev>"]
-repository = "https://github.com/MTRNord/erooster/"
-keywords = ["email","imap","smtp","simple","fast"]
-categories = ["email", "network-programming"]
+[workspace]
 
-[[bin]]
-name = "erooster"
-path = "src/cmds/erooster.rs"
-bench = false
-
-[[bin]]
-name = "eroosterctl"
-path = "src/cmds/eroosterctl.rs"
-bench = false
-
-[lib]
-name = "erooster"
-path = "src/lib.rs"
-bench = false
-
-[dependencies]
-argon2 = { version = "0.4", features = ["std"] }
-askama = "0.11"
-async-trait = "0.1"
-axum ={ version = "0.5", features = ["http2"]}
-axum-opentelemetry-middleware = { git="https://gitlab.com/famedly/company/backend/libraries/axum-opentelemetry-middleware.git" }
-axum-server = { version = "0.4", features = ["tls-rustls"] }
-base64 = "0.13"
-bytes = "1.1"
-cfg-if = "1.0"
-clearscreen = "1.0"
-clap = { version = "3.1", features = ["derive", "color", "suggestions","env"] }
-color-eyre = "0.6"
-const_format = "0.2"
-futures = { version = "0.3", features = ["thread-pool"]}
-indicatif = "0.16"
-mailparse = "0.13"
-mime = "0.3"
-nom = "7.1"
-notify = "5.0.0-pre.15"
-opentelemetry = { version = "0.17", features = ["metrics", "tokio"] }
-opentelemetry-jaeger = { version = "0.16", features = ["tokio"], optional = true }
-owo-colors = "3"
-rand_core = { version = "0.6", features = ["std"] }
-rpassword = "6.0"
-rustls = "0.20"
-rustls-pemfile = "1.0"
-sentry = { version = "0.26", default-features = false, features = ["tracing", "backtrace", "contexts", "panic", "reqwest", "rustls"]}
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.8"
-simdutf8 = { version = "0.1" }
-sqlx = { version = "0.5", features = [ "runtime-tokio-rustls"] }
-sqlxmq = { version = "0.3", default-features = false, features = [ "runtime-tokio-rustls"] }
-sys-info = "0.9"
-tokio = { version = "1", features = ["full"] }
-tokio-rustls ={ version = "0.23", features = ["tls12"] }
-tokio-stream = { version = "0.1", features = ["net", "io-util"] }
-tokio-util = { version = "0.7", features = ["full"] }
-tower-http = { version = "0.3", features = ["trace"] }
-tracing = "0.1"
-tracing-error = "0.2"
-tracing-opentelemetry = "0.17"
-tracing-subscriber = {version = "0.3", features=["env-filter"]}
-trust-dns-resolver = "0.21"
-url = "2.2"
-webpki-roots = "0.22"
-
-[build-dependencies]
-clap = { version = "3.1", features = ["derive", "color", "suggestions","env"] }
-clap_mangen = "0.1"
-vergen = "7"
-
-[dependencies.maildir]
-version = "0.6"
-#git = "https://github.com/soywod/maildir"
-#rev = "179625c3cc15212fb26eca5b819f7fe0d6f802e1"
-optional = true
-
-[features]
-default = ["maildir"]
-maildir = ["dep:maildir"]
-jaeger = ["dep:opentelemetry-jaeger"]
-
-#[profile.release]
-#debug = true
-
-[dev-dependencies]
-convert_case = "0.5"
-criterion = {version = "0.3", features = ["async_tokio"]}
-enum-iterator = "1.1"
-enum-display-derive = "0.1"
-
-[[bench]]
-name = "smtp_bench"
-harness = false
+members = [
+    "crates/erooster",
+    "crates/eroosterctl",
+    "crates/erooster_core",
+    "crates/erooster_imap",
+    "crates/erooster_smtp",
+    "crates/erooster_web",
+]
 
 [profile.dev.package.backtrace]
 opt-level = 3

@@ -4,12 +4,9 @@ use crate::{
     },
     servers::state::State,
 };
-use erooster_core::{
-    backend::storage::{MailEntry, MailEntryType, MailStorage, Storage},
-    config::Config,
-};
+use erooster_core::backend::storage::{MailEntry, MailEntryType, MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 use tracing::{debug, error, instrument};
 
 pub struct Uid<'a> {
@@ -18,11 +15,10 @@ pub struct Uid<'a> {
 
 impl Uid<'_> {
     #[allow(clippy::too_many_lines)]
-    #[instrument(skip(self, lines, config, command_data, storage))]
+    #[instrument(skip(self, lines, command_data, storage))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
-        config: Arc<Config>,
         command_data: &CommandData<'_>,
         storage: Arc<Storage>,
     ) -> color_eyre::eyre::Result<()>
@@ -31,13 +27,11 @@ impl Uid<'_> {
     {
         if command_data.arguments[0].to_lowercase() == "fetch" {
             if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
-                let mut folder = folder.replace('/', ".");
-                folder.insert(0, '.');
-                folder.remove_matches('"');
-                folder = folder.replace(".INBOX", "INBOX");
-                let mailbox_path = Path::new(&config.mail.maildir_folders)
-                    .join(self.data.con_state.read().await.username.clone().unwrap())
-                    .join(folder.clone());
+                let folder = folder.replace('/', ".");
+                let mailbox_path = storage.to_ondisk_path(
+                    folder.clone(),
+                    self.data.con_state.read().await.username.clone().unwrap(),
+                )?;
                 let mails: Vec<MailEntryType> = storage
                     .list_all(
                         mailbox_path
@@ -128,7 +122,7 @@ impl Uid<'_> {
                 .await?;
         } else if command_data.arguments[0].to_lowercase() == "store" {
             Store { data: self.data }
-                .exec(lines, config, storage, command_data, true)
+                .exec(lines, storage, command_data, true)
                 .await?;
         }
         Ok(())

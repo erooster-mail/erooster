@@ -65,7 +65,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                         .await
                         .unwrap();
 
-                    let storage = Arc::new(get_storage(Arc::clone(&database)));
+                    let storage = Arc::new(get_storage(Arc::clone(&database), Arc::clone(&config)));
 
                     if let Err(e) = erooster_smtp::servers::unencrypted::Unencrypted::run(
                         config, database, storage,

@@ -145,7 +145,7 @@ async fn main() -> Result<()> {
 
     // Continue loading database and storage
     let database = Arc::new(get_database(Arc::clone(&config)).await?);
-    let storage = Arc::new(get_storage(Arc::clone(&database)));
+    let storage = Arc::new(get_storage(Arc::clone(&database), Arc::clone(&config)));
 
     // Startup servers
     erooster_imap::servers::start(

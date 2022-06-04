@@ -1,10 +1,7 @@
 use crate::commands::{CommandData, Data};
-use erooster_core::{
-    backend::storage::{MailStorage, Storage},
-    config::Config,
-};
+use erooster_core::backend::storage::{MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 use tracing::{debug, instrument};
 
 pub struct Subscribe<'a> {
@@ -12,11 +9,10 @@ pub struct Subscribe<'a> {
 }
 
 impl Subscribe<'_> {
-    #[instrument(skip(self, lines, config, storage, command_data))]
+    #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
-        config: Arc<Config>,
         storage: Arc<Storage>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
@@ -26,12 +22,11 @@ impl Subscribe<'_> {
         let arguments = &command_data.arguments;
         assert!(arguments.len() == 1);
         if arguments.len() == 1 {
-            let mut folder = arguments[0].replace('/', ".");
-            folder.insert(0, '.');
-            folder.remove_matches('"');
-            let mailbox_path = Path::new(&config.mail.maildir_folders)
-                .join(self.data.con_state.read().await.username.clone().unwrap())
-                .join(folder.clone());
+            let folder = arguments[0].replace('/', ".");
+            let mailbox_path = storage.to_ondisk_path(
+                folder.clone(),
+                self.data.con_state.read().await.username.clone().unwrap(),
+            )?;
             let mailbox_path_string = mailbox_path
                 .clone()
                 .into_os_string()

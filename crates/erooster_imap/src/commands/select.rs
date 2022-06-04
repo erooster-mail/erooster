@@ -2,13 +2,9 @@ use crate::{
     commands::{CommandData, Data},
     servers::state::{Access, State},
 };
-use erooster_core::{
-    backend::storage::{MailStorage, Storage},
-    config::Config,
-};
+use erooster_core::backend::storage::{MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{
-    path::Path,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -18,11 +14,10 @@ pub struct Select<'a> {
     pub data: &'a Data,
 }
 
-#[instrument(skip(data, lines, config, storage, rw, command_data))]
+#[instrument(skip(data, lines, storage, rw, command_data))]
 async fn select<S>(
     data: &Data,
     lines: &mut S,
-    config: Arc<Config>,
     storage: Arc<Storage>,
     rw: bool,
     command_data: &CommandData<'_>,
@@ -45,14 +40,12 @@ where
         write_lock.state = State::Selected(folder.clone(), access);
     };
 
-    let mut folder_on_disk = folder_arg.replace('/', ".");
-    folder_on_disk.insert(0, '.');
-    folder_on_disk.remove_matches('"');
-    folder_on_disk = folder_on_disk.replace(".INBOX", "INBOX");
+    let folder_on_disk = folder_arg;
+    let mailbox_path = storage.to_ondisk_path(
+        (*folder_on_disk).to_string(),
+        write_lock.username.clone().unwrap(),
+    )?;
     // Special INBOX check to make sure we have a mailbox
-    let mailbox_path = Path::new(&config.mail.maildir_folders)
-        .join(write_lock.username.clone().unwrap())
-        .join(folder_on_disk.replace(".INBOX", "INBOX"));
     if folder == "INBOX" && !mailbox_path.exists() {
         storage.create_dirs(
             mailbox_path
@@ -135,11 +128,10 @@ where
 }
 
 impl Select<'_> {
-    #[instrument(skip(self, lines, config, storage, command_data))]
+    #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
-        config: Arc<Config>,
         storage: Arc<Storage>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
@@ -147,7 +139,7 @@ impl Select<'_> {
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         if self.data.con_state.read().await.state == State::Authenticated {
-            select(self.data, lines, config, storage, true, command_data).await?;
+            select(self.data, lines, storage, true, command_data).await?;
         } else {
             lines
                 .send(format!("{} NO invalid state", command_data.tag))
@@ -162,11 +154,10 @@ pub struct Examine<'a> {
 }
 
 impl Examine<'_> {
-    #[instrument(skip(self, lines, config, storage, command_data))]
+    #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
-        config: Arc<Config>,
         storage: Arc<Storage>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
@@ -174,7 +165,7 @@ impl Examine<'_> {
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         if self.data.con_state.read().await.state == State::Authenticated {
-            select(self.data, lines, config, storage, false, command_data).await?;
+            select(self.data, lines, storage, false, command_data).await?;
         } else {
             lines
                 .send(format!("{} NO invalid state", command_data.tag))

@@ -1,9 +1,13 @@
-use crate::backend::{
-    database::DB,
-    storage::maildir::{MaildirMailEntry, MaildirStorage},
+use crate::{
+    backend::{
+        database::DB,
+        storage::maildir::{MaildirMailEntry, MaildirStorage},
+    },
+    config::Config,
 };
 use mailparse::{MailHeader, ParsedMail};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use tracing::instrument;
 
 /// The maildir format
@@ -116,12 +120,16 @@ pub trait MailStorage<M: MailEntry> {
         id: &str,
         imap_flags: &[&str],
     ) -> color_eyre::eyre::Result<()>;
+    /// Converts the imap path to a local path
+    fn to_ondisk_path(&self, path: String, username: String) -> color_eyre::eyre::Result<PathBuf>;
+    /// Converts the imap path to a local path name
+    fn to_ondisk_path_name(&self, path: String) -> color_eyre::eyre::Result<String>;
 }
 
 /// Get the struct of the current storage implementation
 #[cfg(feature = "maildir")]
 #[must_use]
 #[instrument(skip(db))]
-pub fn get_storage(db: DB) -> Storage {
-    MaildirStorage::new(db)
+pub fn get_storage(db: DB, config: Arc<Config>) -> Storage {
+    MaildirStorage::new(db, config)
 }

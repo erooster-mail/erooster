@@ -7,10 +7,9 @@ use crate::{
 };
 use erooster_core::{
     backend::storage::{MailEntry, MailEntryType, MailStorage, Storage},
-    config::Config,
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 use tracing::{debug, error, instrument};
 
 pub struct Fetch<'a> {
@@ -19,11 +18,10 @@ pub struct Fetch<'a> {
 
 impl Fetch<'_> {
     #[allow(clippy::too_many_lines)]
-    #[instrument(skip(self, lines, config, command_data, storage))]
+    #[instrument(skip(self, lines, command_data, storage))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
-        config: Arc<Config>,
         command_data: &CommandData<'_>,
         storage: Arc<Storage>,
     ) -> color_eyre::eyre::Result<()>
@@ -32,13 +30,11 @@ impl Fetch<'_> {
     {
         // TODO handle the various request types defined in https://www.rfc-editor.org/rfc/rfc9051.html#name-fetch-command
         if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
-            let mut folder = folder.replace('/', ".");
-            folder.insert(0, '.');
-            folder.remove_matches('"');
-            folder = folder.replace(".INBOX", "INBOX");
-            let mailbox_path = Path::new(&config.mail.maildir_folders)
-                .join(self.data.con_state.read().await.username.clone().unwrap())
-                .join(folder.clone());
+            let folder = folder.replace('/', ".");
+            let mailbox_path = storage.to_ondisk_path(
+                folder.clone(),
+                self.data.con_state.read().await.username.clone().unwrap(),
+            )?;
             let mails: Vec<MailEntryType> = storage
                 .list_all(
                     mailbox_path

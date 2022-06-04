@@ -30,7 +30,6 @@
     clippy::module_name_repetitions
 )]
 
-use erooster_core::config::Config;
 use askama::Template;
 use axum::{
     http::{header, HeaderValue, StatusCode},
@@ -39,6 +38,7 @@ use axum::{
     Extension, Router,
 };
 use axum_server::tls_rustls::RustlsConfig;
+use erooster_core::config::Config;
 use std::{net::SocketAddr, sync::Arc};
 use tower_http::trace::TraceLayer;
 use tracing::info;

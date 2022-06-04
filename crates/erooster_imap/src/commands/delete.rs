@@ -1,7 +1,7 @@
 use crate::commands::{CommandData, Data};
-use erooster_core::config::Config;
+use erooster_core::backend::storage::{MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 use tokio::fs;
 use tracing::instrument;
 
@@ -10,11 +10,11 @@ pub struct Delete<'a> {
 }
 
 impl Delete<'_> {
-    #[instrument(skip(self, lines, config, command_data))]
+    #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
-        config: Arc<Config>,
+        storage: Arc<Storage>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -23,12 +23,11 @@ impl Delete<'_> {
         let arguments = &command_data.arguments;
         assert!(arguments.len() == 1);
         if arguments.len() == 1 {
-            let mut folder = arguments[0].replace('/', ".");
-            folder.insert(0, '.');
-            folder.remove_matches('"');
-            let mailbox_path = Path::new(&config.mail.maildir_folders)
-                .join(self.data.con_state.read().await.username.clone().unwrap())
-                .join(folder.clone());
+            let folder = arguments[0].replace('/', ".");
+            let mailbox_path = storage.to_ondisk_path(
+                folder.clone(),
+                self.data.con_state.read().await.username.clone().unwrap(),
+            )?;
             // TODO error handling
             // TODO all the extra rules when to not delete
             fs::remove_dir_all(mailbox_path).await?;

@@ -2,12 +2,9 @@ use crate::{
     commands::{CommandData, Data},
     servers::state::{Access, State},
 };
-use erooster_core::{
-    backend::storage::{MailEntry, MailStorage, Storage},
-    config::Config,
-};
+use erooster_core::backend::storage::{MailEntry, MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 use tokio::fs;
 use tracing::{debug, instrument};
 
@@ -16,12 +13,11 @@ pub struct Close<'a> {
 }
 
 impl Close<'_> {
-    #[instrument(skip(self, lines, storage, config, command_data))]
+    #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
         storage: Arc<Storage>,
-        config: Arc<Config>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -37,11 +33,8 @@ impl Close<'_> {
                 return Ok(());
             }
 
-            let mut folder = folder.replace('/', ".");
-            folder.insert(0, '.');
-            let mailbox_path = Path::new(&config.mail.maildir_folders)
-                .join(write_lock.username.clone().unwrap())
-                .join(folder.clone());
+            let mailbox_path =
+                storage.to_ondisk_path(folder.clone(), write_lock.username.clone().unwrap())?;
 
             // We need to check all messages it seems?
             let mails = storage
@@ -121,9 +114,12 @@ mod tests {
                 .await
                 .unwrap(),
         );
-        let storage = Arc::new(erooster_core::backend::storage::get_storage(database));
+        let storage = Arc::new(erooster_core::backend::storage::get_storage(
+            database,
+            Arc::clone(&config),
+        ));
         let (mut tx, mut rx) = mpsc::unbounded();
-        let res = caps.exec(&mut tx, storage, config, &cmd_data).await;
+        let res = caps.exec(&mut tx, storage, &cmd_data).await;
         assert!(res.is_ok());
         assert_eq!(rx.next().await, Some(String::from("1 OK CLOSE completed")));
     }
@@ -153,8 +149,11 @@ mod tests {
                 .await
                 .unwrap(),
         );
-        let storage = Arc::new(erooster_core::backend::storage::get_storage(database));
-        let res = caps.exec(&mut tx, storage, config, &cmd_data).await;
+        let storage = Arc::new(erooster_core::backend::storage::get_storage(
+            database,
+            Arc::clone(&config),
+        ));
+        let res = caps.exec(&mut tx, storage, &cmd_data).await;
         assert!(res.is_ok());
         assert_eq!(
             rx.next().await,
@@ -187,8 +186,11 @@ mod tests {
                 .await
                 .unwrap(),
         );
-        let storage = Arc::new(erooster_core::backend::storage::get_storage(database));
-        let res = caps.exec(&mut tx, storage, config, &cmd_data).await;
+        let storage = Arc::new(erooster_core::backend::storage::get_storage(
+            database,
+            Arc::clone(&config),
+        ));
+        let res = caps.exec(&mut tx, storage, &cmd_data).await;
         assert!(res.is_ok());
         assert_eq!(rx.next().await, Some(String::from("1 NO invalid state")));
     }

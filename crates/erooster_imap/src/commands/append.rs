@@ -14,12 +14,11 @@ pub struct Append<'a> {
     pub data: &'a Data,
 }
 impl Append<'_> {
-    #[instrument(skip(self, lines, storage, config, command_data))]
+    #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
         storage: Arc<Storage>,
-        config: Arc<Config>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -36,20 +35,16 @@ impl Append<'_> {
             assert!(command_data.arguments.len() >= 3);
             let folder = command_data.arguments[0].replace('"', "");
             debug!("[Append] User wants to append to folder: {}", folder);
-            let mut folder = folder.replace('/', ".");
-            folder.insert(0, '.');
-            folder.remove_matches('"');
-            folder = folder.replace(".INBOX", "INBOX");
-            let mailbox_path = Path::new(&config.mail.maildir_folders)
-                .join(write_lock.username.clone().unwrap())
-                .join(folder.clone());
+            let mailbox_path =
+                storage.to_ondisk_path(folder.clone(), write_lock.username.clone().unwrap())?;
+            let folder = storage.to_ondisk_path_name(folder)?;
+            debug!("Appending to folder: {:?}", mailbox_path);
+
             let mailbox_path_string = mailbox_path
                 .clone()
                 .into_os_string()
                 .into_string()
                 .expect("Failed to convert path. Your system may be incompatible");
-            debug!("Appending to folder: {:?}", mailbox_path);
-
             // Spec violation but thunderbird would prompt a user error otherwise :/
             if !mailbox_path.exists() {
                 /*lines

@@ -1,11 +1,17 @@
-use crate::backend::{
-    database::{Database, DB},
-    storage::{MailEntry, MailStorage},
+use crate::{
+    backend::{
+        database::{Database, DB},
+        storage::{MailEntry, MailStorage},
+    },
+    config::Config,
 };
 use futures::{StreamExt, TryStreamExt};
 use maildir::Maildir;
 use mailparse::ParsedMail;
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
@@ -15,14 +21,15 @@ use tracing::{debug, instrument};
 /// The Storage handler for the maildir format
 pub struct MaildirStorage {
     db: DB,
+    config: Arc<Config>,
 }
 
 impl MaildirStorage {
     /// Create a new maildir storage handler
     #[must_use]
     #[instrument(skip(db))]
-    pub fn new(db: DB) -> Self {
-        MaildirStorage { db }
+    pub fn new(db: DB, config: Arc<Config>) -> Self {
+        MaildirStorage { db, config }
     }
 }
 
@@ -358,6 +365,22 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .join("");
         maildir.set_flags(id, &maildir_flags)?;
         Ok(())
+    }
+
+    fn to_ondisk_path(&self, path: String, username: String) -> color_eyre::eyre::Result<PathBuf> {
+        let folder = self.to_ondisk_path_name(path)?;
+        let mailbox_path = Path::new(&self.config.mail.maildir_folders)
+            .join(username)
+            .join(folder);
+        Ok(mailbox_path)
+    }
+
+    fn to_ondisk_path_name(&self, path: String) -> color_eyre::eyre::Result<String> {
+        let mut folder = path.replace('/', ".");
+        folder.insert(0, '.');
+        folder.remove_matches('"');
+        folder = folder.replace(".INBOX", "INBOX");
+        Ok(folder)
     }
 }
 

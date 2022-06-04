@@ -287,37 +287,37 @@ impl Data {
                     }
                     Commands::Select => {
                         Select { data: self }
-                            .exec(lines, config, storage, &command_data)
+                            .exec(lines, storage, &command_data)
                             .await?;
                     }
                     Commands::Store => {
                         Store { data: self }
-                            .exec(lines, config, storage, &command_data, false)
+                            .exec(lines, storage, &command_data, false)
                             .await?;
                     }
                     Commands::Examine => {
                         Examine { data: self }
-                            .exec(lines, config, storage, &command_data)
+                            .exec(lines, storage, &command_data)
                             .await?;
                     }
                     Commands::Create => {
                         Create { data: self }
-                            .exec(lines, config, storage, &command_data)
+                            .exec(lines, storage, &command_data)
                             .await?;
                     }
                     Commands::Delete => {
                         Delete { data: self }
-                            .exec(lines, config, &command_data)
+                            .exec(lines, storage, &command_data)
                             .await?;
                     }
                     Commands::Subscribe => {
                         Subscribe { data: self }
-                            .exec(lines, config, storage, &command_data)
+                            .exec(lines, storage, &command_data)
                             .await?;
                     }
                     Commands::Unsubscribe => {
                         Unsubscribe { data: self }
-                            .exec(lines, config, storage, &command_data)
+                            .exec(lines, storage, &command_data)
                             .await?;
                     }
                     Commands::Noop => {
@@ -328,27 +328,27 @@ impl Data {
                     }
                     Commands::Close => {
                         Close { data: self }
-                            .exec(lines, storage, config, &command_data)
+                            .exec(lines, storage, &command_data)
                             .await?;
                     }
                     Commands::Rename => {
                         Rename { data: self }
-                            .exec(lines, &command_data, config)
+                            .exec(lines, &command_data, storage)
                             .await?;
                     }
                     Commands::Uid => {
                         Uid { data: self }
-                            .exec(lines, config, &command_data, storage)
+                            .exec(lines, &command_data, storage)
                             .await?;
                     }
                     Commands::Fetch => {
                         Fetch { data: self }
-                            .exec(lines, config, &command_data, storage)
+                            .exec(lines, &command_data, storage)
                             .await?;
                     }
                     Commands::Append => {
                         Append { data: self }
-                            .exec(lines, storage, config, &command_data)
+                            .exec(lines, storage, &command_data)
                             .await?;
                     }
                 }

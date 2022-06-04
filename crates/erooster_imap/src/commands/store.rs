@@ -2,23 +2,19 @@ use crate::{
     commands::{CommandData, Data},
     servers::state::State,
 };
-use erooster_core::{
-    backend::storage::{MailEntry, MailEntryType, MailStorage, Storage},
-    config::Config,
-};
+use erooster_core::backend::storage::{MailEntry, MailEntryType, MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 use tracing::{debug, error, instrument};
 
 pub struct Store<'a> {
     pub data: &'a Data,
 }
 impl Store<'_> {
-    #[instrument(skip(self, lines, config, storage, command_data))]
+    #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
-        config: Arc<Config>,
         storage: Arc<Storage>,
         command_data: &CommandData<'_>,
         uid: bool,
@@ -31,13 +27,11 @@ impl Store<'_> {
         assert!(arguments.len() >= 2 + offset);
         if arguments.len() >= 2 + offset {
             if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
-                let mut folder = folder.replace('/', ".");
-                folder.insert(0, '.');
-                folder.remove_matches('"');
-                folder = folder.replace(".INBOX", "INBOX");
-                let mailbox_path = Path::new(&config.mail.maildir_folders)
-                    .join(self.data.con_state.read().await.username.clone().unwrap())
-                    .join(folder.clone());
+                let folder = folder.replace('/', ".");
+                let mailbox_path = storage.to_ondisk_path(
+                    folder.clone(),
+                    self.data.con_state.read().await.username.clone().unwrap(),
+                )?;
                 let mailbox_path_string = mailbox_path
                     .into_os_string()
                     .into_string()

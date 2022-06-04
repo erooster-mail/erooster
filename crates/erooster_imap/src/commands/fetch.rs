@@ -90,9 +90,18 @@ impl Fetch<'_> {
                                 let uid = mail.uid();
                                 if let Some(resp) = generate_response(args.clone(), &mut mail) {
                                     if is_uid {
-                                        lines
-                                            .feed(format!("* {} FETCH (UID {} {})", uid, uid, resp))
-                                            .await?;
+                                        if resp.contains("UID") {
+                                            lines
+                                                .feed(format!("* {} FETCH ({})", uid, resp))
+                                                .await?;
+                                        } else {
+                                            lines
+                                                .feed(format!(
+                                                    "* {} FETCH (UID {} {})",
+                                                    uid, uid, resp
+                                                ))
+                                                .await?;
+                                        }
                                     } else {
                                         lines.feed(format!("* {} FETCH ({})", uid, resp)).await?;
                                     }
@@ -231,7 +240,7 @@ fn generate_response_for_attributes(
                 Some(String::from("RFC822.SIZE 0"))
             }
         }
-        FetchAttributes::Uid => None,
+        FetchAttributes::Uid => Some(format!("UID {}", mail.uid())),
         FetchAttributes::BodyStructure => None,
         FetchAttributes::BodySection(section_text, range) => {
             Some(body(section_text, range, mail, true))

@@ -280,7 +280,7 @@ fn body(
                             let body_text = body_text.get((start as usize)..end).unwrap_or(&[]);
                             let body_text = String::from_utf8_lossy(body_text);
                             format!(
-                                "BODY[] {{{}}}\r\n{}\r\n",
+                                "BODY[] {{{}}}\r\n{}",
                                 body_text.as_bytes().len(),
                                 body_text
                             )
@@ -346,7 +346,7 @@ fn body(
     } else if let Ok(mail) = mail.parsed() {
         let mail = String::from_utf8_lossy(mail.raw_bytes);
 
-        format!("BODY[] {{{}}}\r\n{}\r\n", mail.as_bytes().len(), mail)
+        format!("BODY[] {{{}}}\r\n{}", mail.as_bytes().len(), mail)
     } else {
         String::from("BODY[] NIL\r\n")
     }

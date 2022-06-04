@@ -279,11 +279,7 @@ fn body(
                             };
                             let body_text = body_text.get((start as usize)..end).unwrap_or(&[]);
                             let body_text = String::from_utf8_lossy(body_text);
-                            format!(
-                                "BODY[] {{{}}}\r\n{}",
-                                body_text.as_bytes().len(),
-                                body_text
-                            )
+                            format!("BODY[] {{{}}}\r\n{}", body_text.as_bytes().len(), body_text)
                         } else {
                             String::from("BODY[TEXT] NIL\r\n")
                         }
@@ -315,7 +311,7 @@ fn body(
                         .map(|header| format!("{}: {}", header.get_key(), header.get_value()))
                         .collect::<Vec<_>>()
                         .join("\r\n");
-                    let data = format!("{}\r\n", headers);
+                    let data = format!("{}", headers);
                     format!("BODY[HEADER] {{{}}}\r\n{}", data.as_bytes().len(), data)
                 } else {
                     String::from("BODY[HEADER] NIL\r\n")

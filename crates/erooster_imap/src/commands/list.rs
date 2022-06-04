@@ -139,7 +139,7 @@ where
         if reference_name.is_empty() && mailbox_patterns == "%" {
             lines
                 .feed(format!(
-                    "* {} (\\NoInferiors) \"/\" \"INBOX\"",
+                    "* {} (\\NoInferiors \\Subscribed) \"/\" \"INBOX\"",
                     command_resp,
                 ))
                 .await?;

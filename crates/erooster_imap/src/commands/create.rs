@@ -39,14 +39,19 @@ impl Create<'_> {
                 Ok(_) => {
                     if folder.to_lowercase() == ".sent" {
                         storage.add_flag(&mailbox_path, "\\Sent").await?;
+                        storage.add_flag(&mailbox_path, "\\Subscribed").await?;
                     } else if folder.to_lowercase() == ".junk" {
                         storage.add_flag(&mailbox_path, "\\Junk").await?;
+                        storage.add_flag(&mailbox_path, "\\Subscribed").await?;
                     } else if folder.to_lowercase() == ".drafts" {
                         storage.add_flag(&mailbox_path, "\\Drafts").await?;
+                        storage.add_flag(&mailbox_path, "\\Subscribed").await?;
                     } else if folder.to_lowercase() == ".archive" {
                         storage.add_flag(&mailbox_path, "\\Archive").await?;
+                        storage.add_flag(&mailbox_path, "\\Subscribed").await?;
                     } else if folder.to_lowercase() == ".trash" {
                         storage.add_flag(&mailbox_path, "\\Trash").await?;
+                        storage.add_flag(&mailbox_path, "\\Subscribed").await?;
                     }
                     lines
                         .send(format!("{} OK CREATE completed", command_data.tag))

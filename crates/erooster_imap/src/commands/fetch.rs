@@ -311,8 +311,11 @@ fn body(
                         .map(|header| format!("{}: {}", header.get_key(), header.get_value()))
                         .collect::<Vec<_>>()
                         .join("\r\n");
-                    let data = format!("{}", headers);
-                    format!("BODY[HEADER] {{{}}}\r\n{}", data.as_bytes().len(), data)
+                    format!(
+                        "BODY[HEADER] {{{}}}\r\n{}",
+                        headers.as_bytes().len(),
+                        headers
+                    )
                 } else {
                     String::from("BODY[HEADER] NIL\r\n")
                 }

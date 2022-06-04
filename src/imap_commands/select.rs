@@ -44,9 +44,9 @@ where
     };
 
     let mut folder_on_disk = folder_arg.replace('/', ".");
-            folder_on_disk.insert(0, '.');
-            folder_on_disk.remove_matches('"');
-            folder_on_disk = folder_on_disk.replace(".INBOX", "INBOX");
+    folder_on_disk.insert(0, '.');
+    folder_on_disk.remove_matches('"');
+    folder_on_disk = folder_on_disk.replace(".INBOX", "INBOX");
     // Special INBOX check to make sure we have a mailbox
     let mailbox_path = Path::new(&config.mail.maildir_folders)
         .join(write_lock.username.clone().unwrap())

@@ -26,7 +26,9 @@ impl Append<'_> {
     {
         let mut write_lock = self.data.con_state.write().await;
         debug!("Append command start");
-        if write_lock.state == State::Authenticated {
+        if matches!(write_lock.state, State::Authenticated)
+            || matches!(write_lock.state, State::Selected(_, _))
+        {
             debug!("[Append] User is authenticated");
             debug!(
                 "[Append] User added {} arguments",

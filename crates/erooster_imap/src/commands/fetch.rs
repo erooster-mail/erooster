@@ -260,7 +260,6 @@ fn body(
                 String::from("BODY[HEADER] NIL\r\n")
             }
             super::parsers::SectionText::Text => {
-                // TODO we need to figure out multipart emails
                 if let Some((start, end)) = range {
                     if let Ok(body) = mail.parsed() {
                         if let Ok(body_text) = body.get_body_raw() {
@@ -308,7 +307,7 @@ fn body(
                         .collect::<Vec<_>>()
                         .join("\r\n");
                     let data = format!("{}\r\n", headers);
-                    format!("BODY[HEADER] {{{}}}\r\n{}\r\n", data.as_bytes().len(), data)
+                    format!("BODY[HEADER] {{{}}}\r\n{}", data.as_bytes().len(), data)
                 } else {
                     String::from("BODY[HEADER] NIL\r\n")
                 }
@@ -329,7 +328,7 @@ fn body(
                         .collect::<Vec<_>>()
                         .join("\r\n");
                     let data = format!("{}\r\n", headers);
-                    format!("BODY[HEADER] {{{}}}\r\n{}\r\n", data.as_bytes().len(), data)
+                    format!("BODY[HEADER] {{{}}}\r\n{}", data.as_bytes().len(), data)
                 } else {
                     String::from("BODY[HEADER] NIL\r\n")
                 }

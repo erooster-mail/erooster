@@ -91,10 +91,10 @@ impl Fetch<'_> {
                                 if let Some(resp) = generate_response(args.clone(), &mut mail) {
                                     if is_uid {
                                         lines
-                                            .feed(format!("* {} FETCH (UID {} {})", uid, uid, resp))
+                                            .feed(format!("* {} FETCH ({} UID {})", uid, uid, resp))
                                             .await?;
                                     } else {
-                                        lines.feed(format!("* {} FETCH ( {})", uid, resp)).await?;
+                                        lines.feed(format!("* {} FETCH ({})", uid, resp)).await?;
                                     }
                                 }
                             }

@@ -84,8 +84,6 @@ async fn send_success<S>(
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    // TODO get flags and perma flags
-    // TODO UIDNEXT and UIDVALIDITY
     let count = storage.count_cur(mailbox_path.clone()) + storage.count_new(mailbox_path.clone());
     lines.feed(format!("* {} EXISTS", count)).await?;
     let current_time = SystemTime::now();
@@ -114,7 +112,7 @@ where
         .await?;
     // TODO generate proper list command
     lines
-        .feed(format!("* LIST () \"/\" \"{}\"", folder))
+        .feed(format!("* LIST () \".\" \"{}\"", folder))
         .await?;
 
     let resp = if rw {

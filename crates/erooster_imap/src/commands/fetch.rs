@@ -234,7 +234,7 @@ fn generate_response_for_attributes(
         FetchAttributes::InternalDate => None,
         FetchAttributes::RFC822Size => {
             if let Ok(parsed) = mail.parsed() {
-                let size = parsed.raw_bytes.len()+b"\r\n".len();
+                let size = parsed.raw_bytes.len() + b"\r\n".len();
                 Some(format!("RFC822.SIZE {}", size))
             } else {
                 Some(String::from("RFC822.SIZE 0"))

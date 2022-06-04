@@ -80,7 +80,7 @@ impl Fetch<'_> {
                         .collect::<Vec<MailEntryType>>();
 
                     let fetch_args = command_data.arguments[1 + offset..].to_vec().join(" ");
-                    let fetch_args_str = &fetch_args[1 + offset..fetch_args.len() - 1];
+                    let fetch_args_str = &fetch_args[1..fetch_args.len() - 1];
                     debug!("Fetch args: {}", fetch_args_str);
 
                     filtered_mails.sort_by_key(MailEntry::uid);

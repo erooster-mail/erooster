@@ -157,19 +157,39 @@ fn generate_response_for_attributes(
         FetchAttributes::Flags => {
             let mut flags = String::new();
             if mail.is_draft() {
-                flags = format!("{} \\Draft", flags);
+                if flags.is_empty() {
+                    flags = String::from("\\Draft");
+                } else {
+                    flags.push_str(" \\Draft");
+                }
             }
             if mail.is_flagged() {
-                flags = format!("{} \\Flagged", flags);
+                if flags.is_empty() {
+                    flags = String::from("\\Flagged");
+                } else {
+                    flags.push_str(" \\Flagged");
+                }
             }
             if mail.is_seen() {
-                flags = format!("{} \\Seen", flags);
+                if flags.is_empty() {
+                    flags = String::from("\\Seen");
+                } else {
+                    flags.push_str(" \\Seen");
+                }
             }
             if mail.is_replied() {
-                flags = format!("{} \\Answered", flags);
+                if flags.is_empty() {
+                    flags = String::from("\\Answered");
+                } else {
+                    flags.push_str(" \\Answered");
+                }
             }
             if mail.is_trashed() {
-                flags = format!("{} \\Deleted", flags);
+                if flags.is_empty() {
+                    flags = String::from("\\Deleted");
+                } else {
+                    flags.push_str(" \\Deleted");
+                }
             }
 
             Some(format!("FLAGS ({})", flags))

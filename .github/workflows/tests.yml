@@ -50,18 +50,19 @@ jobs:
       - uses: Swatinem/rust-cache@v1
       - name: Setup Config
         run: |
-          echo 'tls:' > config.yml
-          echo '  key_path: ""' >> config.yml
-          echo '  cert_path: ""' >> config.yml
-          echo 'mail:' >> config.yml
-          echo '  maildir_folders: "./maildir"' >> config.yml
-          echo '  hostname: "localhost"' >> config.yml
-          echo 'database:' >> config.yml
-          echo '  postgres_url: "postgres://postgres:postgres@postgres/erooster"' >> config.yml
-          echo 'webserver:' >> config.yml
-          echo '  port: "80"' >> config.yml
-          echo '  tls: false' >> config.yml
-          echo '  displayname: Erooster' >> config.yml
+          mkdir -p /etc/erooster
+          echo 'tls:' > /etc/erooster/config.yml
+          echo '  key_path: ""' >> /etc/erooster/config.yml
+          echo '  cert_path: ""' >> /etc/erooster/config.yml
+          echo 'mail:' >> /etc/erooster/config.yml
+          echo '  maildir_folders: "./maildir"' >> /etc/erooster/config.yml
+          echo '  hostname: "localhost"' >> /etc/erooster/config.yml
+          echo 'database:' >> /etc/erooster/config.yml
+          echo '  postgres_url: "postgres://postgres:postgres@postgres/erooster"' >> /etc/erooster/config.yml
+          echo 'webserver:' >> /etc/erooster/config.yml
+          echo '  port: "80"' >> /etc/erooster/config.yml
+          echo '  tls: false' >> /etc/erooster/config.yml
+          echo '  displayname: Erooster' >> /etc/erooster/config.yml
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage

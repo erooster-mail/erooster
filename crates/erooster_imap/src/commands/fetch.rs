@@ -30,6 +30,7 @@ impl Fetch<'_> {
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
+        let offset = if is_uid { 1 } else { 0 };
         // TODO handle the various request types defined in https://www.rfc-editor.org/rfc/rfc9051.html#name-fetch-command
         if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
             let folder = folder.replace('/', ".");
@@ -46,7 +47,7 @@ impl Fetch<'_> {
                 )
                 .await;
 
-            let range = parse_selected_range(command_data.arguments[0]);
+            let range = parse_selected_range(command_data.arguments[offset]);
             debug!("Range: {:?}", range);
             match range {
                 Ok((_, range)) => {
@@ -78,8 +79,8 @@ impl Fetch<'_> {
                         })
                         .collect::<Vec<MailEntryType>>();
 
-                    let fetch_args = command_data.arguments[1..].to_vec().join(" ");
-                    let fetch_args_str = &fetch_args[1..fetch_args.len() - 1];
+                    let fetch_args = command_data.arguments[1 + offset..].to_vec().join(" ");
+                    let fetch_args_str = &fetch_args[1 + offset..fetch_args.len() - 1];
                     debug!("Fetch args: {}", fetch_args_str);
 
                     filtered_mails.sort_by_key(MailEntry::uid);

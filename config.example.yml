@@ -12,4 +12,5 @@ listen_ips:
 webserver:
   port: "80"
   tls: false
+  displayname: Erooster
 sentry: false

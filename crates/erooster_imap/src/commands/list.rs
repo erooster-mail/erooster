@@ -46,7 +46,7 @@ where
 
     if mailbox_patterns.is_empty() {
         lines
-            .feed(format!("* {} (\\Noselect) \"/\" \"\"", command_resp))
+            .feed(format!("* {} (\\Noselect) \".\" \"\"", command_resp))
             .await?;
     } else if mailbox_patterns.ends_with('*') {
         let mut folder = Path::new(&config.mail.maildir_folders)
@@ -75,7 +75,7 @@ where
         if reference_name.is_empty() && mailbox_patterns == "*" {
             lines
                 .feed(format!(
-                    "* {} (\\NoInferiors) \"/\" \"INBOX\"",
+                    "* {} (\\NoInferiors \\Subscribed) \".\" \"INBOX\"",
                     command_resp,
                 ))
                 .await?;
@@ -91,7 +91,7 @@ where
             let folder_name = sub_folder.file_name().unwrap().to_string_lossy();
             lines
                 .feed(format!(
-                    "* {} ({}) \"/\" \"{}\"",
+                    "* {} ({}) \".\" \"{}\"",
                     command_resp,
                     flags.join(" "),
                     folder_name.trim_start_matches('.').replace('.', "/")
@@ -115,7 +115,7 @@ where
                 mailbox_patterns_folder.remove_matches('%');
                 lines
                     .feed(format!(
-                        "* {} () \"/\" \"{}\"",
+                        "* {} () \".\" \"{}\"",
                         command_resp, mailbox_patterns_folder
                     ))
                     .await?;
@@ -139,7 +139,7 @@ where
         if reference_name.is_empty() && mailbox_patterns == "%" {
             lines
                 .feed(format!(
-                    "* {} (\\NoInferiors \\Subscribed) \"/\" \"INBOX\"",
+                    "* {} (\\NoInferiors \\Subscribed) \".\" \"INBOX\"",
                     command_resp,
                 ))
                 .await?;
@@ -154,7 +154,7 @@ where
             };
             lines
                 .feed(format!(
-                    "* {} ({}) \"/\" \"{}\"",
+                    "* {} ({}) \".\" \"{}\"",
                     command_resp,
                     flags.join(" "),
                     sub_folder
@@ -200,7 +200,7 @@ where
         }
         lines
             .feed(format!(
-                "* {} ({}) \"/\" \"{}\"",
+                "* {} ({}) \".\" \"{}\"",
                 command_resp,
                 flags.join(" "),
                 folder

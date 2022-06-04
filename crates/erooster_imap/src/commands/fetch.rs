@@ -86,6 +86,7 @@ impl Fetch<'_> {
                     filtered_mails.sort_by_key(MailEntry::uid);
                     match fetch_arguments(fetch_args_str) {
                         Ok((_, args)) => {
+                            debug!("Parsed Fetch args: {:?}", args);
                             for mut mail in filtered_mails {
                                 let uid = mail.uid();
                                 if let Some(resp) = generate_response(args.clone(), &mut mail) {

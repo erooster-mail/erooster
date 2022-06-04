@@ -21,7 +21,14 @@ mail:
   hostname: "localhost"
 database:
   postgres_url: ""
-
+listen_ips:
+  - "[::1]"
+  - "127.0.0.1"
+webserver:
+  port: "80"
+  tls: false
+  displayname: Erooster
+sentry: false
 ```
 The maildir_folders defines where the emails and forlders can be found at. This is close to the maildir format postfix uses. (We use other files to keep track of the state of it)
 

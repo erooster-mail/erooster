@@ -1,5 +1,0 @@
-- Test the different state changes
-- Run https://github.com/dovecot/imaptest/tree/main/src/tests test suite (blocked by them not doing auth or tls...)
-- Typed errors
-- UID map in db
-- Optimize locks

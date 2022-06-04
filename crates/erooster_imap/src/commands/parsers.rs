@@ -264,11 +264,13 @@ pub fn fetch_arguments(input: &str) -> Res<FetchArguments> {
     context("fetch_arguments", inner_fetch_arguments)(input)
 }
 
+#[derive(Debug)]
 pub enum RangeEnd {
     End(i64),
     All,
 }
 
+#[derive(Debug)]
 pub enum Range {
     Single(i64),
     Range(i64, RangeEnd),

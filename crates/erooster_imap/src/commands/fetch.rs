@@ -47,6 +47,7 @@ impl Fetch<'_> {
                 .await;
 
             let range = parse_selected_range(command_data.arguments[0]);
+            debug!("Range: {:?}", range);
             match range {
                 Ok((_, range)) => {
                     let mut filtered_mails: Vec<MailEntryType> = mails

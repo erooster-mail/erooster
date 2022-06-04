@@ -212,7 +212,12 @@ where
             ))
             .await?;
     }
-    lines.feed(format!("{} OK done", command_data.tag,)).await?;
+    lines
+        .feed(format!(
+            "{} OK {} completed",
+            command_data.tag, command_resp
+        ))
+        .await?;
     lines.flush().await?;
     Ok(())
 }

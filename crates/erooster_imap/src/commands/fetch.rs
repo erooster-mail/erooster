@@ -162,10 +162,11 @@ pub fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Optio
                     if resp.is_empty() {
                         resp = extra_resp;
                     } else {
-                        resp.push_str(&format!(" {}", extra_resp));
+                        resp = format!("{} {}", resp, extra_resp);
                     }
                 }
             }
+            debug!("List Response: {}", resp);
             Some(resp)
         }
     }

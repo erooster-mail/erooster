@@ -271,7 +271,11 @@ fn body(
                             };
                             let body_text = body_text.get((start as usize)..end).unwrap_or(&[]);
                             let body_text = String::from_utf8_lossy(body_text);
-                            format!("BODY[] {{{}}}\r\n{}", body_text.as_bytes().len(), body_text)
+                            format!(
+                                "BODY[] {{{}}}\r\n{}\r\n",
+                                body_text.as_bytes().len(),
+                                body_text
+                            )
                         } else {
                             String::from("BODY[TEXT] NIL\r\n")
                         }
@@ -304,7 +308,7 @@ fn body(
                         .collect::<Vec<_>>()
                         .join("\r\n");
                     let data = format!("{}\r\n", headers);
-                    format!("BODY[HEADER] {{{}}}\r\n{}", data.as_bytes().len(), data)
+                    format!("BODY[HEADER] {{{}}}\r\n{}\r\n", data.as_bytes().len(), data)
                 } else {
                     String::from("BODY[HEADER] NIL\r\n")
                 }
@@ -325,7 +329,7 @@ fn body(
                         .collect::<Vec<_>>()
                         .join("\r\n");
                     let data = format!("{}\r\n", headers);
-                    format!("BODY[HEADER] {{{}}}\r\n{}", data.as_bytes().len(), data)
+                    format!("BODY[HEADER] {{{}}}\r\n{}\r\n", data.as_bytes().len(), data)
                 } else {
                     String::from("BODY[HEADER] NIL\r\n")
                 }
@@ -334,7 +338,7 @@ fn body(
     } else if let Ok(mail) = mail.parsed() {
         let mail = String::from_utf8_lossy(mail.raw_bytes);
 
-        format!("BODY[] {{{}}}\r\n{}", mail.as_bytes().len(), mail)
+        format!("BODY[] {{{}}}\r\n{}\r\n", mail.as_bytes().len(), mail)
     } else {
         String::from("BODY[] NIL\r\n")
     }

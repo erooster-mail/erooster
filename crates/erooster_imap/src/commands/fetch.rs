@@ -312,12 +312,16 @@ fn body(
                         .collect::<Vec<_>>()
                         .join("\r\n");
                     format!(
-                        "BODY[HEADER] {{{}}}\r\n{}",
+                        "BODY[HEADER.FIELDS ({})] {{{}}}\r\n{}",
+                        headers_requested_vec.join(" "),
                         headers.as_bytes().len(),
                         headers
                     )
                 } else {
-                    String::from("BODY[HEADER] NIL\r\n")
+                    format!(
+                        "BODY[HEADER.FIELDS ({})] NIL\r\n",
+                        headers_requested_vec.join(" "),
+                    )
                 }
             }
             super::parsers::SectionText::HeaderFieldsNot(headers_requested_vec) => {

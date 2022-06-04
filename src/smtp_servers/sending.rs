@@ -3,8 +3,8 @@ use futures::{Sink, SinkExt, Stream, StreamExt};
 use rustls::OwnedTrustAnchor;
 use serde::{Deserialize, Serialize};
 use sqlxmq::{job, CurrentJob};
-use std::{collections::HashMap, error::Error, io, net::IpAddr, sync::Arc};
-use tokio::net::TcpStream;
+use std::{collections::HashMap, error::Error, io, net::IpAddr, sync::Arc, time::Duration};
+use tokio::{net::TcpStream, time::timeout};
 use tokio_rustls::TlsConnector;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, instrument};
@@ -412,15 +412,32 @@ async fn get_unsecure_connection(
     impl Stream<Item = Result<String, LinesCodecError>> + Sink<String, Error = LinesCodecError>,
     Box<dyn Error + Send + Sync + 'static>,
 > {
-    let stream = TcpStream::connect(&(addr, 25)).await?;
-    debug!(
-        "[{}] Connected to {} via tcp as {:?}",
-        current_job.id(),
-        target,
-        stream.local_addr()?
-    );
+    match timeout(Duration::from_secs(5), TcpStream::connect(&(addr, 25))).await {
+        Ok(Ok(stream)) => {
+            debug!(
+                "[{}] Connected to {} via tcp as {:?}",
+                current_job.id(),
+                target,
+                stream.local_addr()?
+            );
 
-    Ok(Framed::new(stream, LinesCodec::new()))
+            Ok(Framed::new(stream, LinesCodec::new()))
+        }
+        Ok(Err(e)) => Err(format!(
+            "[{}] Error connecting to {} via tcp: {}",
+            current_job.id(),
+            target,
+            e
+        )
+        .into()),
+        Err(e) => Err(format!(
+            "[{}] Error connecting to {} via tcp: {}",
+            current_job.id(),
+            target,
+            e
+        )
+        .into()),
+    }
 }
 
 #[instrument(skip(addr, target, current_job, tls_domain))]
@@ -447,19 +464,36 @@ async fn get_secure_connection(
         .with_no_client_auth();
     let connector = TlsConnector::from(Arc::new(config));
     debug!("[{}] Trying tls", current_job.id(),);
-    let stream = TcpStream::connect(&(addr, 465)).await?;
-    debug!(
-        "[{}] Connected to {} via tcp {:?} waiting for tls magic",
-        current_job.id(),
-        target,
-        stream.local_addr()?
-    );
+    match timeout(Duration::from_secs(5), TcpStream::connect(&(addr, 465))).await {
+        Ok(Ok(stream)) => {
+            debug!(
+                "[{}] Connected to {} via tcp {:?} waiting for tls magic",
+                current_job.id(),
+                target,
+                stream.local_addr()?
+            );
 
-    let domain = rustls::ServerName::try_from(tls_domain)
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid dnsname"))?;
+            let domain = rustls::ServerName::try_from(tls_domain)
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid dnsname"))?;
 
-    let stream = connector.connect(domain, stream).await?;
-    debug!("[{}] Connected to {} via tls", current_job.id(), target);
+            let stream = connector.connect(domain, stream).await?;
+            debug!("[{}] Connected to {} via tls", current_job.id(), target);
 
-    Ok(Framed::new(stream, LinesCodec::new()))
+            Ok(Framed::new(stream, LinesCodec::new()))
+        }
+        Ok(Err(e)) => Err(format!(
+            "[{}] Error connecting to {} via tls: {}",
+            current_job.id(),
+            target,
+            e
+        )
+        .into()),
+        Err(e) => Err(format!(
+            "[{}] Error connecting to {} via tls after {}",
+            current_job.id(),
+            target,
+            e
+        )
+        .into()),
+    }
 }

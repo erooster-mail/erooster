@@ -264,6 +264,40 @@ pub fn fetch_arguments(input: &str) -> Res<FetchArguments> {
     context("fetch_arguments", inner_fetch_arguments)(input)
 }
 
+pub enum RangeEnd {
+    End(i64),
+    All,
+}
+
+pub enum Range {
+    Single(i64),
+    Range(i64, RangeEnd),
+}
+
+#[instrument(skip(input))]
+pub fn parse_selected_range(input: &str) -> Res<Vec<Range>> {
+    context(
+        "parse_selected_range",
+        separated_list0(
+            char(','),
+            alt((
+                map(
+                    separated_pair(
+                        digit1,
+                        char(':'),
+                        map(alt((tag_no_case("*"), digit1)), |x: &str| match x {
+                            "*" => RangeEnd::All,
+                            _ => RangeEnd::End(x.parse::<i64>().unwrap()),
+                        }),
+                    ),
+                    |(x, y): (&str, RangeEnd)| Range::Range(x.parse::<i64>().unwrap(), y),
+                ),
+                map(digit1, |x: &str| Range::Single(x.parse::<i64>().unwrap())),
+            )),
+        ),
+    )(input)
+}
+
 #[instrument(skip(input))]
 pub fn day_of_week(input: &str) -> Res<&str> {
     context(

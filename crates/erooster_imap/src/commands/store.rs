@@ -253,9 +253,15 @@ impl Store<'_> {
                         .await?;
                     return Ok(());
                 }
-                lines
-                    .feed(format!("{} Ok STORE completed", command_data.tag))
-                    .await?;
+                if uid {
+                    lines
+                        .feed(format!("{} Ok UID STORE completed", command_data.tag))
+                        .await?;
+                } else {
+                    lines
+                        .feed(format!("{} Ok STORE completed", command_data.tag))
+                        .await?;
+                }
                 lines.flush().await?;
             } else {
                 lines

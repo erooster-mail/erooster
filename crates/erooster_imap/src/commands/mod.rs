@@ -343,7 +343,7 @@ impl Data {
                     }
                     Commands::Fetch => {
                         Fetch { data: self }
-                            .exec(lines, &command_data, storage)
+                            .exec(lines, &command_data, storage, false)
                             .await?;
                     }
                     Commands::Append => {

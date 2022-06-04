@@ -1,6 +1,9 @@
 use crate::{
     commands::{
-        parsers::{fetch_arguments, FetchArguments, FetchAttributes, SectionText},
+        parsers::{
+            fetch_arguments, parse_selected_range, FetchArguments, FetchAttributes, Range,
+            RangeEnd, SectionText,
+        },
         CommandData, Data,
     },
     servers::state::State,
@@ -22,6 +25,7 @@ impl Fetch<'_> {
         lines: &mut S,
         command_data: &CommandData<'_>,
         storage: Arc<Storage>,
+        is_uid: bool,
     ) -> color_eyre::eyre::Result<()>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
@@ -42,49 +46,75 @@ impl Fetch<'_> {
                 )
                 .await;
 
-            let mut filtered_mails: Vec<MailEntryType> = if command_data.arguments[0].contains(':')
-            {
-                let range = command_data.arguments[0].split(':').collect::<Vec<_>>();
-                let start = range[0].parse::<i64>().unwrap_or(1);
-                let end = range[1];
-                let end_int = end.parse::<i64>().unwrap_or(i64::max_value());
-                if end == "*" {
-                    mails
+            let range = parse_selected_range(command_data.arguments[0]);
+            match range {
+                Ok((_, range)) => {
+                    let mut filtered_mails: Vec<MailEntryType> = mails
                         .into_iter()
-                        .filter(|mail| mail.uid() >= start)
-                        .collect()
-                } else {
-                    mails
-                        .into_iter()
-                        .filter(|mail| mail.uid() >= start && mail.uid() <= end_int)
-                        .collect()
-                }
-            } else {
-                let wanted_id = command_data.arguments[0].parse::<i64>().unwrap_or(1);
-                mails
-                    .into_iter()
-                    .filter(|mail| mail.uid() == wanted_id)
-                    .collect()
-            };
+                        .filter(|mail| {
+                            for range in &range {
+                                match range {
+                                    Range::Single(id) => {
+                                        if &mail.uid() == id {
+                                            return true;
+                                        }
+                                    }
+                                    Range::Range(start, end) => match end {
+                                        RangeEnd::End(end_int) => {
+                                            if &mail.uid() >= start && &mail.uid() <= end_int {
+                                                return true;
+                                            }
+                                        }
+                                        RangeEnd::All => {
+                                            if &mail.uid() >= start {
+                                                return true;
+                                            }
+                                        }
+                                    },
+                                }
+                            }
+                            false
+                        })
+                        .collect::<Vec<MailEntryType>>();
 
-            let fetch_args = command_data.arguments[1..].to_vec().join(" ");
-            let fetch_args_str = &fetch_args[1..fetch_args.len() - 1];
-            debug!("Fetch args: {}", fetch_args_str);
+                    let fetch_args = command_data.arguments[1..].to_vec().join(" ");
+                    let fetch_args_str = &fetch_args[1..fetch_args.len() - 1];
+                    debug!("Fetch args: {}", fetch_args_str);
 
-            filtered_mails.sort_by_key(MailEntry::uid);
-            match fetch_arguments(fetch_args_str) {
-                Ok((_, args)) => {
-                    for mut mail in filtered_mails {
-                        let uid = mail.uid();
-                        if let Some(resp) = generate_response(args.clone(), &mut mail) {
-                            lines.feed(format!("* {} FETCH ({})", uid, resp)).await?;
+                    filtered_mails.sort_by_key(MailEntry::uid);
+                    match fetch_arguments(fetch_args_str) {
+                        Ok((_, args)) => {
+                            for mut mail in filtered_mails {
+                                let uid = mail.uid();
+                                if let Some(resp) = generate_response(args.clone(), &mut mail) {
+                                    if is_uid {
+                                        lines
+                                            .feed(format!("* {} FETCH (UID {} {})", uid, uid, resp))
+                                            .await?;
+                                    } else {
+                                        lines.feed(format!("* {} FETCH ( {})", uid, resp)).await?;
+                                    }
+                                }
+                            }
+
+                            if is_uid {
+                                lines
+                                    .feed(format!("{} Ok UID FETCH completed", command_data.tag))
+                                    .await?;
+                            } else {
+                                lines
+                                    .feed(format!("{} Ok FETCH completed", command_data.tag))
+                                    .await?;
+                            }
+                            lines.flush().await?;
+                        }
+                        Err(e) => {
+                            error!("Failed to parse fetch arguments: {}", e);
+                            lines
+                                .send(format!("{} BAD Unable to parse", command_data.tag))
+                                .await?;
                         }
                     }
-
-                    lines
-                        .feed(format!("{} Ok UID FETCH completed", command_data.tag))
-                        .await?;
-                    lines.flush().await?;
                 }
                 Err(e) => {
                     error!("Failed to parse fetch arguments: {}", e);

@@ -47,7 +47,7 @@ mod tests {
     use tokio::sync::RwLock;
 
     #[tokio::test]
-    async fn test_successfull_check() {
+    async fn test_successful_check() {
         let caps = Check {
             data: &Data {
                 con_state: Arc::new(RwLock::new(Connection {
@@ -71,7 +71,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_unsuccessfull_check() {
+    async fn test_unsuccessful_check() {
         let caps = Check {
             data: &Data {
                 con_state: Arc::new(RwLock::new(Connection {

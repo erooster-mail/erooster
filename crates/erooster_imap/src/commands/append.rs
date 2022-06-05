@@ -8,7 +8,7 @@ use erooster_core::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{path::Path, sync::Arc};
-use tracing::{debug, instrument, error};
+use tracing::{debug, error, instrument};
 
 pub struct Append<'a> {
     pub data: &'a Data,

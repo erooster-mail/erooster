@@ -4,7 +4,7 @@ use color_eyre::Result;
 use rand_core::OsRng;
 use sqlx::PgPool;
 use std::sync::Arc;
-use tracing::{debug, error, instrument};
+use tracing::{debug, debug_span, error, instrument, Instrument};
 
 /// Postgres specific database implementation
 /// Holds data to connect to the database
@@ -39,15 +39,21 @@ impl Database<sqlx::Postgres> for Postgres {
         match hash {
             Ok(hash) => {
                 let hash = hash.0;
-                match PasswordHash::new(&hash) {
-                    Ok(parsed_hash) => Argon2::default()
-                        .verify_password(password.as_bytes(), &parsed_hash)
-                        .is_ok(),
+                let span = debug_span!("verify_user::aron2::PasswordHash");
+                span.in_scope(|| match PasswordHash::new(&hash) {
+                    Ok(parsed_hash) => {
+                        let span = debug_span!("verify_user::aron2::verify_password");
+                        span.in_scope(|| {
+                            Argon2::default()
+                                .verify_password(password.as_bytes(), &parsed_hash)
+                                .is_ok()
+                        })
+                    }
                     Err(e) => {
                         error!("[DB] Error verifying user: {}", e);
                         false
                     }
-                }
+                })
             }
             Err(e) => {
                 error!("[DB] Error verifying user: {}", e);

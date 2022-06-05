@@ -61,7 +61,7 @@ jobs:
           echo 'database:' >> /etc/erooster/config.yml
           echo '  postgres_url: "postgres://postgres:postgres@postgres/erooster"' >> /etc/erooster/config.yml
           echo 'webserver:' >> /etc/erooster/config.yml
-          echo '  port: "80"' >> /etc/erooster/config.yml
+          echo '  port: 80' >> /etc/erooster/config.yml
           echo '  tls: false' >> /etc/erooster/config.yml
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov

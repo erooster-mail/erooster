@@ -69,7 +69,7 @@ async fn main() -> Result<()> {
             .or_else(|_| tracing_subscriber::EnvFilter::try_new("info"))?;
         cfg_if::cfg_if! {
             if #[cfg(feature = "jaeger")] {
-                let tracer = opentelemetry_jaeger::new_pipeline().with_service_name(env!("CARGO_PKG_NAME")).install_simple()?;
+                let tracer = opentelemetry_jaeger::new_pipeline().with_service_name(env!("CARGO_PKG_NAME")).install_batch(opentelemetry::runtime::Tokio)?;
                 tracing_subscriber::Registry::default()
                     .with(sentry::integrations::tracing::layer())
                     .with(filter_layer)

@@ -32,11 +32,7 @@ impl Store<'_> {
                     folder.clone(),
                     self.data.con_state.read().await.username.clone().unwrap(),
                 )?;
-                let mailbox_path_string = mailbox_path
-                    .into_os_string()
-                    .into_string()
-                    .expect("Failed to convert path. Your system may be incompatible");
-                let mails: Vec<MailEntryType> = storage.list_all(mailbox_path_string.clone()).await;
+                let mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
 
                 let filtered_mails: Vec<MailEntryType> =
                     if command_data.arguments[offset].contains(':') {
@@ -77,16 +73,12 @@ impl Store<'_> {
                             .into_string()
                             .expect("Failed to convert path. Your system may be incompatible");
                         if path.ends_with("new") {
-                            if let Err(e) = storage.move_new_to_cur_with_flags(
-                                mailbox_path_string.clone(),
-                                mail.id(),
-                                &flags,
-                            ) {
+                            if let Err(e) =
+                                storage.move_new_to_cur_with_flags(&mailbox_path, mail.id(), &flags)
+                            {
                                 error!("Failed to store flags or move email {}: {}", mail.id(), e);
                             }
-                        } else if let Err(e) =
-                            storage.set_flags(mailbox_path_string.clone(), mail.id(), &flags)
-                        {
+                        } else if let Err(e) = storage.set_flags(&mailbox_path, mail.id(), &flags) {
                             error!("Failed to store flags or move email {}: {}", mail.id(), e);
                         }
 
@@ -114,16 +106,12 @@ impl Store<'_> {
                             .into_string()
                             .expect("Failed to convert path. Your system may be incompatible");
                         if path.ends_with("new") {
-                            if let Err(e) = storage.move_new_to_cur_with_flags(
-                                mailbox_path_string.clone(),
-                                mail.id(),
-                                &flags,
-                            ) {
+                            if let Err(e) =
+                                storage.move_new_to_cur_with_flags(&mailbox_path, mail.id(), &flags)
+                            {
                                 error!("Failed to store flags or move email {}: {}", mail.id(), e);
                             }
-                        } else if let Err(e) =
-                            storage.set_flags(mailbox_path_string.clone(), mail.id(), &flags)
-                        {
+                        } else if let Err(e) = storage.set_flags(&mailbox_path, mail.id(), &flags) {
                             error!("Failed to store flags or move email {}: {}", mail.id(), e);
                         }
                     }
@@ -137,16 +125,12 @@ impl Store<'_> {
                             .expect("Failed to convert path. Your system may be incompatible");
                         debug!("Path: {}", path);
                         if path.ends_with("new") {
-                            if let Err(e) = storage.move_new_to_cur_with_flags(
-                                mailbox_path_string.clone(),
-                                mail.id(),
-                                &flags,
-                            ) {
+                            if let Err(e) =
+                                storage.move_new_to_cur_with_flags(&mailbox_path, mail.id(), &flags)
+                            {
                                 error!("Failed to store flags or move email {}: {}", mail.id(), e);
                             }
-                        } else if let Err(e) =
-                            storage.add_flags(mailbox_path_string.clone(), mail.id(), &flags)
-                        {
+                        } else if let Err(e) = storage.add_flags(&mailbox_path, mail.id(), &flags) {
                             error!("Failed to store flags or move email {}: {}", mail.id(), e);
                         }
 
@@ -174,16 +158,12 @@ impl Store<'_> {
                             .into_string()
                             .expect("Failed to convert path. Your system may be incompatible");
                         if path.ends_with("new") {
-                            if let Err(e) = storage.move_new_to_cur_with_flags(
-                                mailbox_path_string.clone(),
-                                mail.id(),
-                                &flags,
-                            ) {
+                            if let Err(e) =
+                                storage.move_new_to_cur_with_flags(&mailbox_path, mail.id(), &flags)
+                            {
                                 error!("Failed to store flags or move email {}: {}", mail.id(), e);
                             }
-                        } else if let Err(e) =
-                            storage.add_flags(mailbox_path_string.clone(), mail.id(), &flags)
-                        {
+                        } else if let Err(e) = storage.add_flags(&mailbox_path, mail.id(), &flags) {
                             error!("Failed to store flags or move email {}: {}", mail.id(), e);
                         }
                     }
@@ -211,9 +191,7 @@ impl Store<'_> {
                             })
                             .collect::<Vec<_>>();
 
-                        if let Err(e) =
-                            storage.remove_flags(mailbox_path_string.clone(), mail.id(), &flags)
-                        {
+                        if let Err(e) = storage.remove_flags(&mailbox_path, mail.id(), &flags) {
                             error!("Failed to store flags or move email {}: {}", mail.id(), e);
                         }
 
@@ -238,9 +216,7 @@ impl Store<'_> {
                     }
                 } else if action.to_lowercase() == "-flags.silent" {
                     for mail in filtered_mails {
-                        if let Err(e) =
-                            storage.remove_flags(mailbox_path_string.clone(), mail.id(), &flags)
-                        {
+                        if let Err(e) = storage.remove_flags(&mailbox_path, mail.id(), &flags) {
                             error!("Failed to store flags or move email {}: {}", mail.id(), e);
                         }
                     }

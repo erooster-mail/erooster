@@ -27,16 +27,11 @@ impl Subscribe<'_> {
                 folder.clone(),
                 self.data.con_state.read().await.username.clone().unwrap(),
             )?;
-            let mailbox_path_string = mailbox_path
-                .clone()
-                .into_os_string()
-                .into_string()
-                .expect("Failed to convert path. Your system may be incompatible");
 
             // This is a spec violation. However we need to do this currently due to how the storage is set up
-            debug!("mailbox_path: {}", mailbox_path_string);
+            debug!("mailbox_path: {:?}", &mailbox_path);
             if !mailbox_path.exists() {
-                storage.create_dirs(mailbox_path_string)?;
+                storage.create_dirs(&mailbox_path)?;
                 if folder.to_lowercase() == ".sent" {
                     storage.add_flag(&mailbox_path, "\\Sent").await?;
                 } else if folder.to_lowercase() == ".junk" {

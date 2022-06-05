@@ -48,13 +48,7 @@ where
     )?;
     // Special INBOX check to make sure we have a mailbox
     if folder == "INBOX" && !mailbox_path.exists() {
-        storage.create_dirs(
-            mailbox_path
-                .clone()
-                .into_os_string()
-                .into_string()
-                .expect("Failed to convert path. Your system may be incompatible"),
-        )?;
+        storage.create_dirs(&mailbox_path)?;
         storage.add_flag(&mailbox_path, "\\Subscribed").await?;
         storage.add_flag(&mailbox_path, "\\NoInferiors").await?;
     }
@@ -74,19 +68,7 @@ async fn send_success<S>(
 where
     S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
 {
-    let count = storage.count_cur(
-        mailbox_path
-            .clone()
-            .into_os_string()
-            .into_string()
-            .expect("Failed to convert path. Your system may be incompatible"),
-    ) + storage.count_new(
-        mailbox_path
-            .clone()
-            .into_os_string()
-            .into_string()
-            .expect("Failed to convert path. Your system may be incompatible"),
-    );
+    let count = storage.count_cur(&mailbox_path) + storage.count_new(&mailbox_path);
     lines.feed(format!("* {} EXISTS", count)).await?;
     let current_time = SystemTime::now();
     let unix_timestamp = current_time.duration_since(UNIX_EPOCH)?;
@@ -95,13 +77,7 @@ where
     lines
         .feed(format!("* OK [UIDVALIDITY {}] UIDs valid", timestamp))
         .await?;
-    let current_uid = storage.get_uid_for_folder(
-        mailbox_path
-            .clone()
-            .into_os_string()
-            .into_string()
-            .expect("Failed to convert path. Your system may be incompatible"),
-    )?;
+    let current_uid = storage.get_uid_for_folder(&mailbox_path)?;
     lines
         .feed(format!(
             "* OK [UIDNEXT {}] Predicted next UID",
@@ -122,12 +98,7 @@ where
     lines
         .feed(format!("* LIST () \".\" \"{}\"", folder))
         .await?;
-    let sub_folders = storage.list_subdirs(
-        mailbox_path
-            .into_os_string()
-            .into_string()
-            .expect("Failed to convert path. Your system may be incompatible"),
-    )?;
+    let sub_folders = storage.list_subdirs(&mailbox_path)?;
     for sub_folder in sub_folders {
         let flags_raw = storage.get_flags(&sub_folder).await;
         let flags = if let Ok(flags_raw) = flags_raw {

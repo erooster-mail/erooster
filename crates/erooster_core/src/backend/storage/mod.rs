@@ -62,7 +62,7 @@ pub trait MailEntry {
 #[async_trait::async_trait]
 pub trait MailStorage<M: MailEntry> {
     /// Get the current UID for the folder
-    fn get_uid_for_folder(&self, path: String) -> color_eyre::eyre::Result<u32>;
+    fn get_uid_for_folder(&self, path: &Path) -> color_eyre::eyre::Result<u32>;
     /// Get the current flags for the folder
     async fn get_flags(&self, path: &Path) -> std::io::Result<Vec<String>>;
     /// Set a new flag for the folder
@@ -70,53 +70,45 @@ pub trait MailStorage<M: MailEntry> {
     /// Remove a flag from the folder
     async fn remove_flag(&self, path: &Path, flag: &str) -> color_eyre::eyre::Result<()>;
     /// Creates the required folder structure
-    fn create_dirs(&self, path: String) -> color_eyre::eyre::Result<()>;
+    fn create_dirs(&self, path: &Path) -> color_eyre::eyre::Result<()>;
     /// Store new message
-    async fn store_new(&self, path: String, data: &[u8]) -> color_eyre::eyre::Result<String>;
+    async fn store_new(&self, path: &Path, data: &[u8]) -> color_eyre::eyre::Result<String>;
     /// Store a message
     async fn store_cur_with_flags(
         &self,
-        path: String,
+        path: &Path,
         data: &[u8],
         flags: Vec<String>,
     ) -> color_eyre::eyre::Result<String>;
     /// List the subfolders
-    fn list_subdirs(&self, path: String) -> color_eyre::eyre::Result<Vec<PathBuf>>;
+    fn list_subdirs(&self, path: &Path) -> color_eyre::eyre::Result<Vec<PathBuf>>;
     /// Count of current messages
-    fn count_cur(&self, path: String) -> usize;
+    fn count_cur(&self, path: &Path) -> usize;
     /// Count of new messages
-    fn count_new(&self, path: String) -> usize;
+    fn count_new(&self, path: &Path) -> usize;
     /// Get the current messages
-    async fn list_cur(&self, path: String) -> Vec<M>;
+    async fn list_cur(&self, path: &Path) -> Vec<M>;
     /// Get the new messages
-    async fn list_new(&self, path: String) -> Vec<M>;
+    async fn list_new(&self, path: &Path) -> Vec<M>;
     /// Get the all messages
-    async fn list_all(&self, path: String) -> Vec<M>;
+    async fn list_all(&self, path: &Path) -> Vec<M>;
     /// Move mail to current folder and set flags
     fn move_new_to_cur_with_flags(
         &self,
-        path: String,
+        path: &Path,
         id: &str,
         imap_flags: &[&str],
     ) -> color_eyre::eyre::Result<()>;
     /// Add flags to email
-    fn add_flags(
-        &self,
-        path: String,
-        id: &str,
-        imap_flags: &[&str],
-    ) -> color_eyre::eyre::Result<()>;
+    fn add_flags(&self, path: &Path, id: &str, imap_flags: &[&str])
+        -> color_eyre::eyre::Result<()>;
     /// Set flags of an email
-    fn set_flags(
-        &self,
-        path: String,
-        id: &str,
-        imap_flags: &[&str],
-    ) -> color_eyre::eyre::Result<()>;
+    fn set_flags(&self, path: &Path, id: &str, imap_flags: &[&str])
+        -> color_eyre::eyre::Result<()>;
     /// Remove flags of an email
     fn remove_flags(
         &self,
-        path: String,
+        path: &Path,
         id: &str,
         imap_flags: &[&str],
     ) -> color_eyre::eyre::Result<()>;

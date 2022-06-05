@@ -38,25 +38,10 @@ impl Close<'_> {
 
             // We need to check all messages it seems?
             let mails = storage
-                .list_cur(
-                    mailbox_path
-                        .clone()
-                        .into_os_string()
-                        .into_string()
-                        .expect("Failed to convert path. Your system may be incompatible"),
-                )
+                .list_cur(&mailbox_path)
                 .await
                 .into_iter()
-                .chain(
-                    storage
-                        .list_new(
-                            mailbox_path
-                                .into_os_string()
-                                .into_string()
-                                .expect("Failed to convert path. Your system may be incompatible"),
-                        )
-                        .await,
-                );
+                .chain(storage.list_new(&mailbox_path).await);
             for mail in mails {
                 debug!("Checking mails");
                 if mail.is_trashed() {

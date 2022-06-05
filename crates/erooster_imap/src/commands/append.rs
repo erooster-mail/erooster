@@ -41,12 +41,6 @@ impl Append<'_> {
                 storage.to_ondisk_path(folder.clone(), write_lock.username.clone().unwrap())?;
             let folder = storage.to_ondisk_path_name(folder)?;
             debug!("Appending to folder: {:?}", mailbox_path);
-
-            let mailbox_path_string = mailbox_path
-                .clone()
-                .into_os_string()
-                .into_string()
-                .expect("Failed to convert path. Your system may be incompatible");
             // Spec violation but thunderbird would prompt a user error otherwise :/
             if !mailbox_path.exists() {
                 /*lines
@@ -56,7 +50,7 @@ impl Append<'_> {
                     ))
                     .await?;
                 return Ok(());*/
-                storage.create_dirs(mailbox_path_string)?;
+                storage.create_dirs(&mailbox_path)?;
                 if folder.to_lowercase() == ".sent" {
                     storage.add_flag(&mailbox_path, "\\Sent").await?;
                     storage.add_flag(&mailbox_path, "\\Subscribed").await?;
@@ -132,24 +126,12 @@ impl Append<'_> {
                     debug!("[Append] Mailbox path: {:?}", mailbox_path);
                     if let Some(flags) = &state.flags {
                         let message_id = storage
-                            .store_cur_with_flags(
-                                mailbox_path.clone().into_os_string().into_string().expect(
-                                    "Failed to convert path. Your system may be incompatible",
-                                ),
-                                buffer,
-                                flags.clone(),
-                            )
+                            .store_cur_with_flags(&mailbox_path, buffer, flags.clone())
                             .await?;
                         debug!("Stored message via append: {}", message_id);
                     } else {
                         let message_id = storage
-                            .store_cur_with_flags(
-                                mailbox_path.clone().into_os_string().into_string().expect(
-                                    "Failed to convert path. Your system may be incompatible",
-                                ),
-                                buffer,
-                                vec![],
-                            )
+                            .store_cur_with_flags(&mailbox_path, buffer, vec![])
                             .await?;
                         debug!("Stored message via append: {}", message_id);
                     }

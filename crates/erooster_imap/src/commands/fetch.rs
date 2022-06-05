@@ -38,14 +38,7 @@ impl Fetch<'_> {
                 folder.clone(),
                 self.data.con_state.read().await.username.clone().unwrap(),
             )?;
-            let mails: Vec<MailEntryType> = storage
-                .list_all(
-                    mailbox_path
-                        .into_os_string()
-                        .into_string()
-                        .expect("Failed to convert path. Your system may be incompatible"),
-                )
-                .await;
+            let mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
 
             let range = parse_selected_range(command_data.arguments[offset]);
             debug!("Range: {:?}", range);

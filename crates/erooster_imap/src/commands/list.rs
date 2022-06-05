@@ -66,12 +66,7 @@ where
             folder = folder.join(mailbox_patterns_folder);
         }
 
-        let sub_folders = storage.list_subdirs(
-            folder
-                .into_os_string()
-                .into_string()
-                .expect("Failed to convert path. Your system may be incompatible"),
-        )?;
+        let sub_folders = storage.list_subdirs(&folder)?;
         if reference_name.is_empty() && mailbox_patterns == "*" {
             lines
                 .feed(format!("* {} (\\Subscribed) \".\" \"INBOX\"", command_resp,))
@@ -126,12 +121,7 @@ where
             folder = folder.join(mailbox_patterns_folder);
         }
 
-        let sub_folders = storage.list_subdirs(
-            folder
-                .into_os_string()
-                .into_string()
-                .expect("Failed to convert path. Your system may be incompatible"),
-        )?;
+        let sub_folders = storage.list_subdirs(&folder)?;
         if reference_name.is_empty() && mailbox_patterns == "%" {
             lines
                 .feed(format!("* {} (\\Subscribed) \".\" \"INBOX\"", command_resp,))

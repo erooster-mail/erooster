@@ -29,13 +29,7 @@ impl Create<'_> {
             )?;
             let folder = storage.to_ondisk_path_name(folder)?;
 
-            let mailbox_path_string = mailbox_path
-                .clone()
-                .into_os_string()
-                .into_string()
-                .expect("Failed to convert path. Your system may be incompatible");
-
-            match storage.create_dirs(mailbox_path_string) {
+            match storage.create_dirs(&mailbox_path) {
                 Ok(_) => {
                     if folder.to_lowercase() == ".sent" {
                         storage.add_flag(&mailbox_path, "\\Sent").await?;

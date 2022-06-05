@@ -36,8 +36,8 @@ impl MaildirStorage {
 #[async_trait::async_trait]
 impl MailStorage<MaildirMailEntry> for MaildirStorage {
     #[instrument(skip(self, mailbox_path))]
-    fn get_uid_for_folder(&self, mailbox_path: String) -> color_eyre::eyre::Result<u32> {
-        let maildir = Maildir::from(mailbox_path);
+    fn get_uid_for_folder(&self, mailbox_path: &Path) -> color_eyre::eyre::Result<u32> {
+        let maildir = Maildir::from(mailbox_path.to_path_buf());
         let current_last_id: u32 = maildir.count_cur().try_into()?;
         let new_last_id: u32 = maildir.count_new().try_into()?;
         Ok(current_last_id + new_last_id)
@@ -89,19 +89,19 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     }
 
     #[instrument(skip(self, mailbox_path))]
-    fn create_dirs(&self, mailbox_path: String) -> color_eyre::eyre::Result<()> {
-        let maildir = Maildir::from(mailbox_path);
+    fn create_dirs(&self, mailbox_path: &Path) -> color_eyre::eyre::Result<()> {
+        let maildir = Maildir::from(mailbox_path.to_path_buf());
         maildir.create_dirs().map_err(Into::into)
     }
 
     #[instrument(skip(self, path, data))]
     async fn store_cur_with_flags(
         &self,
-        path: String,
+        path: &Path,
         data: &[u8],
         imap_flags: Vec<String>,
     ) -> color_eyre::eyre::Result<String> {
-        let maildir = Maildir::from(path);
+        let maildir = Maildir::from(path.to_path_buf());
         let maildir_flags = imap_flags
             .iter()
             .filter_map(|flag| {
@@ -131,8 +131,8 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     }
 
     #[instrument(skip(self, path, data))]
-    async fn store_new(&self, path: String, data: &[u8]) -> color_eyre::eyre::Result<String> {
-        let maildir = Maildir::from(path);
+    async fn store_new(&self, path: &Path, data: &[u8]) -> color_eyre::eyre::Result<String> {
+        let maildir = Maildir::from(path.to_path_buf());
         let maildir_id = maildir.store_new(data)?;
         sqlx::query("INSERT INTO mails (maildir_id) VALUES ($1)")
             .bind(maildir_id.clone())
@@ -142,8 +142,8 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     }
 
     #[instrument(skip(self, path))]
-    fn list_subdirs(&self, path: String) -> color_eyre::eyre::Result<Vec<PathBuf>> {
-        let maildir = Maildir::from(path);
+    fn list_subdirs(&self, path: &Path) -> color_eyre::eyre::Result<Vec<PathBuf>> {
+        let maildir = Maildir::from(path.to_path_buf());
         Ok(maildir
             .list_subdirs()
             .filter_map(|x| match x {
@@ -154,20 +154,20 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     }
 
     #[instrument(skip(self, path))]
-    fn count_cur(&self, path: String) -> usize {
-        let maildir = Maildir::from(path);
+    fn count_cur(&self, path: &Path) -> usize {
+        let maildir = Maildir::from(path.to_path_buf());
         maildir.count_cur()
     }
 
     #[instrument(skip(self, path))]
-    fn count_new(&self, path: String) -> usize {
-        let maildir = Maildir::from(path);
+    fn count_new(&self, path: &Path) -> usize {
+        let maildir = Maildir::from(path.to_path_buf());
         maildir.count_new()
     }
 
     #[instrument(skip(self, path))]
-    async fn list_cur(&self, path: String) -> Vec<MaildirMailEntry> {
-        let maildir = Maildir::from(path);
+    async fn list_cur(&self, path: &Path) -> Vec<MaildirMailEntry> {
+        let maildir = Maildir::from(path.to_path_buf());
         let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
             .fetch(self.db.get_pool())
             .filter_map(|x| async move { x.ok() })
@@ -190,8 +190,8 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     }
 
     #[instrument(skip(self, path))]
-    async fn list_new(&self, path: String) -> Vec<MaildirMailEntry> {
-        let maildir = Maildir::from(path);
+    async fn list_new(&self, path: &Path) -> Vec<MaildirMailEntry> {
+        let maildir = Maildir::from(path.to_path_buf());
         let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
             .fetch(self.db.get_pool())
             .filter_map(|x| async move { x.ok() })
@@ -214,8 +214,8 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     }
 
     #[instrument(skip(self, path))]
-    async fn list_all(&self, path: String) -> Vec<MaildirMailEntry> {
-        let maildir = Maildir::from(path);
+    async fn list_all(&self, path: &Path) -> Vec<MaildirMailEntry> {
+        let maildir = Maildir::from(path.to_path_buf());
         let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
             .fetch(self.db.get_pool())
             .filter_map(|x| async move { x.ok() })
@@ -241,11 +241,11 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     #[instrument(skip(self, path))]
     fn move_new_to_cur_with_flags(
         &self,
-        path: String,
+        path: &Path,
         id: &str,
         imap_flags: &[&str],
     ) -> color_eyre::eyre::Result<()> {
-        let maildir = Maildir::from(path);
+        let maildir = Maildir::from(path.to_path_buf());
         let maildir_flags = imap_flags
             .iter()
             .filter_map(|flag| {
@@ -273,11 +273,11 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     #[instrument(skip(self, path))]
     fn add_flags(
         &self,
-        path: String,
+        path: &Path,
         id: &str,
         imap_flags: &[&str],
     ) -> color_eyre::eyre::Result<()> {
-        let maildir = Maildir::from(path);
+        let maildir = Maildir::from(path.to_path_buf());
         let maildir_flags = imap_flags
             .iter()
             .filter_map(|flag| {
@@ -306,11 +306,11 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     #[instrument(skip(self, path))]
     fn set_flags(
         &self,
-        path: String,
+        path: &Path,
         id: &str,
         imap_flags: &[&str],
     ) -> color_eyre::eyre::Result<()> {
-        let maildir = Maildir::from(path);
+        let maildir = Maildir::from(path.to_path_buf());
         let maildir_flags = imap_flags
             .iter()
             .filter_map(|flag| {
@@ -338,11 +338,11 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     #[instrument(skip(self, path))]
     fn remove_flags(
         &self,
-        path: String,
+        path: &Path,
         id: &str,
         imap_flags: &[&str],
     ) -> color_eyre::eyre::Result<()> {
-        let maildir = Maildir::from(path);
+        let maildir = Maildir::from(path.to_path_buf());
         let maildir_flags = imap_flags
             .iter()
             .filter_map(|flag| {
@@ -465,7 +465,7 @@ impl MailEntry for MaildirMailEntry {
     }
 
     #[instrument(skip(self))]
-    fn path(&self) -> &std::path::PathBuf {
+    fn path(&self) -> &PathBuf {
         self.entry.path()
     }
 }

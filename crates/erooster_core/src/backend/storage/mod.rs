@@ -92,6 +92,8 @@ pub trait MailStorage<M: MailEntry> {
     async fn list_new(&self, path: &Path) -> Vec<M>;
     /// Get the all messages
     async fn list_all(&self, path: &Path) -> Vec<M>;
+    /// Get message by non unique id
+    async fn find(&self, path: &Path, id: &str) -> Option<M>;
     /// Move mail to current folder and set flags
     fn move_new_to_cur_with_flags(
         &self,

@@ -188,6 +188,16 @@ fn generate_response_for_attributes(
         }
         FetchAttributes::Flags => {
             let mut flags = String::new();
+            if mail
+                .path()
+                .clone()
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .contains("new")
+            {
+                flags.push_str("\\Recent");
+            }
             if mail.is_draft() {
                 if flags.is_empty() {
                     flags = String::from("\\Draft");

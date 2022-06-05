@@ -43,6 +43,22 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         Ok(current_last_id + new_last_id)
     }
 
+    async fn find(&self, path: &Path, id: &str) -> Option<MaildirMailEntry> {
+        let maildir = Maildir::from(path.to_path_buf());
+        let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
+            .fetch(self.db.get_pool())
+            .filter_map(|x| async move { x.ok() })
+            .collect()
+            .await;
+        maildir.find(id).map(|entry| MaildirMailEntry {
+            entry,
+            uid: mail_rows
+                .iter()
+                .find(|x| x.maildir_id == id)
+                .map_or(0, |x| x.id),
+        })
+    }
+
     #[instrument(skip(self, path))]
     async fn get_flags(&self, path: &Path) -> std::io::Result<Vec<String>> {
         let flags_file = path.join(".erooster_folder_flags");

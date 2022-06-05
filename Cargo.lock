@@ -1243,12 +1243,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "hashbrown"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db0d4cf898abf0081f964436dc980e96670a0f36863e4b83aaacdb65c9d7ccc3"
+dependencies = [
+ "ahash",
+]
+
+[[package]]
 name = "hashlink"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7249a3129cbc1ffccd74857f81464a323a152173cdb134e0fd81bc803b29facf"
 dependencies = [
- "hashbrown",
+ "hashbrown 0.11.2",
 ]
 
 [[package]]
@@ -1436,7 +1445,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6012d540c5baa3589337a98ce73408de9b5a25ec9fc2c6fd6be8f0d39e0ca5a"
 dependencies = [
  "autocfg",
- "hashbrown",
+ "hashbrown 0.11.2",
 ]
 
 [[package]]
@@ -3128,9 +3137,9 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "1.19.0"
+version = "1.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f392c8f16bda3456c0b00c6de39cb100449b98de55ac41c6cdd2bfcf53a1245"
+checksum = "95eec79ea28c00a365f539f1961e9278fbcaf81c0ff6aaf0e93c181352446948"
 dependencies = [
  "bytes",
  "libc",
@@ -3148,9 +3157,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-macros"
-version = "1.7.0"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b557f72f448c511a979e2564e55d74e6c4432fc96ff4f6241bc6bded342643b7"
+checksum = "9724f9a975fb987ef7a3cd9be0350edcbe130698af5b8f7a631e23d42d052484"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3181,9 +3190,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-stream"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50145484efff8818b5ccd256697f36863f587da82cf8b409c53adf1e840798e3"
+checksum = "df54d54117d6fdc4e4fea40fe1e4e566b3505700e148a6827e59b34b0d2600d9"
 dependencies = [
  "futures-core",
  "pin-project-lite",
@@ -3192,15 +3201,16 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.2"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f988a1a1adc2fb21f9c12aa96441da33a1728193ae0b95d2be22dbd17fcb4e5c"
+checksum = "cc463cd8deddc3770d20f9852143d50bf6094e640b485cb2e189a2099085ff45"
 dependencies = [
  "bytes",
  "futures-core",
  "futures-io",
  "futures-sink",
  "futures-util",
+ "hashbrown 0.12.1",
  "pin-project-lite",
  "slab",
  "tokio",

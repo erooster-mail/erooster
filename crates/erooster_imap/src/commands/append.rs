@@ -8,7 +8,7 @@ use erooster_core::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{path::Path, sync::Arc};
-use tracing::{debug, instrument};
+use tracing::{debug, instrument, error};
 
 pub struct Append<'a> {
     pub data: &'a Data,
@@ -71,25 +71,30 @@ impl Append<'_> {
 
             let append_args = command_data.arguments[1..].join(" ");
             debug!("Append args: {}", append_args);
-            if let Ok((_, (flags, datetime, literal))) = append_arguments(&append_args) {
-                write_lock.state = State::Appending(AppendingState {
-                    folder: folder.to_string(),
-                    flags: flags.map(|x| x.iter().map(ToString::to_string).collect::<Vec<_>>()),
-                    datetime,
-                    data: None,
-                    datalen: literal.length,
-                    tag: command_data.tag.to_string(),
-                });
-                if !literal.continuation {
-                    lines.send(String::from("+ Ready for literal data")).await?;
+            match append_arguments(&append_args) {
+                Ok((left, (flags, datetime, literal))) => {
+                    debug!("[Append] leftover: {}", left);
+                    write_lock.state = State::Appending(AppendingState {
+                        folder: folder.to_string(),
+                        flags: flags.map(|x| x.iter().map(ToString::to_string).collect::<Vec<_>>()),
+                        datetime,
+                        data: None,
+                        datalen: literal.length,
+                        tag: command_data.tag.to_string(),
+                    });
+                    if !literal.continuation {
+                        lines.send(String::from("+ Ready for literal data")).await?;
+                    }
                 }
-            } else {
-                lines
-                    .send(format!(
-                        "{} BAD failed to parse arguments",
-                        command_data.tag
-                    ))
-                    .await?;
+                Err(e) => {
+                    error!("[Append] Error parsing arguments: {}", e);
+                    lines
+                        .send(format!(
+                            "{} BAD failed to parse arguments",
+                            command_data.tag
+                        ))
+                        .await?;
+                }
             }
         } else {
             lines

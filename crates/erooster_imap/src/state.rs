@@ -1,4 +1,4 @@
-use crate::commands::{auth::AuthenticationMethod, capability::Capability, parsers::DateTime};
+use crate::commands::{auth::AuthenticationMethod, parsers::DateTime};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

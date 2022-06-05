@@ -20,11 +20,16 @@ impl Enable<'_> {
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         let mut write_lock = self.data.con_state.write().await;
-        if command_data.arguments.contains(&"UTF8=ACCEPT") {
-            write_lock.active_capabilities.push(Capabilities::UTF8);
-        }
+
         for arg in command_data.arguments.iter() {
-            lines.feed(format!("* ENABLED {}", arg)).await?;
+            if arg == &"UTF8=ACCEPT" {
+                write_lock.active_capabilities.push(Capabilities::UTF8);
+                lines.feed(format!("* ENABLED {}", arg)).await?;
+            } else {
+                write_lock
+                    .active_capabilities
+                    .push(Capabilities::Other((*arg).to_string()));
+            }
         }
         lines.feed(format!("{} OK", command_data.tag)).await?;
         lines.flush().await?;

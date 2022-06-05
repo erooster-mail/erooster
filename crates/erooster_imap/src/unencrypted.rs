@@ -1,8 +1,4 @@
-use crate::{
-    commands::Data,
-    state::{Connection, State},
-    Server, CAPABILITY_HELLO,
-};
+use crate::{commands::Data, state::Connection, Server, CAPABILITY_HELLO};
 use async_trait::async_trait;
 use erooster_core::{
     backend::{database::DB, storage::Storage},
@@ -12,10 +8,7 @@ use erooster_core::{
 use futures::{channel::mpsc, SinkExt, StreamExt};
 use notify::Event;
 use std::{net::SocketAddr, sync::Arc};
-use tokio::{
-    net::TcpListener,
-    sync::{broadcast, RwLock},
-};
+use tokio::{net::TcpListener, sync::broadcast};
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
 use tracing::{debug, info, instrument};

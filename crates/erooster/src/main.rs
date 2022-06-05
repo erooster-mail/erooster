@@ -165,5 +165,6 @@ async fn main() -> Result<()> {
             // we also shut down in case of error
         }
     }
+    opentelemetry::global::shutdown_tracer_provider();
     Ok(())
 }

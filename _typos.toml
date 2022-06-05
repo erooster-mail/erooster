@@ -1,0 +1,7 @@
+[files]
+extend-exclude = []
+
+[default]
+locale = "en"
+
+[default.extend-words]

@@ -1,0 +1,31 @@
+name: Spell Check
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  run:
+    permissions:
+      contents: read # for actions/checkout to fetch code
+    name: Spell Check with Typos
+    runs-on: self-hosted
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@bdb12b622a910dfdc99a31fdfe6f45a16bc287a4 # v1
+        with:
+          egress-policy: block
+          allowed-endpoints: github.com:443
+        env:
+          USER: runner
+      - name: Checkout Actions Repository
+        uses: actions/checkout@629c2de402a417ea7690ca6ce3f33229e27606a5 # v2
+
+      - name: Check spelling
+        uses: crate-ci/typos@927308c726b1fba730f7aaa8bde602148b82004d # master
+        with:
+          config: ${{github.workspace}}/_typos.toml

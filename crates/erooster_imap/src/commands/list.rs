@@ -1,6 +1,6 @@
 use crate::{
     commands::{CommandData, Commands, Data},
-    servers::state::State,
+    state::State,
 };
 use erooster_core::{
     backend::storage::{MailStorage, Storage},

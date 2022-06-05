@@ -1,6 +1,6 @@
 use crate::{
     commands::{CommandData, Data},
-    servers::state::{Access, State},
+    state::{Access, State},
 };
 use erooster_core::backend::storage::{MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};

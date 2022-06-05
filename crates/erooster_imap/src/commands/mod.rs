@@ -19,7 +19,7 @@ use crate::{
         uid::Uid,
         unsubscribe::Unsubscribe,
     },
-    servers::state::{Connection, State},
+    state::{Connection, State},
 };
 use erooster_core::{
     backend::{database::DB, storage::Storage},

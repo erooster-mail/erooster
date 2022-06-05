@@ -1,6 +1,6 @@
 use crate::{
     commands::{CommandData, Data},
-    servers::state::{Access, State},
+    state::{Access, State},
 };
 use erooster_core::backend::storage::{MailEntry, MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
@@ -85,7 +85,7 @@ impl Close<'_> {
 mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};
-    use crate::servers::state::{Access, Connection};
+    use crate::state::{Access, Connection};
     use futures::{channel::mpsc, StreamExt};
     use std::sync::Arc;
     use tokio::sync::RwLock;

@@ -1,9 +1,7 @@
 use crate::{
     commands::Data,
-    servers::{
-        state::{Connection, State},
-        Server, CAPABILITY_HELLO,
-    },
+    state::{Connection, State},
+    Server, CAPABILITY_HELLO,
 };
 use async_trait::async_trait;
 use erooster_core::{

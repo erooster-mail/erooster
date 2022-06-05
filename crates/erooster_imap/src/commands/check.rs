@@ -1,6 +1,6 @@
 use crate::{
     commands::{CommandData, Data},
-    servers::state::State,
+    state::State,
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use tracing::instrument;
@@ -41,7 +41,7 @@ impl Check<'_> {
 mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};
-    use crate::servers::state::{Access, Connection};
+    use crate::state::{Access, Connection};
     use futures::{channel::mpsc, StreamExt};
     use std::sync::Arc;
     use tokio::sync::RwLock;

@@ -148,7 +148,7 @@ async fn main() -> Result<()> {
     let storage = Arc::new(get_storage(Arc::clone(&database), Arc::clone(&config)));
 
     // Startup servers
-    erooster_imap::servers::start(
+    erooster_imap::start(
         Arc::clone(&config),
         Arc::clone(&database),
         Arc::clone(&storage),

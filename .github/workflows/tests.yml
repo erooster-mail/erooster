@@ -57,12 +57,12 @@ jobs:
           echo 'mail:' >> /etc/erooster/config.yml
           echo '  maildir_folders: "./maildir"' >> /etc/erooster/config.yml
           echo '  hostname: "localhost"' >> /etc/erooster/config.yml
+          echo '  displayname: Erooster' >> /etc/erooster/config.yml
           echo 'database:' >> /etc/erooster/config.yml
           echo '  postgres_url: "postgres://postgres:postgres@postgres/erooster"' >> /etc/erooster/config.yml
           echo 'webserver:' >> /etc/erooster/config.yml
           echo '  port: "80"' >> /etc/erooster/config.yml
           echo '  tls: false' >> /etc/erooster/config.yml
-          echo '  displayname: Erooster' >> /etc/erooster/config.yml
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage

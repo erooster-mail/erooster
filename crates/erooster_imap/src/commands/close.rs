@@ -98,6 +98,7 @@ mod tests {
                     state: State::Selected("INBOX".to_string(), Access::ReadWrite),
                     secure: true,
                     username: Some(String::from("test")),
+                    active_capabilities: vec![],
                 })),
             },
         };
@@ -132,6 +133,7 @@ mod tests {
                     state: State::Selected("INBOX".to_string(), Access::ReadOnly),
                     secure: true,
                     username: Some(String::from("test")),
+                    active_capabilities: vec![],
                 })),
             },
         };
@@ -169,6 +171,7 @@ mod tests {
                     state: State::NotAuthenticated,
                     secure: true,
                     username: None,
+                    active_capabilities: vec![],
                 })),
             },
         };

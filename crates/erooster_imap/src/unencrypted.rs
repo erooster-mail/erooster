@@ -87,11 +87,7 @@ async fn listen(
                 .send(CAPABILITY_HELLO.to_string())
                 .await
                 .unwrap();
-            let state = Arc::new(RwLock::new(Connection {
-                state: State::NotAuthenticated,
-                secure: false,
-                username: None,
-            }));
+            let state = Connection::new(false);
 
             let (mut tx, mut rx) = mpsc::unbounded();
             tokio::spawn(async move {

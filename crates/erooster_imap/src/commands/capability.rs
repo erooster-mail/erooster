@@ -25,7 +25,7 @@ impl Capability {
 }
 
 pub const fn get_capabilities() -> &'static str {
-    "CAPABILITY AUTH=PLAIN LOGINDISABLED IMAP4rev2 IMAP4rev1"
+    "CAPABILITY AUTH=PLAIN LOGINDISABLED UTF8=ONLY IMAP4rev2 IMAP4rev1"
 }
 
 #[cfg(test)]

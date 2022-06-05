@@ -9,7 +9,6 @@ pub struct Uid<'a> {
 }
 
 impl Uid<'_> {
-    #[allow(clippy::too_many_lines)]
     #[instrument(skip(self, lines, command_data, storage))]
     pub async fn exec<S>(
         &self,

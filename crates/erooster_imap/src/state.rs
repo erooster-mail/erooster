@@ -1,4 +1,4 @@
-use crate::commands::{auth::AuthenticationMethod, parsers::DateTime};
+use crate::commands::{auth::AuthenticationMethod, capability::Capability, parsers::DateTime};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -8,6 +8,7 @@ pub struct Connection {
     pub state: State,
     pub secure: bool,
     pub username: Option<String>,
+    pub active_capabilities: Vec<Capabilities>,
 }
 
 impl Connection {
@@ -16,8 +17,15 @@ impl Connection {
             state: State::NotAuthenticated,
             secure,
             username: None,
+            active_capabilities: vec![],
         }))
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum Capabilities {
+    UTF8,
+    Other(String),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

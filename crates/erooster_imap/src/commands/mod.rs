@@ -7,6 +7,7 @@ use crate::{
         close::Close,
         create::Create,
         delete::Delete,
+        enable::Enable,
         fetch::Fetch,
         list::{LSub, List},
         login::Login,
@@ -49,6 +50,7 @@ mod check;
 mod close;
 mod create;
 mod delete;
+mod enable;
 mod fetch;
 mod list;
 mod login;
@@ -93,6 +95,7 @@ pub enum Commands {
     Close,
     Create,
     Delete,
+    Enable,
     Examine,
     Fetch,
     List,
@@ -134,6 +137,7 @@ impl TryFrom<&str> for Commands {
             "fetch" => Ok(Commands::Fetch),
             "store" => Ok(Commands::Store),
             "append" => Ok(Commands::Append),
+            "enable" => Ok(Commands::Enable),
             _ => {
                 warn!("[IMAP] Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
@@ -255,6 +259,9 @@ impl Data {
                 };
                 debug!("Command data: {:?}", command_data);
                 match command_data.command {
+                    Commands::Enable => {
+                        Enable { data: self }.exec(lines, &command_data).await?;
+                    }
                     Commands::Capability => {
                         Capability.exec(lines, &command_data).await?;
                     }

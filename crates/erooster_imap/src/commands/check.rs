@@ -55,6 +55,7 @@ mod tests {
                     secure: true,
                     // TODO this may be invalid actuallly
                     username: None,
+                    active_capabilities: vec![],
                 })),
             },
         };
@@ -77,6 +78,7 @@ mod tests {
                     state: State::NotAuthenticated,
                     secure: true,
                     username: None,
+                    active_capabilities: vec![],
                 })),
             },
         };

@@ -423,6 +423,8 @@ pub fn append_arguments(input: &str) -> Res<(Option<Vec<&str>>, Option<DateTime>
                 opt(space1),
                 opt(date_time),
                 opt(space1),
+                opt(tag_no_case("UTF8")),
+                opt(tag_no_case("(")),
                 opt(tag_no_case("~")),
                 tag_no_case("{"),
                 map(
@@ -439,7 +441,7 @@ pub fn append_arguments(input: &str) -> Res<(Option<Vec<&str>>, Option<DateTime>
                 ),
                 tag_no_case("}"),
             )),
-            |(flags, _, datetime, _, _, _, literal, _)| (flags, datetime, literal),
+            |(flags, _, datetime, _, _, _, _, _, literal, _)| (flags, datetime, literal),
         ),
     )(input)
 }

@@ -4,7 +4,7 @@ use color_eyre::Result;
 use rand_core::OsRng;
 use sqlx::PgPool;
 use std::sync::Arc;
-use tracing::{debug, debug_span, error, instrument, Instrument};
+use tracing::{debug, debug_span, error, instrument};
 
 /// Postgres specific database implementation
 /// Holds data to connect to the database

@@ -13,8 +13,8 @@ erooster_web = {version = "0.1.0", path="../erooster_web"}
 cfg-if = "1.0"
 clap = { version = "3.1", features = ["derive", "color", "suggestions","env"] }
 color-eyre = "0.6"
-opentelemetry = { version = "0.17", features = ["metrics", "tokio"] }
-opentelemetry-jaeger = { version = "0.16", features = ["tokio"], optional = true }
+opentelemetry = { version = "0.17", features = ["metrics", "rt-tokio"] }
+opentelemetry-jaeger = { version = "0.16", features = ["rt-tokio"], optional = true }
 sentry = { version = "0.26", default-features = false, features = ["tracing", "backtrace", "contexts", "panic", "reqwest", "rustls"]}
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }

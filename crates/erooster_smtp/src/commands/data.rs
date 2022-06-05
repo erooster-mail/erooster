@@ -104,11 +104,7 @@ impl DataCommand<'_> {
                             .join(receipt)
                             .join(folder.clone());
                         if !mailbox_path.exists() {
-                            storage.create_dirs(
-                                mailbox_path.clone().into_os_string().into_string().expect(
-                                    "Failed to convert path. Your system may be incompatible",
-                                ),
-                            )?;
+                            storage.create_dirs(&mailbox_path)?;
                             storage.add_flag(&mailbox_path, "\\Subscribed").await?;
                             storage.add_flag(&mailbox_path, "\\NoInferiors").await?;
                         }
@@ -117,14 +113,7 @@ impl DataCommand<'_> {
                         } else {
                             color_eyre::eyre::bail!("No data")
                         };
-                        let message_id = storage
-                            .store_new(
-                                mailbox_path.clone().into_os_string().into_string().expect(
-                                    "Failed to convert path. Your system may be incompatible",
-                                ),
-                                data.as_bytes(),
-                            )
-                            .await?;
+                        let message_id = storage.store_new(&mailbox_path, data.as_bytes()).await?;
                         debug!("Stored message: {}", message_id);
                     }
                     // TODO cleanup after we are done

@@ -1,5 +1,6 @@
 {
     "conventionalCommits.scopes": [
-        "eroosterctl"
+        "eroosterctl",
+        "smtp_bench"
     ]
 }

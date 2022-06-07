@@ -3,6 +3,8 @@ use erooster_core::backend::database::{get_database, Database, DB};
 use erooster_core::backend::storage::get_storage;
 use erooster_core::{config::Config, line_codec::LinesCodec};
 use futures::{SinkExt, StreamExt};
+use secrecy::SecretString;
+use std::str::FromStr;
 use std::{path::Path, sync::Arc, thread, time::Duration};
 use tokio::net::TcpStream;
 use tokio::runtime;
@@ -61,7 +63,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     let database: DB = Arc::new(db);
                     database.add_user("test@localhost").await.unwrap();
                     database
-                        .change_password("test@localhost", "test")
+                        .change_password("test@localhost", SecretString::from_str("test").unwrap())
                         .await
                         .unwrap();
 

@@ -1,6 +1,7 @@
 # Erooster
 
 [![codecov](https://codecov.io/gh/MTRNord/erooster/branch/main/graph/badge.svg?token=ieNQlSkDTF)](https://codecov.io/gh/MTRNord/erooster)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md) 
 
 A mail suite written in rust meant to be easy to use.
 
@@ -30,7 +31,7 @@ webserver:
   displayname: Erooster
 sentry: false
 ```
-The maildir_folders defines where the emails and forlders can be found at. This is close to the maildir format postfix uses. (We use other files to keep track of the state of it)
+The maildir_folders defines where the emails and folders can be found at. This is close to the maildir format postfix uses. (We use other files to keep track of the state of it)
 
 After that you can just do `cargo run --release` to run it. The server is reachable via the usual IMAP ports. STARTTLS is currently not supported.
 

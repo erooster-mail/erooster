@@ -974,8 +974,6 @@ dependencies = [
  "color-eyre",
  "erooster_core",
  "indicatif",
- "opentelemetry",
- "opentelemetry-jaeger",
  "owo-colors",
  "rpassword",
  "sentry",

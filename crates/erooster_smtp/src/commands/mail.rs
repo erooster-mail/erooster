@@ -1,3 +1,6 @@
+use std::env::Args;
+
+use color_eyre::eyre::bail;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use tracing::{info, instrument};
 
@@ -19,18 +22,18 @@ impl Mail<'_> {
     {
         info!("{:#?}", command_data.arguments);
         assert!(command_data.arguments.len() == 1);
-        let senders: Vec<String> = localpart_arguments(command_data.arguments[0])
-            .map(|(_, senders)| senders)
-            .expect("Failed to parse localpart arguments")
-            .iter()
-            .map(ToString::to_string)
-            .collect();
-
+        if let Ok(args) = localpart_arguments(command_data.arguments[0]).map(|(_, senders)| senders)
         {
-            let mut write_lock = self.data.con_state.write().await;
-            write_lock.sender = Some(senders[0].clone());
-        };
-        lines.send(String::from("250 OK")).await?;
+            let senders: Vec<_> = args.iter().map(ToString::to_string).collect();
+            {
+                let mut write_lock = self.data.con_state.write().await;
+                write_lock.sender = Some(senders[0].clone());
+            };
+            lines.send(String::from("250 OK")).await?;
+        } else {
+            bail!("Failed to parse localpart arguments");
+        }
+
         Ok(())
     }
 }

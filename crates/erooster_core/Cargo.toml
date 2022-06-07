@@ -8,6 +8,7 @@ authors = ["MTRNord <mtrnord@nordgedanken.dev>"]
 repository = "https://github.com/MTRNord/erooster/"
 keywords = ["email","imap","smtp","simple","fast"]
 categories = ["email", "network-programming"]
+include = ["src/**/*", "build.rs", "migrations/**/*"]
 
 [lib]
 bench = false

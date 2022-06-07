@@ -102,18 +102,21 @@ impl Auth<'_> {
                                         "535 5.7.8 Authentication credentials invalid",
                                     ))
                                     .await?;
+                                return Ok(());
                             }
                         } else {
                             write_lock.state = State::NotAuthenticated;
                             lines
                                 .send(String::from("535 5.7.8 Authentication credentials invalid"))
                                 .await?;
+                            return Ok(());
                         }
                     } else {
                         write_lock.state = State::NotAuthenticated;
                         lines
                             .send(String::from("503 Bad sequence of commands"))
                             .await?;
+                        return Ok(());
                     }
                     if let State::Authenticating(AuthState::Password(username)) = &write_lock.state
                     {

@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
-    line_codec::LinesCodec,
+    line_codec::LinesCodec, LINE_LIMIT,
 };
 use futures::{channel::mpsc, SinkExt, StreamExt};
 use notify::Event;
@@ -74,7 +74,7 @@ async fn listen(
         let database = Arc::clone(&database);
         let storage = Arc::clone(&storage);
         tokio::spawn(async move {
-            let lines = Framed::new(tcp_stream, LinesCodec::new());
+            let lines = Framed::new(tcp_stream, LinesCodec::new_with_max_length(LINE_LIMIT));
             let (mut lines_sender, mut lines_reader) = lines.split();
             lines_sender
                 .send(CAPABILITY_HELLO.to_string())

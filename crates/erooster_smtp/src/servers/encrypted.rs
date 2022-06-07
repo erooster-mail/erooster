@@ -6,6 +6,7 @@ use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
     line_codec::LinesCodec,
+    LINE_LIMIT,
 };
 use futures::{channel::mpsc, SinkExt, StreamExt};
 use std::{
@@ -148,7 +149,7 @@ async fn listen(
                     debug!("[SMTP] TLS negotiation done");
 
                     // Proceed as normal
-                    let lines = Framed::new(stream, LinesCodec::new());
+                    let lines = Framed::new(stream, LinesCodec::new_with_max_length(LINE_LIMIT));
                     // We split these as we handle the sink in a broadcast instead to be able to push non linear data over the socket
                     let (mut lines_sender, mut lines_reader) = lines.split();
                     // Create our Connection

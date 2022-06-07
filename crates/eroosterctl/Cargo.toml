@@ -19,6 +19,7 @@ tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-error = "0.2"
 tracing-subscriber = {version = "0.3", features=["env-filter"]}
+secrecy = "0.8.0"
 
 [build-dependencies]
 vergen = "7"

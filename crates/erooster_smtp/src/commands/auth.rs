@@ -1,9 +1,12 @@
+use std::str::FromStr;
+
 use crate::{
     commands::{CommandData, Data},
     servers::state::{AuthState, State},
 };
 use erooster_core::backend::database::{Database, DB};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use secrecy::{ExposeSecret, SecretString, SecretVec};
 use simdutf8::compat::from_utf8;
 use tracing::instrument;
 pub struct Auth<'a> {
@@ -83,7 +86,8 @@ impl Auth<'_> {
         let bytes = base64::decode(line.as_bytes());
         match bytes {
             Ok(bytes) => {
-                let password = from_utf8(&bytes)?;
+                let password =
+                    SecretString::from_str(from_utf8(SecretVec::new(bytes).expose_secret())?)?;
 
                 {
                     let mut write_lock = self.data.con_state.write().await;

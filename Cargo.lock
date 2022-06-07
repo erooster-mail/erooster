@@ -880,6 +880,7 @@ dependencies = [
  "owo-colors",
  "rand_core 0.6.3",
  "rustls 0.20.6",
+ "secrecy",
  "serde",
  "serde_yaml",
  "simdutf8",
@@ -914,6 +915,7 @@ dependencies = [
  "notify",
  "rustls 0.20.6",
  "rustls-pemfile",
+ "secrecy",
  "simdutf8",
  "tokio",
  "tokio-rustls 0.23.4",
@@ -937,6 +939,7 @@ dependencies = [
  "nom 7.1.1",
  "rustls 0.20.6",
  "rustls-pemfile",
+ "secrecy",
  "serde",
  "simdutf8",
  "sqlxmq",
@@ -976,6 +979,7 @@ dependencies = [
  "indicatif",
  "owo-colors",
  "rpassword",
+ "secrecy",
  "sentry",
  "sys-info",
  "tokio",
@@ -2497,6 +2501,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "secrecy"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bd1c54ea06cfd2f6b63219704de0b9b4f72dcc2b8fdef820be6cd799780e91e"
+dependencies = [
+ "zeroize",
+]
+
+[[package]]
 name = "semver"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3774,3 +3787,9 @@ checksum = "56c1936c4cc7a1c9ab21a1ebb602eb942ba868cbd44a99cb7cdc5892335e1c85"
 dependencies = [
  "linked-hash-map",
 ]
+
+[[package]]
+name = "zeroize"
+version = "1.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94693807d016b2f2d2e14420eb3bfcca689311ff775dcf113d74ea624b7cdf07"

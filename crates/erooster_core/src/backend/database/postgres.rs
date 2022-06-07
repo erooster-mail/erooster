@@ -2,6 +2,7 @@ use crate::{backend::database::Database, config::Config};
 use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use color_eyre::Result;
 use rand_core::OsRng;
+use secrecy::{ExposeSecret, SecretString};
 use sqlx::PgPool;
 use std::sync::Arc;
 use tracing::{debug, debug_span, error, instrument};
@@ -29,7 +30,7 @@ impl Database<sqlx::Postgres> for Postgres {
     }
 
     #[instrument(skip(self, username, password))]
-    async fn verify_user(&self, username: &str, password: &str) -> bool {
+    async fn verify_user(&self, username: &str, password: SecretString) -> bool {
         let hash: std::result::Result<(String,), sqlx::Error> =
             sqlx::query_as("SELECT hash FROM users WHERE username = $1")
                 .bind(username)
@@ -45,7 +46,7 @@ impl Database<sqlx::Postgres> for Postgres {
                         let span = debug_span!("verify_user::aron2::verify_password");
                         span.in_scope(|| {
                             Argon2::default()
-                                .verify_password(password.as_bytes(), &parsed_hash)
+                                .verify_password(password.expose_secret().as_bytes(), &parsed_hash)
                                 .is_ok()
                         })
                     }
@@ -66,12 +67,12 @@ impl Database<sqlx::Postgres> for Postgres {
     async fn change_password(
         &self,
         username: &str,
-        password: &str,
+        password: SecretString,
     ) -> color_eyre::eyre::Result<()> {
         let salt = SaltString::generate(&mut OsRng);
         let argon2 = Argon2::default();
         let password_hash = argon2
-            .hash_password(password.as_bytes(), &salt)?
+            .hash_password(password.expose_secret().as_bytes(), &salt)?
             .to_string();
         sqlx::query("UPDATE users SET hash = $1 WHERE username = $2")
             .bind(password_hash)

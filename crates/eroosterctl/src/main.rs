@@ -42,6 +42,7 @@ use owo_colors::{
     colors::{BrightCyan, BrightGreen, BrightRed, BrightWhite},
     DynColors, OwoColorize,
 };
+use secrecy::SecretString;
 use std::borrow::Cow;
 use std::io::Write;
 use std::{io, process::exit, sync::Arc};
@@ -69,7 +70,7 @@ enum Commands {
         email: Option<String>,
         /// The password of the new user (optional, required if --username is set)
         #[clap(short, long)]
-        password: Option<String>,
+        password: Option<SecretString>,
     },
     // Change a users password
     ChangePassword {
@@ -78,10 +79,10 @@ enum Commands {
         email: Option<String>,
         /// The current password of the user (optional, required if any option is set)
         #[clap(short, long)]
-        current_password: Option<String>,
+        current_password: Option<SecretString>,
         /// The new password of the user (optional, required if any option is set)
         #[clap(short, long)]
-        new_password: Option<String>,
+        new_password: Option<SecretString>,
     },
 }
 
@@ -226,7 +227,7 @@ fn status() {
     }
 }
 
-async fn register(username: Option<String>, password: Option<String>, config: Arc<Config>) {
+async fn register(username: Option<String>, password: Option<SecretString>, config: Arc<Config>) {
     let spinner_style = ProgressStyle::default_spinner()
         .template("{spinner} {wide_msg}")
         .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
@@ -252,10 +253,12 @@ async fn register(username: Option<String>, password: Option<String>, config: Ar
         // TODO input validation
 
         // Get users password (doesnt show it)
-        let password = rpassword::prompt_password(
-            "Please enter the email password of the new user: ".fg::<BrightCyan>(),
-        )
-        .expect("Couldn't read line");
+        let password = SecretString::new(
+            rpassword::prompt_password(
+                "Please enter the email password of the new user: ".fg::<BrightCyan>(),
+            )
+            .expect("Couldn't read line"),
+        );
 
         let pb = ProgressBar::new_spinner();
         pb.set_style(spinner_style);
@@ -306,11 +309,15 @@ async fn register(username: Option<String>, password: Option<String>, config: Ar
     }
 }
 
-async fn actual_register(username: String, password: String, config: Arc<Config>) -> Result<()> {
+async fn actual_register(
+    username: String,
+    password: SecretString,
+    config: Arc<Config>,
+) -> Result<()> {
     let database = get_database(config).await?;
     database.add_user(&username.to_lowercase()).await?;
     database
-        .change_password(&username.to_lowercase(), &password)
+        .change_password(&username.to_lowercase(), password)
         .await?;
     Ok(())
 }
@@ -318,8 +325,8 @@ async fn actual_register(username: String, password: String, config: Arc<Config>
 #[allow(clippy::too_many_lines)]
 async fn change_password(
     username: Option<String>,
-    current_password: Option<String>,
-    new_password: Option<String>,
+    current_password: Option<SecretString>,
+    new_password: Option<SecretString>,
     config: Arc<Config>,
 ) {
     let spinner_style = ProgressStyle::default_spinner()
@@ -353,10 +360,12 @@ async fn change_password(
         // TODO input validation
 
         // Get users current password (doesnt show it)
-        let current_password = rpassword::prompt_password(
-            "Please enter the current password of the user: ".fg::<BrightCyan>(),
-        )
-        .expect("Couldn't read line");
+        let current_password = SecretString::new(
+            rpassword::prompt_password(
+                "Please enter the current password of the user: ".fg::<BrightCyan>(),
+            )
+            .expect("Couldn't read line"),
+        );
 
         // TODO repromt as needed
         if !verify_password(
@@ -373,10 +382,12 @@ async fn change_password(
             exit(1);
         }
 
-        let new_password = rpassword::prompt_password(
-            "Please enter the new password of the user: ".fg::<BrightCyan>(),
-        )
-        .expect("Couldn't read line");
+        let new_password = SecretString::new(
+            rpassword::prompt_password(
+                "Please enter the new password of the user: ".fg::<BrightCyan>(),
+            )
+            .expect("Couldn't read line"),
+        );
 
         let pb = ProgressBar::new_spinner();
         pb.set_style(spinner_style);
@@ -443,9 +454,13 @@ async fn change_password(
     }
 }
 
-async fn verify_password(username: String, current_password: String, config: Arc<Config>) -> bool {
+async fn verify_password(
+    username: String,
+    current_password: SecretString,
+    config: Arc<Config>,
+) -> bool {
     match get_database(config).await {
-        Ok(database) => database.verify_user(&username, &current_password).await,
+        Ok(database) => database.verify_user(&username, current_password).await,
         Err(e) => {
             error!("Failed to verify password: {}", e);
             false
@@ -455,12 +470,12 @@ async fn verify_password(username: String, current_password: String, config: Arc
 
 async fn actual_change_password(
     username: String,
-    new_password: String,
+    new_password: SecretString,
     config: Arc<Config>,
 ) -> Result<()> {
     let database = get_database(config).await?;
     database
-        .change_password(&username.to_lowercase(), &new_password)
+        .change_password(&username.to_lowercase(), new_password)
         .await?;
     Ok(())
 }

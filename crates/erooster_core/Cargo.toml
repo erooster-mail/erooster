@@ -41,6 +41,7 @@ tracing-error = "0.2"
 tracing-subscriber = {version = "0.3", features=["env-filter"]}
 url = "2.2"
 webpki-roots = "0.22"
+secrecy = "0.8.0"
 
 [build-dependencies]
 vergen = "7"

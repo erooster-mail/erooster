@@ -1,9 +1,12 @@
+use std::str::FromStr;
+
 use crate::{
     commands::{CommandData, Data},
     state::State,
 };
 use erooster_core::backend::database::{Database, DB};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use secrecy::SecretString;
 use simdutf8::compat::from_utf8;
 use tracing::{debug, error, instrument};
 
@@ -49,7 +52,7 @@ impl Authenticate<'_> {
                 assert!(auth_data_vec.len() == 2);
                 if auth_data_vec.len() == 2 {
                     let username = auth_data_vec[0];
-                    let password = auth_data_vec[1];
+                    let password = SecretString::from_str(auth_data_vec[1])?;
 
                     debug!("[IMAP] Making sure user exists");
                     if database.user_exists(username).await {

@@ -1,5 +1,6 @@
 use crate::config::Config;
 use color_eyre::Result;
+use secrecy::SecretString;
 use sqlx::Pool;
 use std::sync::Arc;
 use tracing::instrument;
@@ -22,14 +23,17 @@ pub trait Database<S: sqlx::Database> {
     fn get_pool(&self) -> &Pool<S>;
 
     /// Checks if the user and password are correct
-    async fn verify_user(&self, username: &str, password: &str) -> bool;
+    async fn verify_user(&self, username: &str, password: SecretString) -> bool;
 
     /// Checks if the user exists
     async fn user_exists(&self, username: &str) -> bool;
 
     /// Saves a users password
-    async fn change_password(&self, username: &str, password: &str)
-        -> color_eyre::eyre::Result<()>;
+    async fn change_password(
+        &self,
+        username: &str,
+        password: SecretString,
+    ) -> color_eyre::eyre::Result<()>;
 
     /// Adds a new user without password
     async fn add_user(&self, username: &str) -> color_eyre::eyre::Result<()>;

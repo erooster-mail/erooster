@@ -30,7 +30,7 @@ rustls = "0.20"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
 simdutf8 = { version = "0.1" }
-sqlx = { version = "0.5", features = [ "runtime-tokio-rustls"] }
+sqlx = { version = "0.5", features = [ "postgres", "runtime-tokio-rustls"] }
 sys-info = "0.9"
 tokio = { version = "1", features = ["full"] }
 tokio-rustls ={ version = "0.23", features = ["tls12"] }

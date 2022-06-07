@@ -15,7 +15,7 @@ opentelemetry = { version = "0.17", features = ["metrics", "rt-tokio"] }
 opentelemetry-jaeger = { version = "0.16", features = ["rt-tokio"], optional = true }
 owo-colors = "3"
 rpassword = "6.0"
-sentry = { version = "0.26", default-features = false, features = ["tracing", "backtrace", "contexts", "panic", "reqwest", "rustls"]}
+sentry = { version = "0.26", default-features = false, features = ["tracing", "backtrace", "contexts", "panic", "ureq"]}
 sys-info = "0.9"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"

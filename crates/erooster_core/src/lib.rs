@@ -63,4 +63,5 @@ pub async fn get_config(config_path: String) -> Result<Arc<config::Config>> {
     Ok(config)
 }
 
+/// The maximum size of a line in bytes
 pub const LINE_LIMIT: usize = 8192;

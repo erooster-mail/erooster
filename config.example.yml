@@ -4,13 +4,13 @@ tls:
 mail:
   maildir_folders: "./maildir"
   hostname: "localhost"
+  displayname: Erooster
 database:
   postgres_url: ""
 listen_ips:
   - "[::1]"
   - "127.0.0.1"
 webserver:
-  port: "80"
+  port: 80
   tls: false
-  displayname: Erooster
 sentry: false

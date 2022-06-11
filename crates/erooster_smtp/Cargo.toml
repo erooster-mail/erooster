@@ -22,6 +22,7 @@ tokio-rustls ={ version = "0.23", features = ["tls12"] }
 tokio-stream = { version = "0.1", features = ["net", "io-util"] }
 tokio-util = { version = "0.7", features = ["full"] }
 tracing = "0.1"
+tracing-subscriber = {version = "0.3", features=["env-filter"]}
 trust-dns-resolver = "0.21"
 webpki-roots = "0.22"
 secrecy = "0.8.0"
@@ -33,5 +34,6 @@ harness = false
 [dev-dependencies]
 convert_case = "0.5"
 criterion = {version = "0.3", features = ["async_tokio"]}
+sqlx = { version = "0.5", features = [ "postgres", "runtime-tokio-rustls"] }
 enum-iterator = "1.1"
 enum-display-derive = "0.1"

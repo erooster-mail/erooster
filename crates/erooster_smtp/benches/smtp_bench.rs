@@ -40,48 +40,58 @@ async fn login() {
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     //tracing_subscriber::fmt::init();
+
+    let rt = runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    info!("Spawn setup");
+    rt.spawn(async {
+        info!("Starting ERooster Server");
+        let config = if Path::new("./config.yml").exists() {
+            Arc::new(Config::load("./config.yml").await.unwrap())
+        } else if Path::new("/etc/erooster/config.yml").exists() {
+            Arc::new(Config::load("/etc/erooster/config.yml").await.unwrap())
+        } else if Path::new("/etc/erooster/config.yaml").exists() {
+            Arc::new(Config::load("/etc/erooster/config.yaml").await.unwrap())
+        } else {
+            error!("No config file found. Please follow the readme.");
+            return;
+        };
+        match get_database(Arc::clone(&config)).await {
+            Ok(db) => {
+                info!("Connected to database");
+                let database: DB = Arc::new(db);
+                info!("Adding user");
+                database.add_user("test@localhost").await.unwrap();
+                info!("Setting user password");
+                database
+                    .change_password("test@localhost", SecretString::from_str("test").unwrap())
+                    .await
+                    .unwrap();
+                info!("Created users");
+
+                let storage = Arc::new(get_storage(Arc::clone(&database), Arc::clone(&config)));
+
+                info!("Starting SMTP Server");
+                if let Err(e) =
+                    erooster_smtp::servers::unencrypted::Unencrypted::run(config, database, storage)
+                        .await
+                {
+                    panic!("Unable to start server: {:?}", e);
+                }
+            }
+            Err(e) => panic!("Unable to connect to database server: {:?}", e),
+        }
+    });
+    thread::sleep(Duration::from_millis(5000));
+
     c.bench_function("login", |b| {
         let rt = runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
             .unwrap();
-        rt.spawn(async {
-            info!("Starting ERooster Server");
-            let config = if Path::new("./config.yml").exists() {
-                Arc::new(Config::load("./config.yml").await.unwrap())
-            } else if Path::new("/etc/erooster/config.yml").exists() {
-                Arc::new(Config::load("/etc/erooster/config.yml").await.unwrap())
-            } else if Path::new("/etc/erooster/config.yaml").exists() {
-                Arc::new(Config::load("/etc/erooster/config.yaml").await.unwrap())
-            } else {
-                error!("No config file found. Please follow the readme.");
-                return;
-            };
-
-            match get_database(Arc::clone(&config)).await {
-                Ok(db) => {
-                    let database: DB = Arc::new(db);
-                    database.add_user("test@localhost").await.unwrap();
-                    database
-                        .change_password("test@localhost", SecretString::from_str("test").unwrap())
-                        .await
-                        .unwrap();
-
-                    let storage = Arc::new(get_storage(Arc::clone(&database), Arc::clone(&config)));
-
-                    if let Err(e) = erooster_smtp::servers::unencrypted::Unencrypted::run(
-                        config, database, storage,
-                    )
-                    .await
-                    {
-                        panic!("Unable to start server: {:?}", e);
-                    }
-                }
-                Err(e) => panic!("Unable to connect to database server: {:?}", e),
-            }
-        });
-        thread::sleep(Duration::from_millis(500));
-        b.to_async(rt).iter(login)
+        b.to_async(rt).iter(login);
     });
 }
 

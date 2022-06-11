@@ -2,6 +2,12 @@
 name = "eroosterctl"
 version = "0.1.0"
 edition = "2021"
+description = "An IMAP4v2 compatible mail server"
+license = "Apache-2.0"
+authors = ["MTRNord <mtrnord@nordgedanken.dev>"]
+repository = "https://github.com/MTRNord/erooster/"
+keywords = ["email","imap","smtp","simple","fast"]
+categories = ["email", "network-programming"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [[bin]]

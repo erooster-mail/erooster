@@ -144,9 +144,6 @@ impl Fetch<'_> {
 #[instrument(skip(arg, mail))]
 pub fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Option<String> {
     match arg {
-        FetchArguments::All => None,
-        FetchArguments::Fast => None,
-        FetchArguments::Full => None,
         FetchArguments::Single(single_arg) => generate_response_for_attributes(single_arg, mail),
         FetchArguments::List(args) => {
             let mut resp = String::new();
@@ -162,6 +159,7 @@ pub fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Optio
             debug!("List Response: {}", resp);
             Some(resp)
         }
+        _ => None,
     }
 }
 
@@ -172,7 +170,6 @@ fn generate_response_for_attributes(
     mail: &mut MailEntryType,
 ) -> Option<String> {
     match attr {
-        FetchAttributes::Envelope => None,
         FetchAttributes::RFC822Header => {
             if let Ok(headers_vec) = mail.headers() {
                 let headers = headers_vec
@@ -236,7 +233,6 @@ fn generate_response_for_attributes(
 
             Some(format!("FLAGS ({})", flags))
         }
-        FetchAttributes::InternalDate => None,
         FetchAttributes::RFC822Size => {
             if let Ok(parsed) = mail.parsed() {
                 let size = parsed.raw_bytes.len();
@@ -246,16 +242,13 @@ fn generate_response_for_attributes(
             }
         }
         FetchAttributes::Uid => Some(format!("UID {}", mail.uid())),
-        FetchAttributes::BodyStructure => None,
         FetchAttributes::BodySection(section_text, range) => {
             Some(body(section_text, range, mail, true))
         }
         FetchAttributes::BodyPeek(section_text, range) => {
             Some(body(section_text, range, mail, false))
         }
-        FetchAttributes::Binary(_, _) => None,
-        FetchAttributes::BinaryPeek(_, _) => None,
-        FetchAttributes::BinarySize(_) => None,
+        _ => None,
     }
 }
 

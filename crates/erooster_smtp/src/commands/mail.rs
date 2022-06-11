@@ -1,9 +1,6 @@
-use std::env::Args;
-
 use color_eyre::eyre::bail;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use tracing::{info, instrument};
-
 use crate::commands::{parsers::localpart_arguments, CommandData, Data};
 
 pub struct Mail<'a> {

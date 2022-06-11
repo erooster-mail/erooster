@@ -406,8 +406,10 @@ pub struct LiteralSize {
     pub continuation: bool,
 }
 
+pub type AppendArgs<'a> = (Option<Vec<&'a str>>, Option<DateTime>, LiteralSize);
+
 #[instrument(skip(input))]
-pub fn append_arguments(input: &str) -> Res<(Option<Vec<&str>>, Option<DateTime>, LiteralSize)> {
+pub fn append_arguments(input: &str) -> Res<AppendArgs> {
     context(
         "append_arguments",
         map(

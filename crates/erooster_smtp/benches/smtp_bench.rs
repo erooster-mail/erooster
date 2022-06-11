@@ -4,6 +4,7 @@ use erooster_core::backend::storage::get_storage;
 use erooster_core::{config::Config, line_codec::LinesCodec};
 use futures::{SinkExt, StreamExt};
 use secrecy::SecretString;
+use sqlx::migrate::MigrateDatabase;
 use std::str::FromStr;
 use std::{path::Path, sync::Arc, thread, time::Duration};
 use tokio::net::TcpStream;
@@ -58,6 +59,12 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             error!("No config file found. Please follow the readme.");
             return;
         };
+        sqlx::postgres::Postgres::drop_database(&config.database.postgres_url)
+            .await
+            .unwrap();
+        sqlx::postgres::Postgres::create_database(&config.database.postgres_url)
+            .await
+            .unwrap();
         match get_database(Arc::clone(&config)).await {
             Ok(db) => {
                 info!("Connected to database");

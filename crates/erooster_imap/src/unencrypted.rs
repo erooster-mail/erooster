@@ -3,7 +3,8 @@ use async_trait::async_trait;
 use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
-    line_codec::LinesCodec, LINE_LIMIT,
+    line_codec::LinesCodec,
+    LINE_LIMIT,
 };
 use futures::{channel::mpsc, SinkExt, StreamExt};
 use notify::Event;

@@ -1,8 +1,4 @@
 name: Security audit
-permissions:
-  issues: write
-  pull-requests: read
-  contents: read
 on:
   push:
     paths:

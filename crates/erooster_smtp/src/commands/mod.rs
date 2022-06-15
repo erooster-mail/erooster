@@ -14,10 +14,10 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_while1},
     character::complete::alpha1,
-    error::{context, VerboseError},
+    error::{context, convert_error, VerboseError},
     multi::many0,
     sequence::{terminated, tuple},
-    IResult,
+    Finish, IResult,
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -127,7 +127,7 @@ fn arguments(input: &str) -> Res<Vec<&str>> {
 impl Data {
     #[instrument(skip(line))]
     fn parse_internal(line: &str) -> Res<(Result<Commands, String>, Vec<&str>)> {
-        context("parse", tuple((command, arguments)))(line)
+        context("parse_internal", tuple((command, arguments)))(line)
     }
 
     #[instrument(skip(self, lines, config, database, storage, line))]
@@ -166,7 +166,8 @@ impl Data {
             // We are done here
             return Ok(false);
         };
-        match Data::parse_internal(&line) {
+        let line_borrow: &str = &line;
+        match Data::parse_internal(line_borrow).finish() {
             Ok((_, (command, arguments))) => {
                 let command_data = match command {
                     Ok(command) => CommandData {
@@ -214,7 +215,10 @@ impl Data {
                 }
             }
             Err(e) => {
-                error!("[SMTP] Error parsing command: {}", e);
+                error!(
+                    "[SMTP] Error parsing command: {}",
+                    convert_error(line_borrow, e)
+                );
                 lines
                     .send(String::from("500 unable to parse command"))
                     .await?;

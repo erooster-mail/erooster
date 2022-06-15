@@ -301,7 +301,7 @@ pub fn parse_selected_range(input: &str) -> Res<Vec<Range>> {
 }
 
 #[instrument(skip(input))]
-pub fn day_of_week(input: &str) -> Res<&str> {
+fn day_of_week(input: &str) -> Res<&str> {
     context(
         "day_of_week",
         alt((
@@ -317,7 +317,7 @@ pub fn day_of_week(input: &str) -> Res<&str> {
 }
 
 #[instrument(skip(input))]
-pub fn month(input: &str) -> Res<&str> {
+fn month(input: &str) -> Res<&str> {
     context(
         "month",
         alt((

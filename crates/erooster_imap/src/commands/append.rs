@@ -7,6 +7,7 @@ use erooster_core::{
     config::Config,
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use nom::{error::convert_error, Finish};
 use std::{path::Path, sync::Arc};
 use tracing::{debug, error, instrument};
 
@@ -70,8 +71,9 @@ impl Append<'_> {
             }
 
             let append_args = command_data.arguments[1..].join(" ");
-            debug!("Append args: {}", append_args);
-            match append_arguments(&append_args) {
+            let append_args_borrow: &str = &append_args;
+            debug!("Append args: {}", append_args_borrow);
+            match append_arguments(append_args_borrow).finish() {
                 Ok((left, (flags, datetime, literal))) => {
                     debug!("[Append] leftover: {}", left);
                     write_lock.state = State::Appending(AppendingState {
@@ -87,7 +89,10 @@ impl Append<'_> {
                     }
                 }
                 Err(e) => {
-                    error!("[Append] Error parsing arguments: {}", e);
+                    error!(
+                        "[Append] Error parsing arguments: {}",
+                        convert_error(append_args_borrow, e)
+                    );
                     lines
                         .send(format!(
                             "{} BAD failed to parse arguments",

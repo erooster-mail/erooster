@@ -10,6 +10,7 @@ use crate::{
 };
 use erooster_core::backend::storage::{MailEntry, MailEntryType, MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use nom::{error::convert_error, Finish};
 use std::sync::Arc;
 use tracing::{debug, error, instrument};
 
@@ -40,7 +41,8 @@ impl Fetch<'_> {
             )?;
             let mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
 
-            let range = parse_selected_range(command_data.arguments[offset]);
+            let arguments_borrow = command_data.arguments[offset];
+            let range = parse_selected_range(arguments_borrow).finish();
             debug!("Range: {:?}", range);
             match range {
                 Ok((_, range)) => {
@@ -77,7 +79,7 @@ impl Fetch<'_> {
                     debug!("Fetch args: {}", fetch_args_str);
 
                     filtered_mails.sort_by_key(MailEntry::uid);
-                    match fetch_arguments(fetch_args_str) {
+                    match fetch_arguments(fetch_args_str).finish() {
                         Ok((_, args)) => {
                             debug!("Parsed Fetch args: {:?}", args);
                             for mut mail in filtered_mails {
@@ -114,7 +116,10 @@ impl Fetch<'_> {
                             lines.flush().await?;
                         }
                         Err(e) => {
-                            error!("Failed to parse fetch arguments: {}", e);
+                            error!(
+                                "Failed to parse fetch arguments: {}",
+                                convert_error(fetch_args_str, e)
+                            );
                             lines
                                 .send(format!("{} BAD Unable to parse", command_data.tag))
                                 .await?;
@@ -122,7 +127,10 @@ impl Fetch<'_> {
                     }
                 }
                 Err(e) => {
-                    error!("Failed to parse fetch arguments: {}", e);
+                    error!(
+                        "Failed to parse fetch arguments: {}",
+                        convert_error(arguments_borrow, e)
+                    );
                     lines
                         .send(format!("{} BAD Unable to parse", command_data.tag))
                         .await?;

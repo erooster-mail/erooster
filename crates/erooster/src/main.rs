@@ -43,6 +43,8 @@ use tracing::{error, info, warn};
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+static COMPRESSED_DEPENDENCY_LIST: &[u8] = auditable::inject_dependency_list!();
+
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
@@ -161,6 +163,10 @@ async fn main() -> Result<()> {
     match signal::ctrl_c().await {
         Ok(()) => {}
         Err(err) => {
+            // Actually use the data to work around a bug in rustc:
+            // https://github.com/rust-lang/rust/issues/47384
+            // On nightly you can use `test::black_box` instead of `println!`
+            println!("{}", COMPRESSED_DEPENDENCY_LIST[0]);
             error!("Unable to listen for shutdown signal: {}", err);
             // we also shut down in case of error
         }

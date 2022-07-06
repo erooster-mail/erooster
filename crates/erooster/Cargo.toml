@@ -32,6 +32,7 @@ tracing = "0.1"
 tracing-error = "0.2"
 tracing-opentelemetry = "0.17"
 tracing-subscriber = {version = "0.3", features=["env-filter"]}
+auditable = "0.1"
 
 [features]
 default = []
@@ -41,3 +42,4 @@ jaeger = ["dep:opentelemetry-jaeger"]
 clap = { version = "3.1", features = ["derive", "color", "suggestions","env"] }
 clap_mangen = "0.1"
 vergen = "7"
+auditable-build = "0.1"

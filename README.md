@@ -7,11 +7,11 @@ A mail suite written in rust meant to be easy to use.
 
 ## Getting started
 
-Currently the setup is quite rough.
+Currently, the setup is quite rough.
 
-You need some certificates for your server (pem format) and a postgres database.
+You need some certificates for your server (PEM format) and a Postgres database.
 
-To get started you need a `config.yml` like this it can either be in /etc/erooster or the working dir:
+To get started you need a `config.yml` like this, it can either be in /etc/erooster or the working dir:
 
 ```yaml
 tls:
@@ -33,20 +33,20 @@ sentry: false
 ```
 The maildir_folders defines where the emails and folders can be found at. This is close to the maildir format postfix uses. (We use other files to keep track of the state of it)
 
-After that you can just do `cargo run --release` to run it. The server is reachable via the usual IMAP ports. STARTTLS is currently not supported.
+After that, you can just do `cargo run --release` to run it. The server is reachable via the usual IMAP ports. STARTTLS is currently not supported.
 
 ### Setting up users
 
-To set up users you can use the `eroosterctl` command.
+To set up users, you can use the `eroosterctl` command.
 It will talk to the database. So make sure your config file is set up.
 
-To register a user you simply run `eroosterctl register` and follow the questions.
-The password is safed as an argon2 hash inside the database.
+To register a user, you simply run `eroosterctl register` and follow the questions.
+The password is saved as an argon2 hash inside the database.
 
-To change a password there is the `change-password` subcommand.
+To change a password, there is the `change-password` subcommand.
 You need to provide the old password and the new one.
-It is planned that admins can also change this using a preencrypted password instead.
-In the future this is going to be replaced by an integrated web interface users can directly use.
+It is planned that admins can also change this using a pre-encrypted password instead.
+In the future, this is going to be replaced by an integrated web interface users can directly use.
 
 _Note: The status subcommand at this time doesn't actually check the server status._
 
@@ -63,33 +63,33 @@ _Note: The status subcommand at this time doesn't actually check the server stat
 
 ## Non Goal
 
-- Implementing every single peace of optional spec
-- MySQL/Mariadb support
-- Support for imap LOGIN command (It is per rev2 spec)
+- Implementing every single piece of optional spec
+- MySQL/MariaDB support
+- Support for IMAP LOGIN command (It is per rev2 spec)
 - Support for POP3
 - Support for Exchange
 
 ## Error Reporting
 
-Erosster by default does not auto report an panics or errors.
-It provides however a github reporting link on panics.
+Erooster by default does not auto report any panics or errors.
+It provides however a GitHub reporting link on panics.
 
-Additionally it is able to let ou auto report to a sentry.
-This also will record performance using tracing.
-Due to how sentry works this is not public.
-It is disabled by default due to gdpr rules.
+Additionally, it is able to let you auto report to a sentry.
+This will also record performance using tracing.
+Due to how sentry works, this is not public.
+It is disabled by default due to GDPR rules.
 
-To enable sentry please set `sentry: true` in yout config file.
+To enable sentry, please set `sentry: true` in your config file.
 
 ## Comparisons
 
-As I made a reddit post some comparisons were made in the commands.
+As I made a Reddit post, some comparisons were made in the commands.
 You can check them out at https://www.reddit.com/r/rust/comments/uyxxrg/comment/ia7qwcg/?utm_source=share&utm_medium=web2x&context=3
 
 ## Support
 
-Due to personal constraints I currently do not prove enterprise support for this. Please open issues instead. I will try to reply as soon as I can but I cannot gurantee a specific time frame.
+Due to personal constraints, I currently do not prove enterprise support for this. Please open issues instead. I will try to reply as soon as I can, but I cannot guarantee a specific time frame.
 
 ##  Contact
 
-To contact the erooster team you can find us at https://matrix.to/#/#erooster:midnightthoughts.space or if an email is absolutely needed please write to [support@nordgedanken.dev](mailto:support@nordgedanken.dev). As written in the Support section there is no enterprise support at this time. So please don't ask for it. It will just fill up the mailbox. :)
+To contact the erooster team you can find us at https://matrix.to/#/#erooster:midnightthoughts.space or if an email is absolutely needed please write to [support@nordgedanken.dev](mailto:support@nordgedanken.dev). As written in the Support section, there is no enterprise support at this time. So please don't ask for it. It will just fill up the mailbox. :)

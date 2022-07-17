@@ -77,7 +77,6 @@ fn main() -> std::io::Result<()> {
 
     std::fs::write(dest_path.join("eroosterctl.1"), buffer)?;
 
-
     auditable_build::collect_dependency_list();
     Ok(())
 }

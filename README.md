@@ -85,3 +85,11 @@ To enable sentry please set `sentry: true` in yout config file.
 
 As I made a reddit post some comparisons were made in the commands.
 You can check them out at https://www.reddit.com/r/rust/comments/uyxxrg/comment/ia7qwcg/?utm_source=share&utm_medium=web2x&context=3
+
+## Support
+
+Due to personal constraints I currently do not prove enterprise support for this. Please open issues instead. I will try to reply as soon as I can but I cannot gurantee a specific time frame.
+
+##  Contact
+
+To contact the erooster team you can find us at https://matrix.to/#/#erooster:midnightthoughts.space or if an email is absolutely needed please write to [support@nordgedanken.dev](mailto:support@nordgedanken.dev). As written in the Support section there is no enterprise support at this time. So please don't ask for it. It will just fill up the mailbox. :)

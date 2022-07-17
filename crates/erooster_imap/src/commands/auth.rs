@@ -49,7 +49,6 @@ impl Authenticate<'_> {
                     })
                     .collect();
 
-                assert!(auth_data_vec.len() == 2);
                 if auth_data_vec.len() == 2 {
                     let username = auth_data_vec[0];
                     let password = SecretString::from_str(auth_data_vec[1])?;

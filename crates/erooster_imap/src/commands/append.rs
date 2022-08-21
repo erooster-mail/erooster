@@ -134,17 +134,14 @@ impl Append<'_> {
                         .join(username)
                         .join(folder.clone());
                     debug!("[Append] Mailbox path: {:?}", mailbox_path);
-                    if let Some(flags) = &state.flags {
-                        let message_id = storage
-                            .store_cur_with_flags(&mailbox_path, buffer, flags.clone())
-                            .await?;
-                        debug!("Stored message via append: {}", message_id);
-                    } else {
-                        let message_id = storage
-                            .store_cur_with_flags(&mailbox_path, buffer, vec![])
-                            .await?;
-                        debug!("Stored message via append: {}", message_id);
-                    }
+                    let message_id = storage
+                        .store_cur_with_flags(
+                            &mailbox_path,
+                            buffer,
+                            state.flags.clone().unwrap_or_default(),
+                        )
+                        .await?;
+                    debug!("Stored message via append: {}", message_id);
                     write_lock.state = State::Authenticated;
                     lines.send(format!("{} OK APPEND completed", tag)).await?;
                 }

@@ -94,6 +94,7 @@ async fn listen(
                 while let Some(res) = rx.next().await {
                     if let Err(e) = lines_sender.send(res).await {
                         error!("[SMTP] Error sending response: {:?}", e);
+                        break;
                     }
                 }
             });

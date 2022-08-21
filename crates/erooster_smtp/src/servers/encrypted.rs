@@ -159,7 +159,10 @@ async fn listen(
                     let (mut tx, mut rx) = mpsc::unbounded();
                     tokio::spawn(async move {
                         while let Some(res) = rx.next().await {
-                            lines_sender.send(res).await.unwrap();
+                            if let Err(error) = lines_sender.send(res).await {
+                                error!("[SMTP] Error sending response to client: {:?}", error);
+                                break;
+                            }
                         }
                     });
 

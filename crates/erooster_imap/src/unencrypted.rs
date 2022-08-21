@@ -12,7 +12,7 @@ use std::{net::SocketAddr, sync::Arc};
 use tokio::{net::TcpListener, sync::broadcast};
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
-use tracing::{debug, info, instrument};
+use tracing::{debug, error, info, instrument};
 
 /// An unencrypted imap Server
 pub struct Unencrypted;
@@ -86,7 +86,10 @@ async fn listen(
             let (mut tx, mut rx) = mpsc::unbounded();
             tokio::spawn(async move {
                 while let Some(res) = rx.next().await {
-                    lines_sender.send(res).await.unwrap();
+                    if let Err(error) = lines_sender.send(res).await {
+                        error!("[IMAP] Error sending response to client: {:?}", error);
+                        break;
+                    }
                 }
             });
             while let Some(Ok(line)) = lines_reader.next().await {

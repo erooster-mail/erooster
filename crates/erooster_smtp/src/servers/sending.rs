@@ -1,4 +1,4 @@
-use cfdkim::{verify_email, DkimPrivateKey, SignerBuilder};
+use cfdkim::{DkimPrivateKey, SignerBuilder};
 use color_eyre::Result;
 use erooster_core::line_codec::{LinesCodec, LinesCodecError};
 use futures::{Sink, SinkExt, Stream, StreamExt};
@@ -46,7 +46,7 @@ fn dkim_sign(
         .build()?;
     let header = signer.sign(&email)?;
 
-    Ok(format!("{}\n{}", header, raw_email))
+    Ok(format!("{}\r\n{}", header, raw_email))
 }
 
 #[allow(clippy::too_many_lines)]

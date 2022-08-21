@@ -33,6 +33,7 @@ fn dkim_sign(
     dkim_key_selector: &str,
 ) -> Result<String> {
     let email = mailparse::parse_mail(raw_email.as_bytes())?;
+    debug!("raw_bytes: {:?}", email.raw_bytes);
 
     let private_key = rsa::RsaPrivateKey::read_pkcs1_pem_file(Path::new(&dkim_key_path))?;
     let time = time::OffsetDateTime::now_utc();

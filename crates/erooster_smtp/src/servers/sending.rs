@@ -35,7 +35,7 @@ fn dkim_sign(domain: &str, raw_email: &str, dkim_key_path: &str) -> Result<Strin
         .with_signed_headers(&["From", "Subject"])
         .unwrap()
         .with_private_key(DkimPrivateKey::Rsa(private_key))
-        .with_selector("2022")
+        .with_selector("default")
         .with_signing_domain(domain)
         .with_time(time)
         .build()?;

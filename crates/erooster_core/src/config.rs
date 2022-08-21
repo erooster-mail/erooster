@@ -64,10 +64,8 @@ pub struct Mail {
     ///
     /// ```bash
     /// opendkim-genkey \
-    /// --testmode \
     /// --domain=<hostname> \
-    /// --selector=2022 \
-    /// --nosubdomains
+    /// --subdomains
     /// ```
     pub dkim_key_path: String,
 }

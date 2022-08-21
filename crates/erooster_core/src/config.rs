@@ -68,6 +68,8 @@ pub struct Mail {
     /// --subdomains
     /// ```
     pub dkim_key_path: String,
+    /// The selector to be used in the dkim header
+    pub dkim_key_selector: String,
 }
 
 impl Config {

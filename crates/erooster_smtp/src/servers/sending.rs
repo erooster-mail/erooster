@@ -23,9 +23,15 @@ pub struct EmailPayload {
     pub body: String,
     pub sender_domain: String,
     pub dkim_key_path: String,
+    pub dkim_key_selector: String,
 }
 
-fn dkim_sign(domain: &str, raw_email: &str, dkim_key_path: &str) -> Result<String> {
+fn dkim_sign(
+    domain: &str,
+    raw_email: &str,
+    dkim_key_path: &str,
+    dkim_key_selector: &str,
+) -> Result<String> {
     let email = mailparse::parse_mail(raw_email.as_bytes())?;
 
     let private_key = rsa::RsaPrivateKey::read_pkcs1_pem_file(Path::new(&dkim_key_path))?;
@@ -224,7 +230,12 @@ where
         return Err("Server did not accept data start command".into());
     }
 
-    let signed_body = dkim_sign(&email.sender_domain, &email.body, &email.dkim_key_path)?;
+    let signed_body = dkim_sign(
+        &email.sender_domain,
+        &email.body,
+        &email.dkim_key_path,
+        &email.dkim_key_selector,
+    )?;
     lines_sender.send(signed_body).await?;
     lines_sender.send(String::from(".")).await?;
     debug!(

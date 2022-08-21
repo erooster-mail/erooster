@@ -58,6 +58,18 @@ pub struct Mail {
     pub hostname: String,
     /// The Displayname to be used in software like thunderbird
     pub displayname: String,
+    /// The private dkim key in rsa format
+    ///
+    /// Use this to generate the key:
+    ///
+    /// ```bash
+    /// opendkim-genkey \
+    /// --testmode \
+    /// --domain=<hostname> \
+    /// --selector=2022 \
+    /// --nosubdomains
+    /// ```
+    pub dkim_key_path: String,
 }
 
 impl Config {

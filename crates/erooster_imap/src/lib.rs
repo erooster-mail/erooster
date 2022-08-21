@@ -84,14 +84,17 @@ pub fn start(
 ) -> color_eyre::eyre::Result<()> {
     let (tx, _rx) = broadcast::channel(1);
     let tx_clone = tx.clone();
-    let mut watcher = RecommendedWatcher::new(move |res: notify::Result<Event>| {
-        if let Ok(event) = res {
-            futures::executor::block_on(async {
-                tx.send(event.clone())
-                    .expect("failed to send filechange event");
-            });
-        }
-    })?;
+    let mut watcher = RecommendedWatcher::new(
+        move |res: notify::Result<Event>| {
+            if let Ok(event) = res {
+                futures::executor::block_on(async {
+                    tx.send(event.clone())
+                        .expect("failed to send filechange event");
+                });
+            }
+        },
+        notify::Config::default(),
+    )?;
 
     std::fs::create_dir_all(&config.mail.maildir_folders)?;
 

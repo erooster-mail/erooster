@@ -20,10 +20,10 @@ erooster_core = {version = "0.1.0", path="../erooster_core"}
 clearscreen = "1.0"
 clap = { version = "3.1", features = ["derive", "color", "suggestions","env"] }
 color-eyre = "0.6"
-indicatif = "0.16"
+indicatif = "0.17"
 owo-colors = "3"
-rpassword = "6.0"
-sentry = { version = "0.26", default-features = false, features = ["tracing", "backtrace", "contexts", "panic", "ureq"]}
+rpassword = "7.0"
+sentry = { version = "0.27", default-features = false, features = ["tracing", "backtrace", "contexts", "panic", "ureq"]}
 sys-info = "0.9"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"

@@ -85,6 +85,7 @@ impl DataCommand<'_> {
                         from: write_lock.sender.clone().unwrap(),
                         body: data,
                         sender_domain: config.mail.hostname.clone(),
+                        dkim_key_path: config.mail.dkim_key_path.clone(),
                     };
                     let pool = database.get_pool();
                     send_email_job

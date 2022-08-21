@@ -26,7 +26,9 @@ rustls = "0.20"
 rustls-pemfile = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 simdutf8 = { version = "0.1" }
-sqlxmq = { version = "0.3", default-features = false, features = [ "runtime-tokio-rustls"] }
+mailparse = "0.13"
+rsa = "0.6"
+sqlxmq = { version = "0.4", default-features = false, features = [ "runtime-tokio-rustls"] }
 tokio = { version = "1", features = ["full"] }
 tokio-rustls ={ version = "0.23", features = ["tls12"] }
 tokio-stream = { version = "0.1", features = ["net", "io-util"] }
@@ -36,6 +38,8 @@ tracing-subscriber = {version = "0.3", features=["env-filter"]}
 trust-dns-resolver = "0.21"
 webpki-roots = "0.22"
 secrecy = "0.8.0"
+cfdkim = {version = "0.2.3", git = "https://github.com/erooster-mail/dkim"}
+time = "0.3.13"
 
 [[bench]]
 name = "smtp_bench"
@@ -44,6 +48,6 @@ harness = false
 [dev-dependencies]
 convert_case = "0.5"
 criterion = {version = "0.3", features = ["async_tokio"]}
-sqlx = { version = "0.5", features = [ "postgres", "runtime-tokio-rustls"] }
+sqlx = { version = "0.6", features = [ "postgres", "runtime-tokio-rustls"] }
 enum-iterator = "1.1"
 enum-display-derive = "0.1"

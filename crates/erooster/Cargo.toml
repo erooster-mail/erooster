@@ -25,14 +25,14 @@ clap = { version = "3.1", features = ["derive", "color", "suggestions","env"] }
 color-eyre = "0.6"
 opentelemetry = { version = "0.17", features = ["metrics", "rt-tokio"] }
 opentelemetry-jaeger = { version = "0.16", features = ["rt-tokio"], optional = true }
-sentry = { version = "0.26", default-features = false, features = ["tracing", "backtrace", "contexts", "panic", "ureq"]}
+sentry = { version = "0.27", default-features = false, features = ["tracing", "backtrace", "contexts", "panic", "ureq"]}
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-error = "0.2"
 tracing-opentelemetry = "0.17"
 tracing-subscriber = {version = "0.3", features=["env-filter"]}
-auditable = "0.1"
+auditable = "0.2"
 
 [features]
 default = []
@@ -42,4 +42,4 @@ jaeger = ["dep:opentelemetry-jaeger"]
 clap = { version = "3.1", features = ["derive", "color", "suggestions","env"] }
 clap_mangen = "0.1"
 vergen = "7"
-auditable-build = "0.1"
+auditable-build = "0.2"

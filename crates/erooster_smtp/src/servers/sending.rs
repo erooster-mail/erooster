@@ -1,9 +1,14 @@
+use cfdkim::{DkimPrivateKey, SignerBuilder};
+use color_eyre::Result;
 use erooster_core::line_codec::{LinesCodec, LinesCodecError};
 use futures::{Sink, SinkExt, Stream, StreamExt};
+use rsa::pkcs1::DecodeRsaPrivateKey;
 use rustls::OwnedTrustAnchor;
 use serde::{Deserialize, Serialize};
 use sqlxmq::{job, CurrentJob};
-use std::{collections::HashMap, error::Error, io, net::IpAddr, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap, error::Error, io, net::IpAddr, path::Path, sync::Arc, time::Duration,
+};
 use tokio::{net::TcpStream, time::timeout};
 use tokio_rustls::TlsConnector;
 use tokio_util::codec::Framed;
@@ -17,6 +22,26 @@ pub struct EmailPayload {
     pub from: String,
     pub body: String,
     pub sender_domain: String,
+    pub dkim_key_path: String,
+}
+
+fn dkim_sign(domain: &str, raw_email: &str, dkim_key_path: &str) -> Result<String> {
+    let email = mailparse::parse_mail(raw_email.as_bytes())?;
+
+    let private_key = rsa::RsaPrivateKey::read_pkcs1_pem_file(Path::new(&dkim_key_path))?;
+    let time = time::OffsetDateTime::now_utc();
+
+    let signer = SignerBuilder::new()
+        .with_signed_headers(&["From", "Subject"])
+        .unwrap()
+        .with_private_key(DkimPrivateKey::Rsa(private_key))
+        .with_selector("2022")
+        .with_signing_domain(domain)
+        .with_time(time)
+        .build()?;
+    let header = signer.sign(&email)?;
+
+    Ok(format!("{}\n{}", header, raw_email))
 }
 
 #[allow(clippy::too_many_lines)]
@@ -199,7 +224,8 @@ where
         return Err("Server did not accept data start command".into());
     }
 
-    lines_sender.send(email.body.clone()).await?;
+    let signed_body = dkim_sign(&email.sender_domain, &email.body, &email.dkim_key_path)?;
+    lines_sender.send(signed_body).await?;
     lines_sender.send(String::from(".")).await?;
     debug!(
         "[{}] [{}] Sent body and ending",

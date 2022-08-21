@@ -86,7 +86,8 @@ pub struct CommandData<'a> {
         enum_display_derive::Display,
         Clone,
         Copy,
-        PartialEq
+        PartialEq,
+        Eq
     )
 )]
 pub enum Commands {

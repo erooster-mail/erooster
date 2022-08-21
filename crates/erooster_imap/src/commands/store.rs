@@ -187,7 +187,7 @@ impl Store<'_> {
                             .copied()
                             .filter_map(|x| {
                                 let x = x.replace('(', "").replace(')', "");
-                                (!flags.contains(&x.as_str())).then(|| x)
+                                (!flags.contains(&x.as_str())).then_some(x)
                             })
                             .collect::<Vec<_>>();
 

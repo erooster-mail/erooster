@@ -43,8 +43,8 @@ use owo_colors::{
     DynColors, OwoColorize,
 };
 use secrecy::SecretString;
-use std::borrow::Cow;
 use std::io::Write;
+use std::{borrow::Cow, time::Duration};
 use std::{io, process::exit, sync::Arc};
 use tracing::{error, info, warn};
 use tracing_error::ErrorLayer;
@@ -230,6 +230,7 @@ fn status() {
 async fn register(username: Option<String>, password: Option<SecretString>, config: Arc<Config>) {
     let spinner_style = ProgressStyle::default_spinner()
         .template("{spinner} {wide_msg}")
+        .expect("template working")
         .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
     if username.is_some() && password.is_none() {
         error!("Missing password");
@@ -262,7 +263,7 @@ async fn register(username: Option<String>, password: Option<SecretString>, conf
 
         let pb = ProgressBar::new_spinner();
         pb.set_style(spinner_style);
-        pb.enable_steady_tick(100);
+        pb.enable_steady_tick(Duration::from_millis(100));
         clearscreen::clear().expect("failed to clear screen");
         pb.set_message("Adding the new user...".fg::<BrightGreen>().to_string());
         let result = actual_register(username, password, Arc::clone(&config)).await;
@@ -285,7 +286,7 @@ async fn register(username: Option<String>, password: Option<SecretString>, conf
         clearscreen::clear().expect("failed to clear screen");
         let pb = ProgressBar::new_spinner();
         pb.set_style(spinner_style);
-        pb.enable_steady_tick(100);
+        pb.enable_steady_tick(Duration::from_millis(100));
         pb.set_message("Adding the new user...".fg::<BrightGreen>().to_string());
 
         let username = username.unwrap();
@@ -331,6 +332,7 @@ async fn change_password(
 ) {
     let spinner_style = ProgressStyle::default_spinner()
         .template("{spinner} {wide_msg}")
+        .expect("template working")
         .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
     if username.is_some() && new_password.is_none() && current_password.is_none() {
         error!("Missing new password and current password");
@@ -391,7 +393,7 @@ async fn change_password(
 
         let pb = ProgressBar::new_spinner();
         pb.set_style(spinner_style);
-        pb.enable_steady_tick(100);
+        pb.enable_steady_tick(Duration::from_millis(100));
         clearscreen::clear().expect("failed to clear screen");
         pb.set_message(
             "Changing the users password..."
@@ -418,7 +420,7 @@ async fn change_password(
         clearscreen::clear().expect("failed to clear screen");
         let pb = ProgressBar::new_spinner();
         pb.set_style(spinner_style);
-        pb.enable_steady_tick(100);
+        pb.enable_steady_tick(Duration::from_millis(100));
         pb.set_message(
             "Changing the users password..."
                 .fg::<BrightGreen>()

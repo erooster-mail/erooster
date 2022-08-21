@@ -1,4 +1,4 @@
-use cfdkim::{DkimPrivateKey, SignerBuilder};
+use cfdkim::{verify_email, DkimPrivateKey, SignerBuilder};
 use color_eyre::Result;
 use erooster_core::line_codec::{LinesCodec, LinesCodecError};
 use futures::{Sink, SinkExt, Stream, StreamExt};
@@ -240,6 +240,13 @@ where
         &email.dkim_key_path,
         &email.dkim_key_selector,
     )?;
+    // TODO remove debug code
+    let signed_email = mailparse::parse_mail(signed_body.as_bytes()).unwrap();
+    let res = verify_email(&email.sender_domain, &signed_email)
+        .await
+        .unwrap();
+    debug!("{}", res.with_detail());
+    ///////////////////////////////////
     lines_sender.send(signed_body).await?;
     lines_sender.send(String::from(".")).await?;
     debug!(

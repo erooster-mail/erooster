@@ -144,7 +144,7 @@ impl Append<'_> {
                         )
                         .await?;
                     debug!("Stored message via append: {}", message_id);
-                    write_lock.state = State::Authenticated;
+                    write_lock.state = State::GotAppendData;
                     lines.send(format!("{} OK APPEND completed", tag)).await?;
                 }
             } else {

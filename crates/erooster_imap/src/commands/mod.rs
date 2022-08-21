@@ -244,6 +244,12 @@ impl Data {
                 .await?;
             // We are done here
             return Ok(false);
+        } else if let State::GotAppendData = state {
+            if line == ")" {
+                con_clone.write().await.state = State::Authenticated;
+                // We are done here
+                return Ok(false);
+            }
         }
         debug!("Starting to parse");
         let line_borrow: &str = &line;

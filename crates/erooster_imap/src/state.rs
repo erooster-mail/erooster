@@ -44,6 +44,8 @@ pub enum State {
     /// - flags
     /// - datetime
     Appending(AppendingState),
+    /// We received all data for the email but there may be misc data coming
+    GotAppendData,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

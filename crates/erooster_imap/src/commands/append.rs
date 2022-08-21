@@ -149,10 +149,8 @@ impl Append<'_> {
                 }
             } else {
                 let mut buffer = Vec::with_capacity(state.datalen);
-                let mut bytes = append_data.as_bytes().to_vec();
+                let mut bytes = format!("{}\r\n", append_data).as_bytes().to_vec();
                 buffer.append(&mut bytes);
-                debug!("Buffer length: {}", buffer.len());
-                debug!("expected: {}", state.datalen);
 
                 state.data = Some(buffer);
             }

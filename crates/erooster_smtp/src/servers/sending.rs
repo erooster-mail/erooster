@@ -32,14 +32,18 @@ fn dkim_sign(
     dkim_key_path: &str,
     dkim_key_selector: &str,
 ) -> Result<String> {
+    debug!("Signing email");
+    debug!("Domain: {}", domain);
+    debug!("Raw email: {}", raw_email);
+    debug!("DKIM key path: {}", dkim_key_path);
+    debug!("DKIM key selector: {}", dkim_key_selector);
     let email = mailparse::parse_mail(raw_email.as_bytes())?;
 
     let private_key = rsa::RsaPrivateKey::read_pkcs1_pem_file(Path::new(&dkim_key_path))?;
     let time = time::OffsetDateTime::now_utc();
 
     let signer = SignerBuilder::new()
-        .with_signed_headers(&["From", "Subject"])
-        .unwrap()
+        .with_signed_headers(&["From", "Subject"])?
         .with_private_key(DkimPrivateKey::Rsa(private_key))
         .with_selector(dkim_key_selector)
         .with_signing_domain(domain)

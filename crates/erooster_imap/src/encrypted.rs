@@ -190,7 +190,10 @@ async fn listen(
                     let cloned_tx = tx.clone();
                     tokio::spawn(async move {
                         while let Some(res) = rx.next().await {
-                            lines_sender.send(res).await.unwrap();
+                            if let Err(error) = lines_sender.send(res).await {
+                                error!("[IMAP] Error sending response to client: {:?}", error);
+                                break;
+                            }
                         }
                     });
                     // Connection needed for the file watcher

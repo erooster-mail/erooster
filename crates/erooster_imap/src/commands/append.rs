@@ -125,11 +125,11 @@ impl Append<'_> {
         let username = write_lock.username.clone().unwrap();
         if let State::Appending(state) = &mut write_lock.state {
             if let Some(buffer) = &mut state.data {
+                let mut bytes = format!("{}\r\n", append_data).as_bytes().to_vec();
+                buffer.append(&mut bytes);
                 debug!("Buffer length: {}", buffer.len());
-                debug!("Append data length: {}", append_data.len());
-                debug!("total: {}", buffer.len() + append_data.len());
                 debug!("expected: {}", state.datalen);
-                if buffer.len() + append_data.as_bytes().to_vec().len() >= state.datalen {
+                if buffer.len() >= state.datalen {
                     debug!("[Append] Saving data");
                     let folder = &state.folder;
                     let mailbox_path = Path::new(&config.mail.maildir_folders)
@@ -146,9 +146,6 @@ impl Append<'_> {
                     debug!("Stored message via append: {}", message_id);
                     write_lock.state = State::Authenticated;
                     lines.send(format!("{} OK APPEND completed", tag)).await?;
-                } else {
-                    let mut bytes = format!("{}\r\n", append_data).as_bytes().to_vec();
-                    buffer.append(&mut bytes);
                 }
             } else {
                 let mut buffer = Vec::with_capacity(state.datalen);

@@ -229,22 +229,12 @@ where
         return Err("Server did not accept data start command".into());
     }
 
-    
-    // TODO remove debug code
-    debug!("{:?}", email.body);
-
     let signed_body = dkim_sign(
         &email.sender_domain,
         &email.body,
         &email.dkim_key_path,
         &email.dkim_key_selector,
     )?;
-    // TODO remove debug code
-    let signed_email = mailparse::parse_mail(signed_body.as_bytes()).unwrap();
-    let res = verify_email(&email.sender_domain, &signed_email)
-        .await
-        .unwrap();
-    debug!("{}", res.with_detail());
     ///////////////////////////////////
     lines_sender.send(signed_body).await?;
     lines_sender.send(String::from(".")).await?;

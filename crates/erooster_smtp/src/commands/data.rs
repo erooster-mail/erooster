@@ -68,7 +68,8 @@ impl DataCommand<'_> {
                 write_lock.state = if let State::ReceivingData(Some(username)) = &write_lock.state {
                     debug!("Authenticated user: {}", username);
 
-                    let data = if let Some(data) = write_lock.data.clone() {
+                    let data = if let Some(mut data) = write_lock.data.clone() {
+                        data.truncate(data.len() - 2);
                         data
                     } else {
                         color_eyre::eyre::bail!("No data")

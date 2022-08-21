@@ -41,7 +41,7 @@ fn dkim_sign(
         .with_signed_headers(&["From", "Subject"])
         .unwrap()
         .with_private_key(DkimPrivateKey::Rsa(private_key))
-        .with_selector("default")
+        .with_selector(dkim_key_selector)
         .with_signing_domain(domain)
         .with_time(time)
         .build()?;

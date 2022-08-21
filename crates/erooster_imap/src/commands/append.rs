@@ -125,6 +125,10 @@ impl Append<'_> {
         let username = write_lock.username.clone().unwrap();
         if let State::Appending(state) = &mut write_lock.state {
             if let Some(buffer) = &mut state.data {
+                debug!("Buffer length: {}", buffer.len());
+                debug!("Append data length: {}", append_data.len());
+                debug!("total: {}", buffer.len() + append_data.len());
+                debug!("expected: {}", state.datalen);
                 if buffer.len() + append_data.as_bytes().to_vec().len() >= state.datalen {
                     debug!("[Append] Saving data");
                     let folder = &state.folder;

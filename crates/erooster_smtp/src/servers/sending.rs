@@ -229,6 +229,10 @@ where
         return Err("Server did not accept data start command".into());
     }
 
+    
+    // TODO remove debug code
+    debug!("{:?}", email.body);
+
     let signed_body = dkim_sign(
         &email.sender_domain,
         &email.body,

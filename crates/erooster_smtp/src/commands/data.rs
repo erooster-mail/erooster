@@ -115,6 +115,8 @@ impl DataCommand<'_> {
                         } else {
                             color_eyre::eyre::bail!("No data")
                         };
+                        // TODO remove debug
+                        debug!("{:?}", data);
                         let message_id = storage.store_new(&mailbox_path, data.as_bytes()).await?;
                         debug!("Stored message: {}", message_id);
                     }

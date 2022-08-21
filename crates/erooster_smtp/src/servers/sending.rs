@@ -5,6 +5,7 @@ use futures::{Sink, SinkExt, Stream, StreamExt};
 use rsa::pkcs1::DecodeRsaPrivateKey;
 use rustls::OwnedTrustAnchor;
 use serde::{Deserialize, Serialize};
+use simdutf8::compat::from_utf8;
 use sqlxmq::{job, CurrentJob};
 use std::{
     collections::HashMap, error::Error, io, net::IpAddr, path::Path, sync::Arc, time::Duration,
@@ -33,7 +34,7 @@ fn dkim_sign(
     dkim_key_selector: &str,
 ) -> Result<String> {
     let email = mailparse::parse_mail(raw_email.as_bytes())?;
-    debug!("raw_bytes: {:?}", email.raw_bytes);
+    debug!("raw_bytes: {:?}", from_utf8(email.raw_bytes)?);
 
     let private_key = rsa::RsaPrivateKey::read_pkcs1_pem_file(Path::new(&dkim_key_path))?;
     let time = time::OffsetDateTime::now_utc();

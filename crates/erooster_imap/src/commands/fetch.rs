@@ -318,9 +318,9 @@ fn body(
                         .collect::<Vec<_>>()
                         .join("\r\n");
                     format!(
-                        "BODY[HEADER.FIELDS ({})] {{{}}}\r\n{}",
+                        "BODY[HEADER.FIELDS ({})] {{{}}}\r\n{}\r\n",
                         headers_requested_vec.join(" "),
-                        headers.as_bytes().len(),
+                        headers.as_bytes().len() + 2,
                         headers
                     )
                 } else {

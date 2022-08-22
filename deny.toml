@@ -83,6 +83,7 @@ allow = [
     "OpenSSL",
     "Zlib",
     "WTFPL"
+    "Unicode-DFS-2016"
     #"Apache-2.0 WITH LLVM-exception",
 ]
 # List of explicitly disallowed licenses

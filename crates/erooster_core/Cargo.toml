@@ -54,7 +54,7 @@ optional = true
 
 [features]
 default = ["maildir"]
-maildir = ["dep:maildir"]
+maildir = ["dep:maildir", "maildir/memmap"]
 jaeger = ["dep:opentelemetry-jaeger"]
 
 #[profile.release]

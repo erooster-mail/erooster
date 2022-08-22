@@ -430,6 +430,7 @@ struct DbMails {
 pub struct MaildirMailEntry {
     entry: maildir::MailEntry,
     uid: i64,
+    /// The sequence number. It is None until used
     pub sequence_number: Option<i64>,
 }
 

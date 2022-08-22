@@ -421,7 +421,7 @@ dependencies = [
 [[package]]
 name = "cfdkim"
 version = "0.2.3"
-source = "git+https://github.com/erooster-mail/dkim#7cdb4ace8e8830e0eefa87a6e9b90d10a7946742"
+source = "git+https://github.com/erooster-mail/dkim#e3dc8f2bc351fae109efb4b1251c54e13a80c676"
 dependencies = [
  "base64",
  "ed25519-dalek",

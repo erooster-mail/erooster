@@ -28,7 +28,7 @@ pub trait MailEntry {
     /// The uid of the mail entry
     fn uid(&self) -> i64;
     /// The sequence number of the mail entry
-    fn sequence_number(&self) -> i64;
+    fn sequence_number(&self) -> Option<i64>;
     /// The id of the email
     fn id(&self) -> &str;
     /// The parsed form of the email

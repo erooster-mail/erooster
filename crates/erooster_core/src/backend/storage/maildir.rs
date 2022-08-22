@@ -51,15 +51,14 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .collect()
             .await;
         maildir.find(id).map(|entry| {
-            let (sequence, uid) = mail_rows
+            let uid = mail_rows
                 .iter()
-                .enumerate()
-                .find(|(_, x)| x.maildir_id == id)
-                .map_or((0, 0), |(index, x)| (index, x.id));
+                .find(|x| x.maildir_id == id)
+                .map_or(0, |x| x.id);
             MaildirMailEntry {
                 entry,
                 uid,
-                sequence_number: sequence as i64,
+                sequence_number: None,
             }
         })
     }
@@ -199,15 +198,14 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .filter_map(|x| match x {
                 Ok(x) => {
                     let maildir_id = x.id();
-                    let (sequence, uid) = mail_rows
+                    let uid = mail_rows
                         .iter()
-                        .enumerate()
-                        .find(|(_, y)| y.maildir_id == maildir_id)
-                        .map_or((0, 0), |(x, y)| (x, y.id));
+                        .find(|y| y.maildir_id == maildir_id)
+                        .map_or(0, |y| y.id);
                     Some(MaildirMailEntry {
                         uid,
                         entry: x,
-                        sequence_number: sequence as i64,
+                        sequence_number: None,
                     })
                 }
                 Err(_) => None,
@@ -229,15 +227,14 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .filter_map(|x| match x {
                 Ok(x) => {
                     let maildir_id = x.id();
-                    let (sequence, uid) = mail_rows
+                    let uid = mail_rows
                         .iter()
-                        .enumerate()
-                        .find(|(_, y)| y.maildir_id == maildir_id)
-                        .map_or((0, 0), |(x, y)| (x, y.id));
+                        .find(|y| y.maildir_id == maildir_id)
+                        .map_or(0, |y| y.id);
                     Some(MaildirMailEntry {
                         uid,
                         entry: x,
-                        sequence_number: sequence as i64,
+                        sequence_number: None,
                     })
                 }
                 Err(_) => None,
@@ -261,15 +258,14 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .filter_map(|x| match x {
                 Ok(x) => {
                     let maildir_id = x.id();
-                    let (sequence, uid) = mail_rows
+                    let uid = mail_rows
                         .iter()
-                        .enumerate()
-                        .find(|(_, y)| y.maildir_id == maildir_id)
-                        .map_or((0, 0), |(x, y)| (x, y.id));
+                        .find(|y| y.maildir_id == maildir_id)
+                        .map_or(0, |y| y.id);
                     Some(MaildirMailEntry {
                         uid,
                         entry: x,
-                        sequence_number: sequence as i64,
+                        sequence_number: None,
                     })
                 }
                 Err(_) => None,
@@ -434,7 +430,7 @@ struct DbMails {
 pub struct MaildirMailEntry {
     entry: maildir::MailEntry,
     uid: i64,
-    sequence_number: i64,
+    pub sequence_number: Option<i64>,
 }
 
 #[async_trait::async_trait]
@@ -445,7 +441,7 @@ impl MailEntry for MaildirMailEntry {
     }
 
     #[instrument(skip(self))]
-    fn sequence_number(&self) -> i64 {
+    fn sequence_number(&self) -> Option<i64> {
         self.sequence_number
     }
 

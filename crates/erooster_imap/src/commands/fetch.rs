@@ -48,29 +48,43 @@ impl Fetch<'_> {
                 Ok((_, range)) => {
                     let mut filtered_mails: Vec<MailEntryType> = mails
                         .into_iter()
-                        .filter(|mail| {
+                        .enumerate()
+                        .filter_map(|(index, mut mail)| {
                             for range in &range {
                                 match range {
                                     Range::Single(id) => {
-                                        if &mail.uid() == id {
-                                            return true;
+                                        if is_uid && &mail.uid() == id
+                                            || !is_uid && &(index as i64) == id
+                                        {
+                                            mail.sequence_number = Some(index as i64);
+                                            return Some(mail);
                                         }
                                     }
                                     Range::Range(start, end) => match end {
                                         RangeEnd::End(end_int) => {
-                                            if &mail.uid() >= start && &mail.uid() <= end_int {
-                                                return true;
+                                            if (is_uid
+                                                && &mail.uid() >= start
+                                                && &mail.uid() <= end_int)
+                                                || (!is_uid
+                                                    && &(index as i64) >= start
+                                                    && &(index as i64) <= end_int)
+                                            {
+                                                mail.sequence_number = Some(index as i64);
+                                                return Some(mail);
                                             }
                                         }
                                         RangeEnd::All => {
-                                            if &mail.uid() >= start {
-                                                return true;
+                                            if (is_uid && &mail.uid() >= start)
+                                                || (!is_uid && &(index as i64) >= start)
+                                            {
+                                                mail.sequence_number = Some(index as i64);
+                                                return Some(mail);
                                             }
                                         }
                                     },
                                 }
                             }
-                            false
+                            None
                         })
                         .collect::<Vec<MailEntryType>>();
 
@@ -84,7 +98,7 @@ impl Fetch<'_> {
                             debug!("Parsed Fetch args: {:?}", args);
                             for mut mail in filtered_mails {
                                 let uid = mail.uid();
-                                let sequence = mail.sequence_number();
+                                let sequence = mail.sequence_number().unwrap();
                                 if let Some(resp) = generate_response(args.clone(), &mut mail) {
                                     if is_uid {
                                         if resp.contains("UID") {

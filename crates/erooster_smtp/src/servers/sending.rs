@@ -40,7 +40,29 @@ fn dkim_sign(
     let time = time::OffsetDateTime::now_utc();
 
     let signer = SignerBuilder::new()
-        .with_signed_headers(&["From", "Subject"])?
+        .with_signed_headers(&[
+            "From",
+            "Reply-To",
+            "Subject",
+            "Date",
+            "To",
+            "CC",
+            "Resent-Date",
+            "Resent-From",
+            "Resent-To",
+            "Resent-Cc",
+            "In-Reply-To",
+            "References",
+            "List-Id",
+            "List-Help",
+            "List-Unsubscribe",
+            "List-Subscribe",
+            "List-Post",
+            "List-Owner",
+            "List-Archive",
+        ])?
+        .with_body_canonicalization(cfdkim::canonicalization::Type::Relaxed)
+        .with_header_canonicalization(cfdkim::canonicalization::Type::Relaxed)
         .with_private_key(DkimPrivateKey::Rsa(private_key))
         .with_selector(dkim_key_selector)
         .with_signing_domain(domain)

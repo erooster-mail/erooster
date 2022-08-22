@@ -49,7 +49,7 @@ jobs:
         run: rustup toolchain install nightly --component llvm-tools-preview
       - uses: Swatinem/rust-cache@v1
       - name: Install opendkim
-        run: apt install opendkim-tools
+        run: apt update && apt install -y opendkim-tools
       - name: Generate dkim-key
         run: |
           mkdir -p /etc/erooster/keys

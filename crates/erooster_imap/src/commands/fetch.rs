@@ -78,7 +78,7 @@ impl Fetch<'_> {
                     let fetch_args_str = &fetch_args[1..fetch_args.len() - 1];
                     debug!("Fetch args: {}", fetch_args_str);
 
-                    filtered_mails.sort_by_key(MailEntry::uid);
+                    filtered_mails.sort_by_key(MailEntry::sequence_number);
                     match fetch_arguments(fetch_args_str).finish() {
                         Ok((_, args)) => {
                             debug!("Parsed Fetch args: {:?}", args);

@@ -7,7 +7,7 @@ use erooster_core::{
     config::Config,
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use sqlxmq::{JobRegistry, OwnedHandle};
+use sqlxmq::{JobRegistry, JobRunnerHandle};
 use std::error::Error;
 use std::sync::Arc;
 use tracing::instrument;
@@ -43,7 +43,7 @@ pub async fn start(
     config: Arc<Config>,
     database: DB,
     storage: Arc<Storage>,
-) -> color_eyre::eyre::Result<OwnedHandle> {
+) -> color_eyre::eyre::Result<JobRunnerHandle> {
     let config_clone = Arc::clone(&config);
     let db_clone = Arc::clone(&database);
     let storage_clone = Arc::clone(&storage);

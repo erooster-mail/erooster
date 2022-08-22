@@ -28,7 +28,7 @@ serde = { version = "1.0", features = ["derive"] }
 simdutf8 = { version = "0.1" }
 mailparse = "0.13"
 rsa = "0.6"
-sqlxmq = { version = "0.4", default-features = false, features = [ "runtime-tokio-rustls"] }
+sqlxmq = { version = "0.4", default-features = false, features = [ "runtime-tokio-rustls"], git = "https://github.com/erooster-mail/sqlxmq.git" }
 tokio = { version = "1", features = ["full"] }
 tokio-rustls ={ version = "0.23", features = ["tls12"] }
 tokio-stream = { version = "0.1", features = ["net", "io-util"] }

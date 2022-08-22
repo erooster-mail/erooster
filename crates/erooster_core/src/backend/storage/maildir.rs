@@ -1,7 +1,7 @@
 use crate::{
     backend::{
         database::{Database, DB},
-        storage::{MailEntry, MailStorage},
+        storage::{MailEntry, MailState, MailStorage},
     },
     config::Config,
 };
@@ -55,11 +55,17 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                 .iter()
                 .find(|x| x.maildir_id == id)
                 .map_or(0, |x| x.id);
+            let mail_state = if entry.is_seen() {
+                MailState::Read
+            } else {
+                MailState::New
+            };
             let mut entry = MaildirMailEntry {
                 entry,
                 uid,
                 sequence_number: None,
                 date: None,
+                mail_state,
             };
             entry.load();
             entry
@@ -210,6 +216,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                         entry: x,
                         sequence_number: None,
                         date: None,
+                        mail_state: MailState::Read,
                     };
                     entry.load();
                     Some(entry)
@@ -242,6 +249,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                         entry: x,
                         sequence_number: None,
                         date: None,
+                        mail_state: MailState::New,
                     };
                     entry.load();
                     Some(entry)
@@ -271,11 +279,17 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                         .iter()
                         .find(|y| y.maildir_id == maildir_id)
                         .map_or(0, |y| y.id);
+                    let state = if x.is_seen() {
+                        MailState::Read
+                    } else {
+                        MailState::New
+                    };
                     let mut entry = MaildirMailEntry {
                         uid,
                         entry: x,
                         sequence_number: None,
                         date: None,
+                        mail_state: state,
                     };
                     entry.load();
                     Some(entry)
@@ -445,9 +459,11 @@ pub struct MaildirMailEntry {
     /// The sequence number. It is None until used
     pub sequence_number: Option<i64>,
     date: Option<i64>,
+    mail_state: MailState,
 }
 
 impl MaildirMailEntry {
+    /// Loads async data in memory for non mut usage
     pub fn load(&mut self) {
         match self.entry.date() {
             Ok(date) => self.date = Some(date),
@@ -461,6 +477,11 @@ impl MailEntry for MaildirMailEntry {
     #[instrument(skip(self))]
     fn uid(&self) -> i64 {
         self.uid
+    }
+
+    #[instrument(skip(self))]
+    fn mail_state(&self) -> MailState {
+        self.mail_state
     }
 
     #[instrument(skip(self))]

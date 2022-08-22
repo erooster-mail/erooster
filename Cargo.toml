@@ -11,3 +11,7 @@ members = [
 
 [profile.dev.package.backtrace]
 opt-level = 3
+
+# Does not work yet
+#[patch.crates-io]
+#prometheus = {version = "0.13.1", features = ["process"]}

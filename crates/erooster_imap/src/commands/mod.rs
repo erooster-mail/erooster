@@ -343,7 +343,9 @@ impl Data {
                         Noop.exec(lines, &command_data).await?;
                     }
                     Commands::Check => {
-                        Check { data: self }.exec(lines, &command_data).await?;
+                        Check { data: self }
+                            .exec(lines, storage, &command_data)
+                            .await?;
                     }
                     Commands::Close => {
                         Close { data: self }

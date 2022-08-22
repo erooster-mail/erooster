@@ -22,11 +22,22 @@ pub type Storage = MaildirStorage;
 #[cfg(feature = "maildir")]
 pub type MailEntryType = MaildirMailEntry;
 
+/// The state of a message
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MailState {
+    /// Messages that have been marked as read
+    Read,
+    /// Messaages that have been marked as unread
+    New,
+}
+
 /// Representation of a Mail entry
 #[async_trait::async_trait]
 pub trait MailEntry {
     /// The uid of the mail entry
     fn uid(&self) -> i64;
+    /// The state (new or read) of the mail entry
+    fn mail_state(&self) -> MailState;
     /// The sequence number of the mail entry
     fn sequence_number(&self) -> Option<i64>;
     /// The id of the email

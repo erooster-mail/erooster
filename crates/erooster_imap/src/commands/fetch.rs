@@ -8,7 +8,9 @@ use crate::{
     },
     state::State,
 };
-use erooster_core::backend::storage::{MailEntry, MailEntryType, MailStorage, Storage};
+use erooster_core::backend::storage::{
+    maildir::MaildirMailEntry, MailEntry, MailEntryType, MailStorage, Storage,
+};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use nom::{error::convert_error, Finish};
 use std::sync::Arc;
@@ -39,7 +41,8 @@ impl Fetch<'_> {
                 folder.clone(),
                 self.data.con_state.read().await.username.clone().unwrap(),
             )?;
-            let mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
+            let mut mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
+            mails.sort_by_key(MaildirMailEntry::uid);
 
             let arguments_borrow = command_data.arguments[offset];
             let range = parse_selected_range(arguments_borrow).finish();

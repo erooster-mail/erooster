@@ -31,13 +31,11 @@ impl Check<'_> {
                 folder.clone(),
                 self.data.con_state.read().await.username.clone().unwrap(),
             )?;
-            let mut mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
-
-            mails.sort_by_cached_key(MailEntry::date);
-            for (index, mail) in mails.iter().enumerate() {
-                if mail.mail_state() == MailState::New {
-                    lines.send(format!("* OK {} EXISTS", index)).await?;
-                }
+            let mails: Vec<MailEntryType> = storage.list_new(&mailbox_path).await;
+            let got_new = !mails.is_empty();
+            if got_new {
+                let mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
+                lines.send(format!("* {} EXISTS", mails.len())).await?;
             }
 
             lines

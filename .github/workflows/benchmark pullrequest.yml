@@ -30,9 +30,15 @@ jobs:
       - uses: actions/checkout@v2
       - run: rustup default nightly
       - uses: Swatinem/rust-cache@v1
+      - name: Install opendkim
+        run: apt install opendkim-tools
+      - name: Generate dkim-key
+        run: |
+          mkdir -p /etc/erooster/keys
+          cd /etc/erooster/keys
+          opendkim-genkey --domain=example.com  --subdomains --testmode
       - name: Setup Config
         run: |
-          mkdir -p /etc/erooster
           echo 'tls:' > /etc/erooster/config.yml
           echo '  key_path: ""' >> /etc/erooster/config.yml
           echo '  cert_path: ""' >> /etc/erooster/config.yml
@@ -40,6 +46,8 @@ jobs:
           echo '  maildir_folders: "./maildir"' >> /etc/erooster/config.yml
           echo '  hostname: "localhost"' >> /etc/erooster/config.yml
           echo '  displayname: Erooster' >> /etc/erooster/config.yml
+          echo '  dkim_key_path: /etc/erooster/keys/default.private' >> /etc/erooster/config.yml
+          echo '  dkim_key_selector: default' >> /etc/erooster/config.yml
           echo 'database:' >> /etc/erooster/config.yml
           echo '  postgres_url: "postgres://postgres:postgres@postgres/erooster"' >> /etc/erooster/config.yml
           echo 'webserver:' >> /etc/erooster/config.yml

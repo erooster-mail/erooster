@@ -4,7 +4,7 @@ use crate::{
     commands::{CommandData, Data},
     state::State,
 };
-use erooster_core::backend::storage::{MailEntry, MailEntryType, MailState, MailStorage, Storage};
+use erooster_core::backend::storage::{MailEntryType, MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use tracing::instrument;
 

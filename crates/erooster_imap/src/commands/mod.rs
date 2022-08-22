@@ -340,7 +340,9 @@ impl Data {
                             .await?;
                     }
                     Commands::Noop => {
-                        Noop.exec(lines, &command_data).await?;
+                        Noop { data: self }
+                            .exec(lines, storage, &command_data)
+                            .await?;
                     }
                     Commands::Check => {
                         Check { data: self }

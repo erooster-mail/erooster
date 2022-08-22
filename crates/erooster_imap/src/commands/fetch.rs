@@ -184,7 +184,7 @@ pub fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Optio
                     }
                 }
             }
-            debug!("List Response: {}", resp);
+            debug!("[Fetch] List Response: {}", resp);
             Some(resp)
         }
         _ => None,

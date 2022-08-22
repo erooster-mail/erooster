@@ -72,7 +72,7 @@ mod tests {
                 con_state: Arc::new(RwLock::new(Connection {
                     state: State::Selected("INBOX".to_string(), Access::ReadWrite),
                     secure: true,
-                    username: Some("test"),
+                    username: Some(String::from("test")),
                     active_capabilities: vec![],
                 })),
             },

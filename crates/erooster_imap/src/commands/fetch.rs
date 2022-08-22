@@ -54,9 +54,9 @@ impl Fetch<'_> {
                                 match range {
                                     Range::Single(id) => {
                                         if is_uid && &mail.uid() == id
-                                            || !is_uid && &(index as i64) == id
+                                            || !is_uid && &(index as i64 + 1) == id
                                         {
-                                            mail.sequence_number = Some(index as i64);
+                                            mail.sequence_number = Some(index as i64 + 1);
                                             return Some(mail);
                                         }
                                     }
@@ -69,7 +69,7 @@ impl Fetch<'_> {
                                                     && &(index as i64) >= start
                                                     && &(index as i64) <= end_int)
                                             {
-                                                mail.sequence_number = Some(index as i64);
+                                                mail.sequence_number = Some(index as i64 + 1);
                                                 return Some(mail);
                                             }
                                         }
@@ -77,7 +77,7 @@ impl Fetch<'_> {
                                             if (is_uid && &mail.uid() >= start)
                                                 || (!is_uid && &(index as i64) >= start)
                                             {
-                                                mail.sequence_number = Some(index as i64);
+                                                mail.sequence_number = Some(index as i64 + 1);
                                                 return Some(mail);
                                             }
                                         }

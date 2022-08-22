@@ -42,7 +42,7 @@ impl Fetch<'_> {
                 self.data.con_state.read().await.username.clone().unwrap(),
             )?;
             let mut mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
-            mails.sort_by_key(MaildirMailEntry::uid);
+            mails.sort_by_cached_key(MaildirMailEntry::date);
 
             let arguments_borrow = command_data.arguments[offset];
             let range = parse_selected_range(arguments_borrow).finish();
@@ -95,7 +95,7 @@ impl Fetch<'_> {
                     let fetch_args_str = &fetch_args[1..fetch_args.len() - 1];
                     debug!("Fetch args: {}", fetch_args_str);
 
-                    filtered_mails.sort_by_key(|x| x.sequence_number().unwrap());
+                    filtered_mails.sort_by_cached_key(|x| x.sequence_number().unwrap());
                     match fetch_arguments(fetch_args_str).finish() {
                         Ok((_, args)) => {
                             debug!("Parsed Fetch args: {:?}", args);

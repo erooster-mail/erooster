@@ -38,7 +38,7 @@ pub trait MailEntry {
     /// The received time of the email
     fn received(&mut self) -> color_eyre::eyre::Result<i64>;
     /// The date of the email
-    fn date(&mut self) -> color_eyre::eyre::Result<i64>;
+    fn date(&self) -> Option<i64>;
     /// The flags of the email
     fn flags(&self) -> &str;
     /// Whether the email is a draft

@@ -55,11 +55,14 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                 .iter()
                 .find(|x| x.maildir_id == id)
                 .map_or(0, |x| x.id);
-            MaildirMailEntry {
+            let mut entry = MaildirMailEntry {
                 entry,
                 uid,
                 sequence_number: None,
-            }
+                date: None,
+            };
+            entry.load();
+            entry
         })
     }
 
@@ -202,11 +205,14 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                         .iter()
                         .find(|y| y.maildir_id == maildir_id)
                         .map_or(0, |y| y.id);
-                    Some(MaildirMailEntry {
+                    let mut entry = MaildirMailEntry {
                         uid,
                         entry: x,
                         sequence_number: None,
-                    })
+                        date: None,
+                    };
+                    entry.load();
+                    Some(entry)
                 }
                 Err(_) => None,
             })
@@ -231,11 +237,14 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                         .iter()
                         .find(|y| y.maildir_id == maildir_id)
                         .map_or(0, |y| y.id);
-                    Some(MaildirMailEntry {
+                    let mut entry = MaildirMailEntry {
                         uid,
                         entry: x,
                         sequence_number: None,
-                    })
+                        date: None,
+                    };
+                    entry.load();
+                    Some(entry)
                 }
                 Err(_) => None,
             })
@@ -262,11 +271,14 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                         .iter()
                         .find(|y| y.maildir_id == maildir_id)
                         .map_or(0, |y| y.id);
-                    Some(MaildirMailEntry {
+                    let mut entry = MaildirMailEntry {
                         uid,
                         entry: x,
                         sequence_number: None,
-                    })
+                        date: None,
+                    };
+                    entry.load();
+                    Some(entry)
                 }
                 Err(_) => None,
             })
@@ -432,6 +444,16 @@ pub struct MaildirMailEntry {
     uid: i64,
     /// The sequence number. It is None until used
     pub sequence_number: Option<i64>,
+    date: Option<i64>,
+}
+
+impl MaildirMailEntry {
+    pub fn load(&mut self) {
+        match self.entry.date() {
+            Ok(date) => self.date = Some(date),
+            Err(_) => self.date = None,
+        }
+    }
 }
 
 #[async_trait::async_trait]
@@ -467,8 +489,8 @@ impl MailEntry for MaildirMailEntry {
     }
 
     #[instrument(skip(self))]
-    fn date(&mut self) -> color_eyre::eyre::Result<i64> {
-        self.entry.date().map_err(Into::into)
+    fn date(&self) -> Option<i64> {
+        self.date
     }
 
     #[instrument(skip(self))]

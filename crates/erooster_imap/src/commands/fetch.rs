@@ -84,22 +84,25 @@ impl Fetch<'_> {
                             debug!("Parsed Fetch args: {:?}", args);
                             for mut mail in filtered_mails {
                                 let uid = mail.uid();
+                                let sequence = mail.sequence_number();
                                 if let Some(resp) = generate_response(args.clone(), &mut mail) {
                                     if is_uid {
                                         if resp.contains("UID") {
                                             lines
-                                                .feed(format!("* {} FETCH ({})", uid, resp))
+                                                .feed(format!("* {} FETCH ({})", sequence, resp))
                                                 .await?;
                                         } else {
                                             lines
                                                 .feed(format!(
                                                     "* {} FETCH (UID {} {})",
-                                                    uid, uid, resp
+                                                    sequence, uid, resp
                                                 ))
                                                 .await?;
                                         }
                                     } else {
-                                        lines.feed(format!("* {} FETCH ({})", uid, resp)).await?;
+                                        lines
+                                            .feed(format!("* {} FETCH ({})", sequence, resp))
+                                            .await?;
                                     }
                                 }
                             }

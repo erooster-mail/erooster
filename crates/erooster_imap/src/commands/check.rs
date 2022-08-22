@@ -27,10 +27,16 @@ impl Check<'_> {
         // It also only is allowed in selected state
         if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
             let folder = folder.replace('/', ".");
-            let mailbox_path = storage.to_ondisk_path(
-                folder.clone(),
-                self.data.con_state.read().await.username.clone().unwrap(),
-            )?;
+            let username = if let Some(username) = self.data.con_state.read().await.username.clone()
+            {
+                username
+            } else {
+                lines
+                    .send(format!("{} NO invalid state", command_data.tag))
+                    .await?;
+                return Ok(());
+            };
+            let mailbox_path = storage.to_ondisk_path(folder.clone(), username)?;
             let mails: Vec<MailEntryType> = storage.list_new(&mailbox_path).await;
             let got_new = !mails.is_empty();
             if got_new {
@@ -66,8 +72,7 @@ mod tests {
                 con_state: Arc::new(RwLock::new(Connection {
                     state: State::Selected("INBOX".to_string(), Access::ReadWrite),
                     secure: true,
-                    // TODO this may be invalid actuallly
-                    username: None,
+                    username: Some("test"),
                     active_capabilities: vec![],
                 })),
             },

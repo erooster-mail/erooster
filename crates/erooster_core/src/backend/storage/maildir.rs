@@ -51,15 +51,15 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .collect()
             .await;
         maildir.find(id).map(|entry| {
-            let sequence_and_uid = mail_rows
+            let (sequence, uid) = mail_rows
                 .iter()
                 .enumerate()
                 .find(|(_, x)| x.maildir_id == id)
                 .map_or((0, 0), |(index, x)| (index, x.id));
             MaildirMailEntry {
                 entry,
-                uid: sequence_and_uid.1,
-                sequence_number: sequence_and_uid.0 as i64,
+                uid,
+                sequence_number: sequence as i64,
             }
         })
     }
@@ -196,19 +196,18 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .await;
         maildir
             .list_cur()
-            .filter(std::result::Result::is_ok)
-            .enumerate()
-            .filter_map(|(index, x)| match x {
+            .filter_map(|x| match x {
                 Ok(x) => {
                     let maildir_id = x.id();
-                    let uid = mail_rows
+                    let (sequence, uid) = mail_rows
                         .iter()
-                        .find(|y| y.maildir_id == maildir_id)
-                        .map_or(0, |y| y.id);
+                        .enumerate()
+                        .find(|(_, y)| y.maildir_id == maildir_id)
+                        .map_or((0, 0), |(x, y)| (x, y.id));
                     Some(MaildirMailEntry {
                         uid,
                         entry: x,
-                        sequence_number: index as i64,
+                        sequence_number: sequence as i64,
                     })
                 }
                 Err(_) => None,
@@ -224,21 +223,21 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .filter_map(|x| async move { x.ok() })
             .collect()
             .await;
+
         maildir
             .list_new()
-            .filter(std::result::Result::is_ok)
-            .enumerate()
-            .filter_map(|(index, x)| match x {
+            .filter_map(|x| match x {
                 Ok(x) => {
                     let maildir_id = x.id();
-                    let uid = mail_rows
+                    let (sequence, uid) = mail_rows
                         .iter()
-                        .find(|y| y.maildir_id == maildir_id)
-                        .map_or(0, |y| y.id);
+                        .enumerate()
+                        .find(|(_, y)| y.maildir_id == maildir_id)
+                        .map_or((0, 0), |(x, y)| (x, y.id));
                     Some(MaildirMailEntry {
                         uid,
                         entry: x,
-                        sequence_number: index as i64,
+                        sequence_number: sequence as i64,
                     })
                 }
                 Err(_) => None,
@@ -254,22 +253,23 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .filter_map(|x| async move { x.ok() })
             .collect()
             .await;
+
         maildir
             .list_new()
             .chain(maildir.list_cur())
             .filter(std::result::Result::is_ok)
-            .enumerate()
-            .filter_map(|(index, x)| match x {
+            .filter_map(|x| match x {
                 Ok(x) => {
                     let maildir_id = x.id();
-                    let uid = mail_rows
+                    let (sequence, uid) = mail_rows
                         .iter()
-                        .find(|y| y.maildir_id == maildir_id)
-                        .map_or(0, |y| y.id);
+                        .enumerate()
+                        .find(|(_, y)| y.maildir_id == maildir_id)
+                        .map_or((0, 0), |(x, y)| (x, y.id));
                     Some(MaildirMailEntry {
                         uid,
                         entry: x,
-                        sequence_number: index as i64,
+                        sequence_number: sequence as i64,
                     })
                 }
                 Err(_) => None,

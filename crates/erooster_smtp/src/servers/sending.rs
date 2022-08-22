@@ -61,8 +61,8 @@ fn dkim_sign(
             "List-Owner",
             "List-Archive",
         ])?
-        .with_body_canonicalization(cfdkim::canonicalization::Type::Relaxed)
-        .with_header_canonicalization(cfdkim::canonicalization::Type::Simple)
+        .with_body_canonicalization(cfdkim::canonicalization::Type::Simple)
+        .with_header_canonicalization(cfdkim::canonicalization::Type::Relaxed)
         .with_private_key(DkimPrivateKey::Rsa(private_key))
         .with_selector(dkim_key_selector)
         .with_signing_domain(domain)

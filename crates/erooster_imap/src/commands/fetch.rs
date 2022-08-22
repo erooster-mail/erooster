@@ -41,7 +41,16 @@ impl Fetch<'_> {
                 folder.clone(),
                 self.data.con_state.read().await.username.clone().unwrap(),
             )?;
-            let mut mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
+            let mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
+            // Possibly slower or faster than before?
+            // This loads stuff in memory essentially
+            let mut mails: Vec<MailEntryType> = mails
+                .into_iter()
+                .map(|mut mail| {
+                    mail.load();
+                    mail
+                })
+                .collect();
             mails.sort_by_cached_key(MaildirMailEntry::date);
 
             let arguments_borrow = command_data.arguments[offset];

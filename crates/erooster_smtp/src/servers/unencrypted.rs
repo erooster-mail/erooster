@@ -36,10 +36,10 @@ impl Unencrypted {
         let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
                 .iter()
-                .map(|ip| format!("{}:25", ip).parse().unwrap())
+                .map(|ip| format!("{}:587", ip).parse().unwrap())
                 .collect()
         } else {
-            vec!["0.0.0.0:25".parse()?]
+            vec!["0.0.0.0:587".parse()?]
         };
         for addr in addrs {
             info!("[SMTP] Trying to listen on {:?}", addr);

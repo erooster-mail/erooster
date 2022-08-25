@@ -24,7 +24,12 @@ async fn login() {
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("250-localhost"));
     let resp = reader.next().await.unwrap().unwrap();
-    assert_eq!(resp, String::from("250 AUTH LOGIN"));
+    assert_eq!(resp, String::from("250-ENHANCEDSTATUSCODES"));
+    let resp = reader.next().await.unwrap().unwrap();
+    assert_eq!(resp, String::from("250-STARTTLS"));
+    let resp = reader.next().await.unwrap().unwrap();
+    assert_eq!(resp, String::from("250 SMTPUTF8"));
+    // TODO we need to make sure to do tls here.
     sender.send(String::from("AUTH LOGIN")).await.unwrap();
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("334 VXNlcm5hbWU6"));

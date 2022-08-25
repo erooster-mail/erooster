@@ -203,7 +203,9 @@ impl Data {
                         Rset.exec(lines).await?;
                     }
                     Commands::EHLO => {
-                        Ehlo.exec(config.mail.hostname.clone(), lines).await?;
+                        Ehlo { data: self }
+                            .exec(config.mail.hostname.clone(), lines)
+                            .await?;
                     }
                     Commands::QUIT => {
                         Quit.exec(lines).await?;

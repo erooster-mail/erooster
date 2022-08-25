@@ -194,6 +194,9 @@ pub async fn listen_tls(
                 // Read lines from the stream
                 while let Some(Ok(line)) = lines_reader.next().await {
                     let data = if let Some(data) = upper_data.clone() {
+                        {
+                            data.con_state.write().await.secure = true;
+                        };
                         data
                     } else {
                         // Create our Connection
@@ -203,7 +206,6 @@ pub async fn listen_tls(
                         }
                     };
                     debug!("[SMTP][TLS] [{}] Got Command: {}", peer, line);
-                    // TODO make sure to handle IDLE different as it needs us to stream lines
 
                     {
                         let response = data

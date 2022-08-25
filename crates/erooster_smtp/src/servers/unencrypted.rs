@@ -142,6 +142,7 @@ async fn listen(
                             Response::STARTTLS => {
                                 debug!("[SMTP] Switching context");
                                 do_starttls = true;
+                                tx.send(String::from("220 TLS go ahead")).await?;
                                 break;
                             }
                             Response::Continue => {}
@@ -160,6 +161,8 @@ async fn listen(
                 }
             }
             if do_starttls {
+                debug!("[SMTP] Waiting for sender");
+                //sender.abort();
                 let sender = sender.await?;
                 let framed_stream = sender.reunite(lines_reader)?;
                 let stream = framed_stream.into_inner();

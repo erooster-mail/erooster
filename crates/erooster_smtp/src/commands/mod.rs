@@ -197,7 +197,6 @@ impl Data {
                     Commands::STARTTLS => {
                         // We need to accept tls from this point on
                         debug!("[SMTP] STARTTLS initiated");
-                        lines.send(String::from("220 TLS go ahead")).await?;
                         return Ok(Response::STARTTLS);
                     }
                     Commands::RSET => {

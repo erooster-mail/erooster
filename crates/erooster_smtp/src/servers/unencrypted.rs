@@ -14,7 +14,13 @@ use erooster_core::{
     LINE_LIMIT,
 };
 use futures::{channel::mpsc, SinkExt, StreamExt};
-use std::{net::SocketAddr, sync::Arc};
+use std::{
+    net::SocketAddr,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 use tokio::{net::TcpListener, sync::RwLock, task::JoinHandle};
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
@@ -90,15 +96,16 @@ async fn listen(
                 sender: None,
             }));
 
-            let mut do_starttls = false;
+            let do_starttls = Arc::new(AtomicBool::new(false));
             let (mut tx, mut rx) = mpsc::unbounded();
+            let cloned_do_starttls = Arc::clone(&do_starttls);
             let sender = tokio::spawn(async move {
                 while let Some(res) = rx.next().await {
                     if let Err(e) = lines_sender.send(res).await {
                         error!("[SMTP] Error sending response: {:?}", e);
                         break;
                     }
-                    if do_starttls {
+                    if Arc::clone(&cloned_do_starttls).load(Ordering::Relaxed) {
                         debug!("[SMTP] releasing the sender");
                         break;
                     }
@@ -110,6 +117,7 @@ async fn listen(
             send_capabilities(Arc::clone(&config), &mut tx)
                 .await
                 .unwrap();
+            let do_starttls = Arc::clone(&do_starttls);
 
             while let Some(Ok(line)) = lines_reader.next().await {
                 let data = Data {
@@ -141,7 +149,7 @@ async fn listen(
                             }
                             Response::STARTTLS => {
                                 debug!("[SMTP] Switching context");
-                                do_starttls = true;
+                                Arc::clone(&do_starttls).store(true, Ordering::Relaxed);
                                 tx.send(String::from("220 TLS go ahead")).await?;
                                 break;
                             }
@@ -160,7 +168,7 @@ async fn listen(
                     }
                 }
             }
-            if do_starttls {
+            if do_starttls.load(Ordering::Relaxed) {
                 debug!("[SMTP] Waiting for sender");
                 //sender.abort();
                 let sender = sender.await?;

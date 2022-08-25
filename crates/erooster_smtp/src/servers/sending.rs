@@ -408,6 +408,7 @@ pub async fn send_email_job(
                             target,
                             e
                         );
+                        // TODO try starttls first
                         match get_unsecure_connection(address.unwrap(), &current_job, target).await
                         {
                             Ok(unsecure_con) => {
@@ -424,8 +425,9 @@ pub async fn send_email_job(
                             }
                             Err(e) => {
                                 return Err(From::from(format!(
-                                    "[{}] Error sending email via tcp on port 25: {}",
+                                    "[{}] Error sending email via tcp on port 25 to {}: {}",
                                     current_job.id(),
+                                    target,
                                     e
                                 )));
                             }
@@ -434,17 +436,20 @@ pub async fn send_email_job(
                 }
                 Err(e) => {
                     error!(
-                        "[{}] Error sending email via tls on port 465: {}",
+                        "[{}] Error sending email via tls on port 465 to {}: {}",
                         current_job.id(),
+                        target,
                         e
                     );
+                    // TODO try starttls first
                     let unsecure_con =
                         get_unsecure_connection(address.unwrap(), &current_job, target).await?;
                     if let Err(e) = send_email(unsecure_con, &email, &current_job, to, false).await
                     {
                         return Err(From::from(format!(
-                            "[{}] Error sending email via tcp on port 25: {}",
+                            "[{}] Error sending email via tcp on port 25 to {}: {}",
                             current_job.id(),
+                            target,
                             e
                         )));
                     }

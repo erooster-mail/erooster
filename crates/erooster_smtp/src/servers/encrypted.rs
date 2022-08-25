@@ -186,6 +186,8 @@ pub async fn listen_tls(
                     }
                 });
 
+                // Create our Connection
+                let connection = Connection::new(true);
                 // Greet the client with the capabilities we provide
                 send_capabilities(Arc::clone(&config), &mut tx)
                     .await
@@ -199,8 +201,6 @@ pub async fn listen_tls(
                         };
                         data
                     } else {
-                        // Create our Connection
-                        let connection = Connection::new(true);
                         Data {
                             con_state: Arc::clone(&connection),
                         }

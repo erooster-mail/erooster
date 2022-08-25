@@ -112,7 +112,6 @@ impl Auth<'_> {
                         None
                     })
                     .collect();
-                debug!("auth_data_vec: {:?}", auth_data_vec);
 
                 if auth_data_vec.len() == 2 {
                     let username = auth_data_vec[0];
@@ -131,11 +130,13 @@ impl Auth<'_> {
                             debug!("[SMTP] Invalid user or password");
                             return Ok(());
                         }
-                        {
-                            write_lock.state = State::Authenticated(username.to_string());
-                        };
                         let secure = write_lock.secure;
                         if secure {
+                            {
+                                write_lock.state = State::Authenticated(username.to_string());
+                                debug!("[SMTP] User authenticated");
+                            };
+
                             lines.send(String::from("235 ok")).await?;
                         } else {
                             lines

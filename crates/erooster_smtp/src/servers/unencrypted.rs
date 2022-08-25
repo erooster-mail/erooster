@@ -76,6 +76,7 @@ impl Unencrypted {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 async fn listen(
     mut stream: TcpListenerStream,
     config: Arc<Config>,

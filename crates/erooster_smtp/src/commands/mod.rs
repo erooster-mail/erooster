@@ -227,7 +227,9 @@ impl Data {
                         DataCommand { data: self }.exec(lines).await?;
                     }
                     Commands::AUTH => {
-                        Auth { data: self }.exec(lines, &command_data).await?;
+                        Auth { data: self }
+                            .exec(lines, database, &command_data)
+                            .await?;
                     }
                     Commands::NOOP => {
                         Noop.exec(lines).await?;

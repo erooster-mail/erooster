@@ -14,10 +14,11 @@ pub struct Auth<'a> {
 }
 
 impl Auth<'_> {
-    #[instrument(skip(self, lines, command_data))]
+    #[instrument(skip(self, lines, database, command_data))]
     pub async fn exec<S>(
         &self,
         lines: &mut S,
+        database: DB,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -26,7 +27,7 @@ impl Auth<'_> {
         //let secure = self.data.con_state.read().await.secure;
         let secure = true;
         if secure {
-            assert!(command_data.arguments.len() == 1);
+            assert!(command_data.arguments.len() == 2);
             if command_data.arguments[0] == "LOGIN" {
                 {
                     self.data.con_state.write().await.state =
@@ -34,11 +35,16 @@ impl Auth<'_> {
                 };
                 lines.send(String::from("334 VXNlcm5hbWU6")).await?;
             } else if command_data.arguments[0] == "PLAIN" {
-                {
-                    self.data.con_state.write().await.state =
-                        State::Authenticating(AuthState::Plain);
-                };
-                lines.send(String::from("+ \"\"")).await?;
+                if command_data.arguments.len() == 2 {
+                    self.plain(lines, database, command_data.arguments[1])
+                        .await?;
+                } else {
+                    {
+                        self.data.con_state.write().await.state =
+                            State::Authenticating(AuthState::Plain);
+                    };
+                    lines.send(String::from("+ \"\"")).await?;
+                }
             } else {
                 lines
                     .send(String::from("504 Unrecognized authentication type."))

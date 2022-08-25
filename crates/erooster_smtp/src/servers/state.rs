@@ -39,6 +39,7 @@ pub enum State {
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone)]
 pub enum AuthState {
+    Plain,
     Username,
     Password(String),
 }

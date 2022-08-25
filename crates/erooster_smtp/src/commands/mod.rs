@@ -169,6 +169,9 @@ impl Data {
                 AuthState::Username => {
                     Auth { data: self }.username(lines, &line).await?;
                 }
+                AuthState::Plain => {
+                    Auth { data: self }.plain(lines, database, &line).await?;
+                }
                 AuthState::Password(_) => {
                     Auth { data: self }.password(lines, database, &line).await?;
                 }

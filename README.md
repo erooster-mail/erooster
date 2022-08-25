@@ -1,7 +1,7 @@
 # Erooster
 
 [![codecov](https://codecov.io/gh/MTRNord/erooster/branch/main/graph/badge.svg?token=ieNQlSkDTF)](https://codecov.io/gh/MTRNord/erooster)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md) 
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md)
 
 A mail suite written in rust meant to be easy to use.
 
@@ -9,7 +9,17 @@ A mail suite written in rust meant to be easy to use.
 
 Currently, the setup is quite rough.
 
-You need some certificates for your server (PEM format) and a Postgres database.
+You need some certificates for your server (PEM format) and a Postgres database as well as dkim keys.
+The easiest way to get them is to use opendkim like this:
+
+```bash
+opendkim-genkey \
+    --domain=<hostname> \
+    --subdomains
+```
+
+you should save the file in the folder at `mail.dkim_key_path`.
+You also should add the TXT dns record that is in the txt file to your domain.
 
 To get started you need a `config.yml` like this, it can either be in /etc/erooster or the working dir:
 
@@ -20,6 +30,8 @@ tls:
 mail:
   maildir_folders: "./maildir"
   hostname: "localhost"
+  dkim_key_path: "/etc/erooster/keys/default.private"
+  dkim_key_selector: "default"
 database:
   postgres_url: ""
 listen_ips:
@@ -31,9 +43,10 @@ webserver:
   displayname: Erooster
 sentry: false
 ```
+
 The maildir_folders defines where the emails and folders can be found at. This is close to the maildir format postfix uses. (We use other files to keep track of the state of it)
 
-After that, you can just do `cargo run --release` to run it. The server is reachable via the usual IMAP ports. STARTTLS is currently not supported.
+After that, you can just do `cargo run --release` to run it. The server is reachable via the usual IMAP ports. STARTTLS is only supported for SMTP.
 
 ### Setting up users
 
@@ -49,7 +62,6 @@ It is planned that admins can also change this using a pre-encrypted password in
 In the future, this is going to be replaced by an integrated web interface users can directly use.
 
 _Note: The status subcommand at this time doesn't actually check the server status._
-
 
 ## Features
 
@@ -90,6 +102,6 @@ You can check them out at https://www.reddit.com/r/rust/comments/uyxxrg/comment/
 
 Due to personal constraints, I currently do not prove enterprise support for this. Please open issues instead. I will try to reply as soon as I can, but I cannot guarantee a specific time frame.
 
-##  Contact
+## Contact
 
 To contact the erooster team you can find us at https://matrix.to/#/#erooster:midnightthoughts.space or if an email is absolutely needed please write to [support@nordgedanken.dev](mailto:support@nordgedanken.dev). As written in the Support section, there is no enterprise support at this time. So please don't ask for it. It will just fill up the mailbox. :)

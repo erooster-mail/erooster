@@ -119,11 +119,10 @@ async fn listen(
                 .unwrap();
             let do_starttls = Arc::clone(&do_starttls);
 
+            let data = Data {
+                con_state: Arc::clone(&state),
+            };
             while let Some(Ok(line)) = lines_reader.next().await {
-                let data = Data {
-                    con_state: Arc::clone(&state),
-                };
-
                 debug!("[SMTP] [{}] Got Command: {}", peer, line);
 
                 // TODO make sure to handle IDLE different as it needs us to stream lines
@@ -178,7 +177,7 @@ async fn listen(
                 debug!("[SMTP] Finished to reunite");
                 let acceptor = get_tls_acceptor(&config)?;
                 debug!("[SMTP] Starting to listen using tls");
-                listen_tls(stream, config, database, storage, acceptor).await;
+                listen_tls(stream, config, database, storage, acceptor, Some(data)).await;
             }
             Ok(())
         });

@@ -138,6 +138,7 @@ async fn listen(
             Arc::clone(&database),
             Arc::clone(&storage),
             acceptor.clone(),
+            None,
         )
         .await;
     }
@@ -149,6 +150,7 @@ pub async fn listen_tls(
     database: DB,
     storage: Arc<Storage>,
     acceptor: TlsAcceptor,
+    upper_data: Option<Data>,
 ) {
     debug!("[SMTP] Got new TLS peer: {:?}", tcp_stream.peer_addr());
     let peer = tcp_stream.peer_addr().expect("peer addr to exist");
@@ -159,7 +161,6 @@ pub async fn listen_tls(
     let storage = Arc::clone(&storage);
 
     // Start talking with new peer on new thread
-    let acceptor = acceptor;
     tokio::spawn(async move {
         // Accept TCP connection
         let tls_stream = acceptor.accept(tcp_stream).await;
@@ -173,8 +174,6 @@ pub async fn listen_tls(
                 let lines = Framed::new(stream, LinesCodec::new_with_max_length(LINE_LIMIT));
                 // We split these as we handle the sink in a broadcast instead to be able to push non linear data over the socket
                 let (mut lines_sender, mut lines_reader) = lines.split();
-                // Create our Connection
-                let connection = Connection::new(true);
 
                 // Prepare our custom return path
                 let (mut tx, mut rx) = mpsc::unbounded();
@@ -194,10 +193,16 @@ pub async fn listen_tls(
 
                 // Read lines from the stream
                 while let Some(Ok(line)) = lines_reader.next().await {
-                    let data = Data {
-                        con_state: Arc::clone(&connection),
+                    let data = if let Some(data) = upper_data.clone() {
+                        data
+                    } else {
+                        // Create our Connection
+                        let connection = Connection::new(true);
+                        Data {
+                            con_state: Arc::clone(&connection),
+                        }
                     };
-                    debug!("[SMTP] [{}] Got Command: {}", peer, line);
+                    debug!("[SMTP][TLS] [{}] Got Command: {}", peer, line);
                     // TODO make sure to handle IDLE different as it needs us to stream lines
 
                     {
@@ -215,7 +220,7 @@ pub async fn listen_tls(
                                 // Cleanup timeout managers
                                 if let Response::Exit = response {
                                     // Used for later session timer management
-                                    debug!("[SMTP] Closing connection");
+                                    debug!("[SMTP][TLS] Closing connection");
                                     break;
                                 }
                             }
@@ -224,7 +229,7 @@ pub async fn listen_tls(
                                 tx.send(format!("500 This should not happen: {}", e))
                                     .await
                                     .unwrap();
-                                debug!("[SMTP] Closing TLS connection");
+                                debug!("[SMTP][TLS] Closing TLS connection");
                                 sender.abort();
                                 break;
                             }
@@ -232,7 +237,7 @@ pub async fn listen_tls(
                     };
                 }
             }
-            Err(e) => error!("[SMTP] Got error while accepting TLS: {}", e),
+            Err(e) => error!("[SMTP][TLS] Got error while accepting TLS: {}", e),
         }
     });
 }

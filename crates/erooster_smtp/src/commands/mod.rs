@@ -36,7 +36,7 @@ mod quit;
 mod rcpt;
 mod rset;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Data {
     pub con_state: Arc<RwLock<Connection>>,
 }

@@ -84,7 +84,7 @@ async fn listen(
             let state = Connection::new(false);
 
             let (mut tx, mut rx) = mpsc::unbounded();
-            tokio::spawn(async move {
+            let sender = tokio::spawn(async move {
                 while let Some(res) = rx.next().await {
                     if let Err(error) = lines_sender.send(res).await {
                         error!("[IMAP] Error sending response to client: {:?}", error);
@@ -126,6 +126,7 @@ async fn listen(
                             .await
                             .unwrap();
                         debug!("[IMAP] Closing connection");
+                        sender.abort();
                         break;
                     }
                 }

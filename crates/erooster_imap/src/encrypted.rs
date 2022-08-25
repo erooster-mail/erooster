@@ -188,7 +188,7 @@ async fn listen(
                     // Prepare our custom return path
                     let (mut tx, mut rx) = mpsc::unbounded();
                     let cloned_tx = tx.clone();
-                    tokio::spawn(async move {
+                    let sender = tokio::spawn(async move {
                         while let Some(res) = rx.next().await {
                             if let Err(error) = lines_sender.send(res).await {
                                 error!("[IMAP] Error sending response to client: {:?}", error);
@@ -246,6 +246,7 @@ async fn listen(
                                     .await
                                     .unwrap();
                                     debug!("[IMAP] Closing TLS connection");
+                                    sender.abort();
                                     break;
                                 }
                             }

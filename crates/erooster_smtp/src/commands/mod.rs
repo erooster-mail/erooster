@@ -69,6 +69,7 @@ pub enum Commands {
     QUIT,
     RCPTTO,
     RSET,
+    STARTTLS,
 }
 
 impl TryFrom<&str> for Commands {
@@ -85,6 +86,7 @@ impl TryFrom<&str> for Commands {
             "auth" => Ok(Commands::AUTH),
             "noop" => Ok(Commands::NOOP),
             "rset" => Ok(Commands::RSET),
+            "starttls" => Ok(Commands::STARTTLS),
             _ => {
                 warn!("[SMTP⦘ Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
@@ -125,6 +127,13 @@ fn arguments(input: &str) -> Res<Vec<&str>> {
     .map(|(x, y)| (x, y))
 }
 
+#[allow(clippy::upper_case_acronyms)]
+pub enum Response {
+    Exit,
+    Continue,
+    STARTTLS,
+}
+
 impl Data {
     #[instrument(skip(line))]
     fn parse_internal(line: &str) -> Res<(Result<Commands, String>, Vec<&str>)> {
@@ -140,7 +149,7 @@ impl Data {
         database: DB,
         storage: Arc<Storage>,
         line: String,
-    ) -> color_eyre::eyre::Result<bool>
+    ) -> color_eyre::eyre::Result<Response>
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
@@ -154,7 +163,7 @@ impl Data {
                 .receive(config, lines, &line, database, storage)
                 .await?;
             // We are done here
-            return Ok(false);
+            return Ok(Response::Continue);
         } else if let State::Authenticating(auth_state) = state {
             match auth_state {
                 AuthState::Username => {
@@ -165,7 +174,7 @@ impl Data {
                 }
             }
             // We are done here
-            return Ok(false);
+            return Ok(Response::Continue);
         };
         let line_borrow: &str = &line;
         match Data::parse_internal(line_borrow).finish() {
@@ -180,11 +189,17 @@ impl Data {
                         lines
                             .send(String::from("500 unable to parse command"))
                             .await?;
-                        return Ok(false);
+                        return Ok(Response::Continue);
                     }
                 };
 
                 match command_data.command {
+                    Commands::STARTTLS => {
+                        // We need to accept tls from this point on
+                        debug!("[SMTP] STARTTLS initiated");
+                        lines.send(String::from("220 TLS go ahead")).await?;
+                        return Ok(Response::STARTTLS);
+                    }
                     Commands::RSET => {
                         Rset.exec(lines).await?;
                     }
@@ -194,7 +209,7 @@ impl Data {
                     Commands::QUIT => {
                         Quit.exec(lines).await?;
                         // We return true here early as we want to make sure that this closes the connection
-                        return Ok(true);
+                        return Ok(Response::Exit);
                     }
                     Commands::MAILFROM => {
                         Mail { data: self }.exec(lines, &command_data).await?;
@@ -223,10 +238,10 @@ impl Data {
                 lines
                     .send(String::from("500 unable to parse command"))
                     .await?;
-                return Ok(false);
+                return Ok(Response::Continue);
             }
         }
-        Ok(false)
+        Ok(Response::Continue)
     }
 }
 

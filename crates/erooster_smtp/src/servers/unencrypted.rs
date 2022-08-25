@@ -1,10 +1,12 @@
 use crate::{
-    commands::Data,
+    commands::{Data, Response},
     servers::{
+        encrypted::{get_tls_acceptor, listen_tls},
         send_capabilities,
         state::{Connection, State},
     },
 };
+use color_eyre::Result;
 use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
@@ -13,7 +15,7 @@ use erooster_core::{
 };
 use futures::{channel::mpsc, SinkExt, StreamExt};
 use std::{net::SocketAddr, sync::Arc};
-use tokio::{net::TcpListener, sync::RwLock};
+use tokio::{net::TcpListener, sync::RwLock, task::JoinHandle};
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, info, instrument};
@@ -63,7 +65,6 @@ impl Unencrypted {
     }
 }
 
-#[instrument(skip(stream, config, database, storage))]
 async fn listen(
     mut stream: TcpListenerStream,
     config: Arc<Config>,
@@ -77,7 +78,7 @@ async fn listen(
         let config = Arc::clone(&config);
         let database = Arc::clone(&database);
         let storage = Arc::clone(&storage);
-        tokio::spawn(async move {
+        let connection: JoinHandle<Result<()>> = tokio::spawn(async move {
             let lines = Framed::new(tcp_stream, LinesCodec::new_with_max_length(LINE_LIMIT));
             let (mut lines_sender, mut lines_reader) = lines.split();
 
@@ -89,14 +90,20 @@ async fn listen(
                 sender: None,
             }));
 
+            let mut do_starttls = false;
             let (mut tx, mut rx) = mpsc::unbounded();
-            tokio::spawn(async move {
+            let sender = tokio::spawn(async move {
                 while let Some(res) = rx.next().await {
+                    if do_starttls {
+                        debug!("[SMTP] releasing the sender");
+                        break;
+                    }
                     if let Err(e) = lines_sender.send(res).await {
                         error!("[SMTP] Error sending response: {:?}", e);
                         break;
                     }
                 }
+                lines_sender
             });
 
             // Greet the client with the capabilities we provide
@@ -126,10 +133,18 @@ async fn listen(
                 match response {
                     Ok(response) => {
                         // Cleanup timeout managers
-                        if response {
-                            // Used for later session timer management
-                            debug!("[SMTP] Closing connection");
-                            break;
+                        match response {
+                            Response::Exit => {
+                                // Used for later session timer management
+                                debug!("[SMTP] Closing connection");
+                                break;
+                            }
+                            Response::STARTTLS => {
+                                debug!("[SMTP] Switching context");
+                                do_starttls = true;
+                                break;
+                            }
+                            Response::Continue => {}
                         }
                     }
                     // We try a last time to do a graceful shutdown before closing
@@ -139,10 +154,23 @@ async fn listen(
                             error!("[SMTP] Error sending response: {:?}", e);
                         }
                         debug!("Closing connection");
+                        sender.abort();
                         break;
                     }
                 }
             }
+            if do_starttls {
+                let sender = sender.await?;
+                let framed_stream = sender.reunite(lines_reader)?;
+                let stream = framed_stream.into_inner();
+                let acceptor = get_tls_acceptor(&config)?;
+                listen_tls(stream, config, database, storage, acceptor).await;
+            }
+            Ok(())
         });
+        let resp = connection.await;
+        if let Ok(Err(e)) = resp {
+            error!("[SMTP] Error: {:?}", e);
+        }
     }
 }

@@ -403,8 +403,9 @@ pub async fn send_email_job(
                 Ok(secure_con) => {
                     if let Err(e) = send_email(secure_con, &email, &current_job, to, true).await {
                         error!(
-                            "[{}] Error sending email via tls on port 465: {}",
+                            "[{}] Error sending email via tls on port 465 to {}: {}",
                             current_job.id(),
+                            target,
                             e
                         );
                         match get_unsecure_connection(address.unwrap(), &current_job, target).await
@@ -414,8 +415,9 @@ pub async fn send_email_job(
                                     send_email(unsecure_con, &email, &current_job, to, false).await
                                 {
                                     return Err(From::from(format!(
-                                        "[{}] Error sending email via tcp on port 25: {}",
+                                        "[{}] Error sending email via tcp on port 25 to {}: {}",
                                         current_job.id(),
+                                        target,
                                         e
                                     )));
                                 }

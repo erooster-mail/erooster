@@ -10,6 +10,8 @@ impl Ehlo {
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         lines.feed(format!("250-{}", hostname)).await?;
+        lines.feed(String::from("250-ENHANCEDSTATUSCODES")).await?;
+        lines.feed(String::from("250-SMTPUTF8")).await?;
         lines.feed(String::from("250 AUTH LOGIN")).await?;
         lines.flush().await?;
         Ok(())

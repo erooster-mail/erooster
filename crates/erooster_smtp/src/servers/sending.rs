@@ -13,7 +13,7 @@ use std::{
 use tokio::{net::TcpStream, time::timeout};
 use tokio_rustls::TlsConnector;
 use tokio_util::codec::Framed;
-use tracing::{debug, error, instrument};
+use tracing::{debug, error, instrument, warn};
 use trust_dns_resolver::TokioAsyncResolver;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -402,7 +402,7 @@ pub async fn send_email_job(
             match get_secure_connection(address.unwrap(), &current_job, target, &tls_domain).await {
                 Ok(secure_con) => {
                     if let Err(e) = send_email(secure_con, &email, &current_job, to, true).await {
-                        error!(
+                        warn!(
                             "[{}] Error sending email via tls on port 465 to {}: {}",
                             current_job.id(),
                             target,

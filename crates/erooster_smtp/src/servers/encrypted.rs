@@ -139,6 +139,7 @@ async fn listen(
             Arc::clone(&storage),
             acceptor.clone(),
             None,
+            false,
         )
         .await;
     }
@@ -151,6 +152,7 @@ pub async fn listen_tls(
     storage: Arc<Storage>,
     acceptor: TlsAcceptor,
     upper_data: Option<Data>,
+    starttls: bool,
 ) {
     debug!("[SMTP] Got new TLS peer: {:?}", tcp_stream.peer_addr());
     let peer = tcp_stream.peer_addr().expect("peer addr to exist");
@@ -188,10 +190,12 @@ pub async fn listen_tls(
 
                 // Create our Connection
                 let connection = Connection::new(true);
-                // Greet the client with the capabilities we provide
-                send_capabilities(Arc::clone(&config), &mut tx)
-                    .await
-                    .unwrap();
+                if !starttls {
+                    // Greet the client with the capabilities we provide
+                    send_capabilities(Arc::clone(&config), &mut tx)
+                        .await
+                        .unwrap();
+                }
 
                 // Read lines from the stream
                 while let Some(Ok(line)) = lines_reader.next().await {

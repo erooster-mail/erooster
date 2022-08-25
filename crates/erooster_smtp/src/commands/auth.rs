@@ -141,7 +141,7 @@ impl Auth<'_> {
                         } else {
                             lines
                                 .send(String::from(
-                                    "538 Encryption required for requested authentication mechanism",
+                                    "530 5.7.0 Encryption required for requested authentication mechanism",
                                 ))
                                 .await?;
                         }

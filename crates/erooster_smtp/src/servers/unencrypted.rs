@@ -182,7 +182,16 @@ async fn listen(
                 debug!("[SMTP] Finished to reunite");
                 let acceptor = get_tls_acceptor(&config)?;
                 debug!("[SMTP] Starting to listen using tls");
-                listen_tls(stream, config, database, storage, acceptor, Some(data)).await;
+                listen_tls(
+                    stream,
+                    config,
+                    database,
+                    storage,
+                    acceptor,
+                    Some(data),
+                    true,
+                )
+                .await;
             }
             Ok(())
         });

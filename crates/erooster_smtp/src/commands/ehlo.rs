@@ -11,6 +11,7 @@ impl Ehlo {
     {
         lines.feed(format!("250-{}", hostname)).await?;
         lines.feed(String::from("250-ENHANCEDSTATUSCODES")).await?;
+        lines.feed(String::from("250-STARTTLS")).await?;
         lines.feed(String::from("250-SMTPUTF8")).await?;
         lines.feed(String::from("250 AUTH LOGIN")).await?;
         lines.flush().await?;

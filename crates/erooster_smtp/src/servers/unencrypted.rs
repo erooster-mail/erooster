@@ -94,12 +94,12 @@ async fn listen(
             let (mut tx, mut rx) = mpsc::unbounded();
             let sender = tokio::spawn(async move {
                 while let Some(res) = rx.next().await {
-                    if do_starttls {
-                        debug!("[SMTP] releasing the sender");
-                        break;
-                    }
                     if let Err(e) = lines_sender.send(res).await {
                         error!("[SMTP] Error sending response: {:?}", e);
+                        break;
+                    }
+                    if do_starttls {
+                        debug!("[SMTP] releasing the sender");
                         break;
                     }
                 }
@@ -164,9 +164,12 @@ async fn listen(
                 debug!("[SMTP] Waiting for sender");
                 //sender.abort();
                 let sender = sender.await?;
+                debug!("[SMTP] Starting to reunite");
                 let framed_stream = sender.reunite(lines_reader)?;
                 let stream = framed_stream.into_inner();
+                debug!("[SMTP] Finished to reunite");
                 let acceptor = get_tls_acceptor(&config)?;
+                debug!("[SMTP] Starting to listen using tls");
                 listen_tls(stream, config, database, storage, acceptor).await;
             }
             Ok(())

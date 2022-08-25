@@ -15,7 +15,9 @@ impl Ehlo<'_> {
     {
         lines.feed(format!("250-{}", hostname)).await?;
         lines.feed(String::from("250-ENHANCEDSTATUSCODES")).await?;
-        lines.feed(String::from("250-STARTTLS")).await?;
+        if !self.data.con_state.read().await.secure {
+            lines.feed(String::from("250-STARTTLS")).await?;
+        }
         if self.data.con_state.read().await.secure {
             lines.feed(String::from("250-AUTH LOGIN PLAIN")).await?;
         }

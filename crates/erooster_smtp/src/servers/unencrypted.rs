@@ -43,9 +43,14 @@ impl Unencrypted {
             listen_ips
                 .iter()
                 .map(|ip| format!("{}:587", ip).parse().unwrap())
+                .chain(
+                    listen_ips
+                        .iter()
+                        .map(|ip| format!("{}:25", ip).parse().unwrap()),
+                )
                 .collect()
         } else {
-            vec!["0.0.0.0:587".parse()?]
+            vec!["0.0.0.0:587".parse()?, "0.0.0.0:25".parse()?]
         };
         for addr in addrs {
             info!("[SMTP] Trying to listen on {:?}", addr);

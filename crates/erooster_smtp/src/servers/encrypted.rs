@@ -92,14 +92,15 @@ impl Encrypted {
         let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
                 .iter()
-                .map(|ip| format!("{}:465", ip).parse().unwrap())
+                .map(|ip| format!("{}:465", ip).parse())
+                .filter_map(Result::ok)
                 .collect()
         } else {
             vec!["0.0.0.0:465".parse()?]
         };
         for addr in addrs {
             info!("[SMTP] Trying to listen on {:?}", addr);
-            let listener = TcpListener::bind(addr).await.unwrap();
+            let listener = TcpListener::bind(addr).await?;
             info!("[SMTP] Listening on ecrypted Port");
             let stream = TcpListenerStream::new(listener);
             let config = Arc::clone(&config);
@@ -192,9 +193,13 @@ pub async fn listen_tls(
                 let connection = Connection::new(true);
                 if !starttls {
                     // Greet the client with the capabilities we provide
-                    send_capabilities(Arc::clone(&config), &mut tx)
-                        .await
-                        .unwrap();
+                    if let Err(e) = send_capabilities(Arc::clone(&config), &mut tx).await {
+                        error!(
+                            "Unable to send greeting to client. Closing connection. Error: {}",
+                            e
+                        );
+                        return;
+                    }
                 }
 
                 // Read lines from the stream
@@ -232,9 +237,11 @@ pub async fn listen_tls(
                             }
                             // We try a last time to do a graceful shutdown before closing
                             Err(e) => {
-                                tx.send(format!("500 This should not happen: {}", e))
-                                    .await
-                                    .unwrap();
+                                if let Err(e) =
+                                    tx.send(format!("500 This should not happen: {}", e)).await
+                                {
+                                    error!("Unable to send error response: {}", e);
+                                }
                                 debug!("[SMTP][TLS] Closing TLS connection");
                                 sender.abort();
                                 break;

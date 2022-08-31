@@ -1,7 +1,7 @@
 //! Core logic for the webserver for the erooster mail server
 //!
 #![feature(string_remove_matches)]
-#![deny(unsafe_code)]
+#![deny(unsafe_code, clippy::unwrap_used)]
 #![warn(
     clippy::cognitive_complexity,
     clippy::branches_sharing_code,
@@ -41,7 +41,7 @@ use axum_server::tls_rustls::RustlsConfig;
 use erooster_core::config::Config;
 use std::{net::SocketAddr, sync::Arc};
 use tower_http::trace::TraceLayer;
-use tracing::info;
+use tracing::{error, info};
 
 /// Starts the webserver used for the admin page and metrics
 #[tracing::instrument(skip(config))]
@@ -53,7 +53,8 @@ pub async fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
     let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
         listen_ips
             .iter()
-            .map(|ip| format!("{}:{}", ip, config.webserver.port).parse().unwrap())
+            .map(|ip| format!("{}:{}", ip, config.webserver.port).parse())
+            .filter_map(Result::ok)
             .collect()
     } else {
         vec![format!("0.0.0.0:{}", config.webserver.port).parse()?]
@@ -78,24 +79,31 @@ pub async fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
                 .layer(TraceLayer::new_for_http());
 
             if config.webserver.tls {
-                let tls_config = RustlsConfig::from_pem_file(
+                let tls_config = match RustlsConfig::from_pem_file(
                     config.tls.cert_path.clone(),
                     config.tls.key_path.clone(),
                 )
                 .await
-                .unwrap();
+                {
+                    Ok(tls_config) => tls_config,
+                    Err(e) => {
+                        error!(?e, "Failed to load TLS config");
+                        return;
+                    }
+                };
 
                 info!("[Webserver] Listening on {}", addr);
-                axum_server::bind_rustls(addr, tls_config)
+                if let Err(e) = axum_server::bind_rustls(addr, tls_config)
                     .serve(app.into_make_service())
                     .await
-                    .unwrap();
+                {
+                    error!(?e, "Failed to bind to {}", addr);
+                };
             } else {
                 info!("[Webserver] Listening on {}", addr);
-                axum_server::bind(addr)
-                    .serve(app.into_make_service())
-                    .await
-                    .unwrap();
+                if let Err(e) = axum_server::bind(addr).serve(app.into_make_service()).await {
+                    error!(?e, "Failed to bind to {}", addr);
+                };
             }
         });
     }

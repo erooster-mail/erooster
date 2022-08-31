@@ -2,6 +2,7 @@ use crate::{
     commands::{CommandData, Data},
     state::{Access, State},
 };
+use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{
@@ -44,7 +45,10 @@ where
     let folder_on_disk = folder_arg;
     let mailbox_path = storage.to_ondisk_path(
         (*folder_on_disk).to_string(),
-        write_lock.username.clone().unwrap(),
+        write_lock
+            .username
+            .clone()
+            .context("Username missing in internal State")?,
     )?;
     // Special INBOX check to make sure we have a mailbox
     if folder == "INBOX" && !mailbox_path.exists() {
@@ -106,7 +110,10 @@ where
         } else {
             vec![]
         };
-        let folder_name = sub_folder.file_name().unwrap().to_string_lossy();
+        let folder_name = sub_folder
+            .file_name()
+            .context("Unable to get file name")?
+            .to_string_lossy();
         lines
             .feed(format!(
                 "* LIST ({}) \".\" \"{}\"",

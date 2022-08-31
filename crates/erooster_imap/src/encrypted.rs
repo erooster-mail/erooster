@@ -106,7 +106,8 @@ impl Server for Encrypted {
         let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
                 .iter()
-                .map(|ip| format!("{}:993", ip).parse().unwrap())
+                .map(|ip| format!("{}:993", ip).parse())
+                .filter_map(Result::ok)
                 .collect()
         } else {
             vec!["0.0.0.0:993".parse()?]
@@ -178,10 +179,13 @@ async fn listen(
                     let (mut lines_sender, mut lines_reader) = lines.split();
 
                     // Greet the client with the capabilities we provide
-                    lines_sender
-                        .send(CAPABILITY_HELLO.to_string())
-                        .await
-                        .unwrap();
+                    if let Err(e) = lines_sender.send(CAPABILITY_HELLO.to_string()).await {
+                        error!(
+                            "Unable to send greeting to client. Closing connection. Error: {}",
+                            e
+                        );
+                        return;
+                    }
                     // Create our Connection
                     let connection = Connection::new(true);
 
@@ -239,12 +243,15 @@ async fn listen(
                                 }
                                 // We try a last time to do a graceful shutdown before closing
                                 Err(e) => {
-                                    tx.send(format!(
-                                        "* BAD [SERVERBUG] This should not happen: {}",
-                                        e
-                                    ))
-                                    .await
-                                    .unwrap();
+                                    if let Err(e) = tx
+                                        .send(format!(
+                                            "* BAD [SERVERBUG] This should not happen: {}",
+                                            e
+                                        ))
+                                        .await
+                                    {
+                                        error!("Unable to send error response: {}", e);
+                                    }
                                     debug!("[IMAP] Closing TLS connection");
                                     sender.abort();
                                     break;

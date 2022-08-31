@@ -113,7 +113,12 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                 |(_, x, _, y)| {
                     FetchAttributes::BodyPeek(
                         x,
-                        y.map(|(a, b)| (a.parse::<u64>().unwrap(), b.parse::<u64>().unwrap())),
+                        y.map(|(a, b)| {
+                            (
+                                a.parse::<u64>().expect("body peek attribute a is a number"),
+                                b.parse::<u64>().expect("body peek attribute b is a number"),
+                            )
+                        }),
                     )
                 },
             ),
@@ -135,7 +140,12 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                 |(_, x, _, y)| {
                     FetchAttributes::BodyPeek(
                         x,
-                        y.map(|(a, b)| (a.parse::<u64>().unwrap(), b.parse::<u64>().unwrap())),
+                        y.map(|(a, b)| {
+                            (
+                                a.parse::<u64>().expect("body peek attribute a is a number"),
+                                b.parse::<u64>().expect("body peek attribute b is a number"),
+                            )
+                        }),
                     )
                 },
             ),
@@ -157,7 +167,14 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                 |(_, x, _, y)| {
                     FetchAttributes::BinaryPeek(
                         x,
-                        y.map(|(a, b)| (a.parse::<u64>().unwrap(), b.parse::<u64>().unwrap())),
+                        y.map(|(a, b)| {
+                            (
+                                a.parse::<u64>()
+                                    .expect("binary peek attribute a is a number"),
+                                b.parse::<u64>()
+                                    .expect("binary peek attribute b is a number"),
+                            )
+                        }),
                     )
                 },
             ),
@@ -182,7 +199,12 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                 |(_, x, _, y)| {
                     FetchAttributes::BodySection(
                         x,
-                        y.map(|(a, b)| (a.parse::<u64>().unwrap(), b.parse::<u64>().unwrap())),
+                        y.map(|(a, b)| {
+                            (
+                                a.parse::<u64>().expect("body attribute a is a number"),
+                                b.parse::<u64>().expect("body attribute b is a number"),
+                            )
+                        }),
                     )
                 },
             ),
@@ -204,7 +226,12 @@ fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
                 |(_, x, _, y)| {
                     FetchAttributes::Binary(
                         x,
-                        y.map(|(a, b)| (a.parse::<u64>().unwrap(), b.parse::<u64>().unwrap())),
+                        y.map(|(a, b)| {
+                            (
+                                a.parse::<u64>().expect("binary attribute a is a number"),
+                                b.parse::<u64>().expect("binary attribute b is a number"),
+                            )
+                        }),
                     )
                 },
             ),
@@ -289,12 +316,16 @@ pub fn parse_selected_range(input: &str) -> Res<Vec<Range>> {
                         char(':'),
                         map(alt((tag_no_case("*"), digit1)), |x: &str| match x {
                             "*" => RangeEnd::All,
-                            _ => RangeEnd::End(x.parse::<i64>().unwrap()),
+                            _ => RangeEnd::End(x.parse::<i64>().expect("range end is a number")),
                         }),
                     ),
-                    |(x, y): (&str, RangeEnd)| Range::Range(x.parse::<i64>().unwrap(), y),
+                    |(x, y): (&str, RangeEnd)| {
+                        Range::Range(x.parse::<i64>().expect("range start is a number"), y)
+                    },
                 ),
-                map(digit1, |x: &str| Range::Single(x.parse::<i64>().unwrap())),
+                map(digit1, |x: &str| {
+                    Range::Single(x.parse::<i64>().expect("single range is a number"))
+                }),
             )),
         ),
     )(input)
@@ -433,7 +464,7 @@ pub fn append_arguments(input: &str) -> Res<AppendArgs> {
                 map(
                     pair(
                         map(take_while1(|c: char| c.is_ascii_digit()), |s: &str| {
-                            s.parse::<usize>().unwrap()
+                            s.parse::<usize>().expect("literal size is a number")
                         }),
                         map(opt(tag_no_case("+")), |x| x.is_some()),
                     ),
@@ -450,6 +481,7 @@ pub fn append_arguments(input: &str) -> Res<AppendArgs> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

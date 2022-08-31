@@ -1,4 +1,5 @@
 use crate::commands::{CommandData, Data};
+use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::sync::Arc;
@@ -25,12 +26,24 @@ impl Rename<'_> {
         let old_folder = args[0].replace('/', ".");
         let old_mailbox_path = storage.to_ondisk_path(
             old_folder.clone(),
-            self.data.con_state.read().await.username.clone().unwrap(),
+            self.data
+                .con_state
+                .read()
+                .await
+                .username
+                .clone()
+                .context("Username missing in internal State")?,
         )?;
         let new_folder = args[1].replace('/', ".");
         let new_mailbox_path = storage.to_ondisk_path(
             new_folder.clone(),
-            self.data.con_state.read().await.username.clone().unwrap(),
+            self.data
+                .con_state
+                .read()
+                .await
+                .username
+                .clone()
+                .context("Username missing in internal State")?,
         )?;
         fs::rename(old_mailbox_path, new_mailbox_path).await?;
         lines

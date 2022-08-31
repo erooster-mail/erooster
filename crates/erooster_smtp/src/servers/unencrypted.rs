@@ -6,7 +6,7 @@ use crate::{
         state::{Connection, State},
     },
 };
-use color_eyre::Result;
+use color_eyre::{Result, eyre::Context};
 use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
@@ -42,12 +42,9 @@ impl Unencrypted {
         let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
                 .iter()
-                .map(|ip| format!("{}:587", ip).parse().unwrap())
-                .chain(
-                    listen_ips
-                        .iter()
-                        .map(|ip| format!("{}:25", ip).parse().unwrap()),
-                )
+                .map(|ip| format!("{}:587", ip).parse())
+                .chain(listen_ips.iter().map(|ip| format!("{}:25", ip).parse()))
+                .filter_map(Result::ok)
                 .collect()
         } else {
             vec!["0.0.0.0:587".parse()?, "0.0.0.0:25".parse()?]
@@ -122,7 +119,7 @@ async fn listen(
             // Greet the client with the capabilities we provide
             send_capabilities(Arc::clone(&config), &mut tx)
                 .await
-                .unwrap();
+                .context("Unable to send greeting to client. Closing connection.")?;
             let do_starttls = Arc::clone(&do_starttls);
 
             let data = Data {

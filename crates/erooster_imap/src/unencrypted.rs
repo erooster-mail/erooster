@@ -29,7 +29,8 @@ impl Server for Unencrypted {
         let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
                 .iter()
-                .map(|ip| format!("{}:143", ip).parse().unwrap())
+                .map(|ip| format!("{}:143", ip).parse())
+                .filter_map(Result::ok)
                 .collect()
         } else {
             vec!["0.0.0.0:143".parse()?]
@@ -77,10 +78,13 @@ async fn listen(
         tokio::spawn(async move {
             let lines = Framed::new(tcp_stream, LinesCodec::new_with_max_length(LINE_LIMIT));
             let (mut lines_sender, mut lines_reader) = lines.split();
-            lines_sender
-                .send(CAPABILITY_HELLO.to_string())
-                .await
-                .unwrap();
+            if let Err(e) = lines_sender.send(CAPABILITY_HELLO.to_string()).await {
+                error!(
+                    "Unable to send greeting to client. Closing connection. Error: {}",
+                    e
+                );
+                return;
+            }
             let state = Connection::new(false);
 
             let (mut tx, mut rx) = mpsc::unbounded();
@@ -122,9 +126,12 @@ async fn listen(
                     }
                     // We try a last time to do a graceful shutdown before closing
                     Err(e) => {
-                        tx.send(format!("* BAD [SERVERBUG] This should not happen: {}", e))
+                        if let Err(e) = tx
+                            .send(format!("* BAD [SERVERBUG] This should not happen: {}", e))
                             .await
-                            .unwrap();
+                        {
+                            error!("Unable to send error response: {}", e);
+                        }
                         debug!("[IMAP] Closing connection");
                         sender.abort();
                         break;

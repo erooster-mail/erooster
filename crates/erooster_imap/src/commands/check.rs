@@ -57,6 +57,7 @@ impl Check<'_> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};

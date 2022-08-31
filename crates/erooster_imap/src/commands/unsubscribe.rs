@@ -1,4 +1,5 @@
 use crate::commands::{CommandData, Data};
+use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::sync::Arc;
@@ -25,7 +26,13 @@ impl Unsubscribe<'_> {
             let folder = arguments[0].replace('/', ".");
             let mailbox_path = storage.to_ondisk_path(
                 folder.clone(),
-                self.data.con_state.read().await.username.clone().unwrap(),
+                self.data
+                    .con_state
+                    .read()
+                    .await
+                    .username
+                    .clone()
+                    .context("Username missing in internal State")?,
             )?;
             // Note we deviate from spec here and actually do this automatically. So we can just return OK here.
             if !mailbox_path.exists() {

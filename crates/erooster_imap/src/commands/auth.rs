@@ -127,7 +127,7 @@ impl Authenticate<'_> {
             let args = &command_data.arguments;
             assert!(args.len() == 1);
             if args.len() == 1 {
-                if args.first().unwrap().to_lowercase() == "plain" {
+                if args[0].to_lowercase() == "plain" {
                     debug!("[IMAP] Update state to Authenticating");
                     {
                         let command_data = command_data;

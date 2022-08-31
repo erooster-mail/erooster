@@ -5,6 +5,7 @@ use crate::{
         state::State,
     },
 };
+use color_eyre::eyre::ContextCompat;
 use erooster_core::{
     backend::{
         database::{Database, DB},
@@ -83,7 +84,10 @@ impl DataCommand<'_> {
                     }
                     let email_payload = EmailPayload {
                         to,
-                        from: write_lock.sender.clone().unwrap(),
+                        from: write_lock
+                            .sender
+                            .clone()
+                            .context("Missing sender in internal state")?,
                         body: data,
                         sender_domain: config.mail.hostname.clone(),
                         dkim_key_path: config.mail.dkim_key_path.clone(),

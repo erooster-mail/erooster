@@ -398,8 +398,12 @@ pub async fn send_email_job(
                 debug!("[{}] No address found for {}", current_job.id(), target);
                 continue;
             }
+            let address = match address {
+                Some(address) => address,
+                None => continue,
+            };
 
-            match get_secure_connection(address.unwrap(), &current_job, target, &tls_domain).await {
+            match get_secure_connection(address, &current_job, target, &tls_domain).await {
                 Ok(secure_con) => {
                     if let Err(e) = send_email(secure_con, &email, &current_job, to, true).await {
                         warn!(
@@ -409,8 +413,7 @@ pub async fn send_email_job(
                             e
                         );
                         // TODO try starttls first
-                        match get_unsecure_connection(address.unwrap(), &current_job, target).await
-                        {
+                        match get_unsecure_connection(address, &current_job, target).await {
                             Ok(unsecure_con) => {
                                 if let Err(e) =
                                     send_email(unsecure_con, &email, &current_job, to, false).await
@@ -443,7 +446,7 @@ pub async fn send_email_job(
                     );
                     // TODO try starttls first
                     let unsecure_con =
-                        get_unsecure_connection(address.unwrap(), &current_job, target).await?;
+                        get_unsecure_connection(address, &current_job, target).await?;
                     if let Err(e) = send_email(unsecure_con, &email, &current_job, to, false).await
                     {
                         return Err(From::from(format!(

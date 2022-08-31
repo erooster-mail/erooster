@@ -286,7 +286,7 @@ impl Data {
                         return Ok(true);
                     }
                     Commands::Authenticate => {
-                        let auth_data = command_data.arguments.last().unwrap();
+                        let auth_data = command_data.arguments[command_data.arguments.len() - 1];
                         Authenticate {
                             data: self,
                             auth_data,
@@ -398,6 +398,7 @@ impl Data {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use convert_case::{Case, Casing};

@@ -2,6 +2,7 @@ use crate::{
     commands::{parsers::append_arguments, CommandData, Data},
     state::{AppendingState, State},
 };
+use color_eyre::eyre::ContextCompat;
 use erooster_core::{
     backend::storage::{MailStorage, Storage},
     config::Config,
@@ -38,8 +39,13 @@ impl Append<'_> {
             assert!(command_data.arguments.len() >= 3);
             let folder = command_data.arguments[0].replace('"', "");
             debug!("[Append] User wants to append to folder: {}", folder);
-            let mailbox_path =
-                storage.to_ondisk_path(folder.clone(), write_lock.username.clone().unwrap())?;
+            let mailbox_path = storage.to_ondisk_path(
+                folder.clone(),
+                write_lock
+                    .username
+                    .clone()
+                    .context("Username missing in internal State")?,
+            )?;
             let folder = storage.to_ondisk_path_name(folder)?;
             debug!("Appending to folder: {:?}", mailbox_path);
             // Spec violation but thunderbird would prompt a user error otherwise :/
@@ -122,7 +128,10 @@ impl Append<'_> {
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         let mut write_lock = self.data.con_state.write().await;
-        let username = write_lock.username.clone().unwrap();
+        let username = write_lock
+            .username
+            .clone()
+            .context("Username missing in internal State")?;
         if let State::Appending(state) = &mut write_lock.state {
             if let Some(buffer) = &mut state.data {
                 let mut bytes = format!("{}\r\n", append_data).as_bytes().to_vec();

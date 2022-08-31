@@ -2,6 +2,7 @@ use crate::{
     commands::{CommandData, Commands, Data},
     state::State,
 };
+use color_eyre::eyre::ContextCompat;
 use erooster_core::{
     backend::storage::{MailStorage, Storage},
     config::Config,
@@ -49,8 +50,14 @@ where
             .feed(format!("* {} (\\Noselect) \".\" \"\"", command_resp))
             .await?;
     } else if mailbox_patterns.ends_with('*') {
-        let mut folder = Path::new(&config.mail.maildir_folders)
-            .join(data.con_state.read().await.username.clone().unwrap());
+        let mut folder = Path::new(&config.mail.maildir_folders).join(
+            data.con_state
+                .read()
+                .await
+                .username
+                .clone()
+                .context("Username missing in internal State")?,
+        );
         if !reference_name.is_empty() {
             let mut reference_name_folder = reference_name.clone();
             reference_name_folder.insert(0, '.');
@@ -79,7 +86,10 @@ where
             } else {
                 vec![]
             };
-            let folder_name = sub_folder.file_name().unwrap().to_string_lossy();
+            let folder_name = sub_folder
+                .file_name()
+                .context("Failed to get folder name")?
+                .to_string_lossy();
             lines
                 .feed(format!(
                     "* {} ({}) \".\" \"{}\"",
@@ -90,8 +100,14 @@ where
                 .await?;
         }
     } else if mailbox_patterns.ends_with('%') {
-        let mut folder = Path::new(&config.mail.maildir_folders)
-            .join(data.con_state.read().await.username.clone().unwrap());
+        let mut folder = Path::new(&config.mail.maildir_folders).join(
+            data.con_state
+                .read()
+                .await
+                .username
+                .clone()
+                .context("Username missing in internal State")?,
+        );
         if !reference_name.is_empty() {
             let mut reference_name_folder = reference_name.clone();
             reference_name_folder.insert(0, '.');
@@ -142,15 +158,21 @@ where
                     flags.join(" "),
                     sub_folder
                         .file_name()
-                        .unwrap()
+                        .context("Failed to get file name")?
                         .to_string_lossy()
                         .trim_start_matches('.')
                 ))
                 .await?;
         }
     } else {
-        let mut folder = Path::new(&config.mail.maildir_folders)
-            .join(data.con_state.read().await.username.clone().unwrap());
+        let mut folder = Path::new(&config.mail.maildir_folders).join(
+            data.con_state
+                .read()
+                .await
+                .username
+                .clone()
+                .context("Username missing in internal State")?,
+        );
         if !reference_name.is_empty() {
             let mut reference_name_folder = reference_name.clone();
             reference_name_folder.remove_matches('"');
@@ -187,7 +209,7 @@ where
                 flags.join(" "),
                 folder
                     .file_name()
-                    .unwrap()
+                    .context("Failed to get file name")?
                     .to_string_lossy()
                     .trim_start_matches('.')
             ))

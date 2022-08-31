@@ -7,7 +7,7 @@
 //! This crate is containing the smtp logic of the erooster mail server.
 //!
 #![feature(string_remove_matches)]
-#![deny(unsafe_code)]
+#![deny(unsafe_code, clippy::unwrap_used)]
 #![warn(
     clippy::branches_sharing_code,
     clippy::imprecise_flops,

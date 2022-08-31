@@ -5,7 +5,7 @@
 //! while being also fast and efficient.
 //!
 #![feature(string_remove_matches)]
-#![deny(unsafe_code)]
+#![deny(unsafe_code, clippy::unwrap_used)]
 #![warn(
     clippy::cognitive_complexity,
     clippy::branches_sharing_code,
@@ -168,6 +168,7 @@ const FEATHER: &str = "#2C5422";
 const LINE: &str = "#000000";
 const CLAWS: &str = "#FFB804";
 
+#[allow(clippy::unwrap_used)]
 fn status() {
     let colors: [DynColors; 17] = [
         HEAD, FINS, HEAD, EYES, HEAD, EYES, HEAD, BEAK, HEAD, FEATHER, BODY, LINE, CLAWS, LINE,
@@ -289,8 +290,8 @@ async fn register(username: Option<String>, password: Option<SecretString>, conf
         pb.enable_steady_tick(Duration::from_millis(100));
         pb.set_message("Adding the new user...".fg::<BrightGreen>().to_string());
 
-        let username = username.unwrap();
-        let password = password.unwrap();
+        let username = username.expect("Username is not empty");
+        let password = password.expect("Password is not empty");
         let result = actual_register(username, password, config).await;
 
         clearscreen::clear().expect("failed to clear screen");
@@ -427,8 +428,8 @@ async fn change_password(
                 .to_string(),
         );
 
-        let username = username.unwrap();
-        let current_password = current_password.unwrap();
+        let username = username.expect("Username is not empty");
+        let current_password = current_password.expect("Password is not empty");
         if !verify_password(username.clone(), current_password, Arc::clone(&config)).await {
             error!(
                 "{}",
@@ -436,7 +437,7 @@ async fn change_password(
             );
             exit(1);
         }
-        let new_password = new_password.unwrap();
+        let new_password = new_password.expect("New Password is not empty");
         let result = actual_register(username, new_password, config).await;
 
         clearscreen::clear().expect("failed to clear screen");

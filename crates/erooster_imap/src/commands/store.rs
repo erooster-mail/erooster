@@ -2,6 +2,7 @@ use crate::{
     commands::{CommandData, Data},
     state::State,
 };
+use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailEntry, MailEntryType, MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::sync::Arc;
@@ -30,7 +31,13 @@ impl Store<'_> {
                 let folder = folder.replace('/', ".");
                 let mailbox_path = storage.to_ondisk_path(
                     folder.clone(),
-                    self.data.con_state.read().await.username.clone().unwrap(),
+                    self.data
+                        .con_state
+                        .read()
+                        .await
+                        .username
+                        .clone()
+                        .context("Username missing in internal State")?,
                 )?;
                 let mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
 

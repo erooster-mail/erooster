@@ -1,7 +1,7 @@
 //! Core logic for the erooster mail server
 //!
 #![feature(string_remove_matches)]
-#![deny(unsafe_code)]
+#![deny(unsafe_code, clippy::unwrap_used)]
 #![warn(
     clippy::cognitive_complexity,
     clippy::branches_sharing_code,

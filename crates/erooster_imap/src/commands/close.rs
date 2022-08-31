@@ -2,6 +2,7 @@ use crate::{
     commands::{CommandData, Data},
     state::{Access, State},
 };
+use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailEntry, MailStorage, Storage};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::sync::Arc;
@@ -33,8 +34,13 @@ impl Close<'_> {
                 return Ok(());
             }
 
-            let mailbox_path =
-                storage.to_ondisk_path(folder.clone(), write_lock.username.clone().unwrap())?;
+            let mailbox_path = storage.to_ondisk_path(
+                folder.clone(),
+                write_lock
+                    .username
+                    .clone()
+                    .context("Username missing in internal State")?,
+            )?;
 
             // We need to check all messages it seems?
             let mails = storage
@@ -67,6 +73,7 @@ impl Close<'_> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};

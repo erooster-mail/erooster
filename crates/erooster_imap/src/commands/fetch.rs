@@ -8,6 +8,10 @@ use crate::{
     },
     state::State,
 };
+use color_eyre::{
+    eyre::{eyre, ContextCompat, WrapErr},
+    Result,
+};
 use erooster_core::backend::storage::{
     maildir::MaildirMailEntry, MailEntry, MailEntryType, MailStorage, Storage,
 };
@@ -39,7 +43,13 @@ impl Fetch<'_> {
             let folder = folder.replace('/', ".");
             let mailbox_path = storage.to_ondisk_path(
                 folder.clone(),
-                self.data.con_state.read().await.username.clone().unwrap(),
+                self.data
+                    .con_state
+                    .read()
+                    .await
+                    .username
+                    .clone()
+                    .context("Username missing in internal State")?,
             )?;
             let mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
             // Possibly slower or faster than before?
@@ -104,14 +114,21 @@ impl Fetch<'_> {
                     let fetch_args_str = &fetch_args[1..fetch_args.len() - 1];
                     debug!("Fetch args: {}", fetch_args_str);
 
-                    filtered_mails.sort_by_cached_key(|x| x.sequence_number().unwrap());
+                    filtered_mails.sort_by_cached_key(|x| {
+                        if let Some(number) = x.sequence_number() {
+                            number
+                        } else {
+                            0
+                        }
+                    });
                     match fetch_arguments(fetch_args_str).finish() {
                         Ok((_, args)) => {
                             debug!("Parsed Fetch args: {:?}", args);
                             for mut mail in filtered_mails {
                                 let uid = mail.uid();
-                                let sequence = mail.sequence_number().unwrap();
-                                if let Some(resp) = generate_response(args.clone(), &mut mail) {
+                                let sequence =
+                                    mail.sequence_number().context("Sequence number missing")?;
+                                if let Some(resp) = generate_response(args.clone(), &mut mail)? {
                                     if is_uid {
                                         if resp.contains("UID") {
                                             lines
@@ -179,13 +196,15 @@ impl Fetch<'_> {
 }
 
 #[instrument(skip(arg, mail))]
-pub fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Option<String> {
+pub fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Result<Option<String>> {
     match arg {
-        FetchArguments::Single(single_arg) => generate_response_for_attributes(single_arg, mail),
+        FetchArguments::Single(single_arg) => {
+            Ok(generate_response_for_attributes(single_arg, mail)?)
+        }
         FetchArguments::List(args) => {
             let mut resp = String::new();
             for arg in args {
-                if let Some(extra_resp) = generate_response_for_attributes(arg, mail) {
+                if let Some(extra_resp) = generate_response_for_attributes(arg, mail)? {
                     if resp.is_empty() {
                         resp = extra_resp;
                     } else {
@@ -194,9 +213,9 @@ pub fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Optio
                 }
             }
             debug!("[Fetch] List Response: {}", resp);
-            Some(resp)
+            Ok(Some(resp))
         }
-        _ => None,
+        _ => Ok(None),
     }
 }
 
@@ -205,7 +224,7 @@ pub fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Optio
 fn generate_response_for_attributes(
     attr: FetchAttributes,
     mail: &mut MailEntryType,
-) -> Option<String> {
+) -> Result<Option<String>> {
     match attr {
         FetchAttributes::RFC822Header => {
             if let Ok(headers_vec) = mail.headers() {
@@ -215,9 +234,9 @@ fn generate_response_for_attributes(
                     .collect::<Vec<_>>()
                     .join("\r\n");
 
-                Some(format!("RFC822.HEADER{}", headers))
+                Ok(Some(format!("RFC822.HEADER{}", headers)))
             } else {
-                Some(String::from("RFC822.HEADER\r\n"))
+                Ok(Some(String::from("RFC822.HEADER\r\n")))
             }
         }
         FetchAttributes::Flags => {
@@ -227,7 +246,8 @@ fn generate_response_for_attributes(
                 .clone()
                 .into_os_string()
                 .into_string()
-                .unwrap()
+                .map_err(|e| eyre!(e.to_string_lossy().to_string()))
+                .wrap_err("Failed to convert OS String into String type")?
                 .contains("new")
             {
                 flags.push_str("\\Recent");
@@ -268,24 +288,24 @@ fn generate_response_for_attributes(
                 }
             }
 
-            Some(format!("FLAGS ({})", flags))
+            Ok(Some(format!("FLAGS ({})", flags)))
         }
         FetchAttributes::RFC822Size => {
             if let Ok(parsed) = mail.parsed() {
                 let size = parsed.raw_bytes.len();
-                Some(format!("RFC822.SIZE {}", size))
+                Ok(Some(format!("RFC822.SIZE {}", size)))
             } else {
-                Some(String::from("RFC822.SIZE 0"))
+                Ok(Some(String::from("RFC822.SIZE 0")))
             }
         }
-        FetchAttributes::Uid => Some(format!("UID {}", mail.uid())),
+        FetchAttributes::Uid => Ok(Some(format!("UID {}", mail.uid()))),
         FetchAttributes::BodySection(section_text, range) => {
-            Some(body(section_text, range, mail, true))
+            Ok(Some(body(section_text, range, mail, true)))
         }
         FetchAttributes::BodyPeek(section_text, range) => {
-            Some(body(section_text, range, mail, false))
+            Ok(Some(body(section_text, range, mail, false)))
         }
-        _ => None,
+        _ => Ok(None),
     }
 }
 

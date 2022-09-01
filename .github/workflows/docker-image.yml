@@ -2,7 +2,7 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   release:
     types: [published]
 
@@ -29,6 +29,7 @@ jobs:
             storage.googleapis.com:443
             crates.io:443
             static.crates.io:443
+            gitlab.com:443
 
       - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
       - name: Log in to Docker Hub

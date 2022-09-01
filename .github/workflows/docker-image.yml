@@ -14,7 +14,16 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@dd2c410b088af7c0dc8046f3ac9a8f4148492a95
         with:
-          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            auth.docker.io:443
+            gcr.io:443
+            github.com:443
+            hub.docker.com:443
+            production.cloudflare.docker.com:443
+            registry-1.docker.io:443
+            storage.googleapis.com:443
 
       - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
       - name: Log in to Docker Hub

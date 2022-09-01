@@ -10,7 +10,12 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@dd2c410b088af7c0dc8046f3ac9a8f4148492a95
         with:
-          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+          egress-policy: block
+          allowed-endpoints: >
+            artifactcache.actions.githubusercontent.com:443
+            frsnacprodeus2file1.blob.core.windows.net:443
+            github.com:443
+            static.rust-lang.org:443
 
       - uses: actions/checkout@7884fcad6b5d53d10323aee724dc68d8b9096a2e
       - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
@@ -104,7 +109,12 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@dd2c410b088af7c0dc8046f3ac9a8f4148492a95
         with:
-          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+          egress-policy: block
+          allowed-endpoints: >
+            artifactcache.actions.githubusercontent.com:443
+            frsnacprodeus2file1.blob.core.windows.net:443
+            github.com:443
+            static.rust-lang.org:443
 
       - uses: actions/checkout@7884fcad6b5d53d10323aee724dc68d8b9096a2e
       - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
@@ -118,24 +128,3 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
-  cargo-deny:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        checks:
-          - advisories
-          - bans licenses sources
-
-    # Prevent sudden announcement of a new advisory from failing ci:
-    continue-on-error: ${{ matrix.checks == 'advisories' }}
-
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@dd2c410b088af7c0dc8046f3ac9a8f4148492a95
-        with:
-          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-
-      - uses: actions/checkout@7884fcad6b5d53d10323aee724dc68d8b9096a2e
-      - uses: EmbarkStudios/cargo-deny-action@7257a18a9c2fe3f92b85d41ae473520dff953c97
-        with:
-          command: check ${{ matrix.checks }}

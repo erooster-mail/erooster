@@ -11,6 +11,9 @@ on:
 jobs:
   audit:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      checks: write
     steps:
       - uses: actions/checkout@v1
       - uses: Swatinem/rust-cache@v1

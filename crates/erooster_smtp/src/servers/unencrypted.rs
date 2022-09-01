@@ -6,7 +6,7 @@ use crate::{
         state::{Connection, State},
     },
 };
-use color_eyre::{Result, eyre::Context};
+use color_eyre::{eyre::Context, Result};
 use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,

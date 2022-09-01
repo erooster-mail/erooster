@@ -26,7 +26,13 @@ impl Subscribe<'_> {
             let folder = arguments[0].replace('/', ".");
             let mailbox_path = storage.to_ondisk_path(
                 folder.clone(),
-                self.data.con_state.read().await.username.clone().context("Username missing in internal State")?,
+                self.data
+                    .con_state
+                    .read()
+                    .await
+                    .username
+                    .clone()
+                    .context("Username missing in internal State")?,
             )?;
 
             // This is a spec violation. However we need to do this currently due to how the storage is set up

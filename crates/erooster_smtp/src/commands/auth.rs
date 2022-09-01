@@ -27,7 +27,6 @@ impl Auth<'_> {
         //let secure = self.data.con_state.read().await.secure;
         let secure = true;
         if secure {
-            assert!(command_data.arguments.len() == 2);
             if command_data.arguments[0] == "LOGIN" {
                 {
                     self.data.con_state.write().await.state =

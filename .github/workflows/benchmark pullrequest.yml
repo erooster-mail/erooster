@@ -1,5 +1,9 @@
 on: [pull_request]
 name: PR Benchmark
+
+permissions:
+  contents: read
+  
 jobs:
   runBenchmark:
     name: Run Benchmark

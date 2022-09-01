@@ -1,5 +1,9 @@
 on: [push]
 name: Benchmark
+
+permissions:
+  contents: read
+
 jobs:
   runBenchmark:
     name: Run Benchmark

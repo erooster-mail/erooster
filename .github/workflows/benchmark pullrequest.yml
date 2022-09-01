@@ -27,9 +27,14 @@ jobs:
           # Maps tcp port 5432 on service container to the host
           - 5432:5432
     steps:
-      - uses: actions/checkout@v2
+      - name: Harden Runner
+        uses: step-security/harden-runner@dd2c410b088af7c0dc8046f3ac9a8f4148492a95
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+
+      - uses: actions/checkout@7884fcad6b5d53d10323aee724dc68d8b9096a2e
       - run: rustup default nightly
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b
       - name: Install opendkim
         run: apt update && apt install -y opendkim-tools
       - name: Generate dkim-key
@@ -53,7 +58,7 @@ jobs:
           echo 'webserver:' >> /etc/erooster/config.yml
           echo '  port: 80' >> /etc/erooster/config.yml
           echo '  tls: false' >> /etc/erooster/config.yml
-      - uses: boa-dev/criterion-compare-action@v3.0.0
+      - uses: boa-dev/criterion-compare-action@3548f9d3266b71c77c03892df0293869884a4d76
         with:
           branchName: ${{ github.base_ref }}
           token: ${{ github.token }}

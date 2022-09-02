@@ -20,6 +20,7 @@ jobs:
             github.com:443
             api.github.com:443
             gitlab.com:443
+            crates.io:443
             static.crates.io:443
             static.rust-lang.org:443
 

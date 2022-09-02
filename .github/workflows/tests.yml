@@ -18,6 +18,9 @@ jobs:
             artifactcache.actions.githubusercontent.com:443
             frsnacprodeus2file1.blob.core.windows.net:443
             github.com:443
+            api.github.com:443
+            gitlab.com:443
+            static.crates.io:443
             static.rust-lang.org:443
 
       - uses: actions/checkout@7884fcad6b5d53d10323aee724dc68d8b9096a2e

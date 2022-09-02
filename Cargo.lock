@@ -470,9 +470,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "3.2.19"
+version = "3.2.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68d43934757334b5c0519ff882e1ab9647ac0258b47c24c4f490d78e42697fd5"
+checksum = "23b71c3ce99b7611011217b366d923f1d0a7e07a92bb2dbf1e84508c673ca3bd"
 dependencies = [
  "atty",
  "bitflags",
@@ -513,7 +513,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "105180c05a72388d5f5e4e4f6c79eecb92497bda749fa8f963a16647c5d5377f"
 dependencies = [
- "clap 3.2.19",
+ "clap 3.2.20",
  "roff",
 ]
 
@@ -869,12 +869,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dotenv"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
-
-[[package]]
 name = "dotenvy"
 version = "0.15.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -977,7 +971,7 @@ dependencies = [
  "auditable",
  "auditable-build",
  "cfg-if 1.0.0",
- "clap 3.2.19",
+ "clap 3.2.20",
  "clap_mangen",
  "color-eyre",
  "erooster_core",
@@ -1116,7 +1110,7 @@ dependencies = [
 name = "eroosterctl"
 version = "0.1.0"
 dependencies = [
- "clap 3.2.19",
+ "clap 3.2.20",
  "clearscreen",
  "color-eyre",
  "erooster_core",
@@ -2048,9 +2042,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.13.1"
+version = "1.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "074864da206b4973b84eb91683020dbefd6a8c3f0f38e054d93954e891935e4e"
+checksum = "2f7254b99e31cad77da24b08ebf628882739a608578bb1bcdfc1f9c21260d7c0"
 
 [[package]]
 name = "oorandom"
@@ -3117,10 +3111,10 @@ dependencies = [
 [[package]]
 name = "sqlxmq"
 version = "0.4.1"
-source = "git+https://github.com/erooster-mail/sqlxmq.git#30dc6652f9054e1c451010de5e508c160dc3fe94"
+source = "git+https://github.com/erooster-mail/sqlxmq.git#40e10bde697159ef75ebe6cb3308e179d424634e"
 dependencies = [
  "anymap2",
- "dotenv",
+ "dotenvy",
  "log",
  "serde",
  "serde_json",
@@ -3133,7 +3127,7 @@ dependencies = [
 [[package]]
 name = "sqlxmq_macros"
 version = "0.4.1"
-source = "git+https://github.com/erooster-mail/sqlxmq.git#30dc6652f9054e1c451010de5e508c160dc3fe94"
+source = "git+https://github.com/erooster-mail/sqlxmq.git#40e10bde697159ef75ebe6cb3308e179d424634e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3358,9 +3352,9 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "1.20.1"
+version = "1.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a8325f63a7d4774dd041e363b2409ed1c5cbbd0f867795e661df066b2b0a581"
+checksum = "89797afd69d206ccd11fb0ea560a44bbb87731d020670e79416d442919257d42"
 dependencies = [
  "autocfg",
  "bytes",

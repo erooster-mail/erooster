@@ -1777,12 +1777,11 @@ dependencies = [
 [[package]]
 name = "maildir"
 version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8e36818ad465a26adc92409158e147e74644f217e0fa77adec6a20c64ee45b5"
+source = "git+https://github.com/erooster-mail/maildir.git?branch=MTRNord/clippy#3da685d8e2e3c21d8523a70fc660d511dc62b7b9"
 dependencies = [
  "gethostname",
  "mailparse",
- "memmap",
+ "memmap2",
 ]
 
 [[package]]
@@ -1839,13 +1838,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
-name = "memmap"
-version = "0.7.0"
+name = "memmap2"
+version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6585fd95e7bb50d6cc31e20d4cf9afb4e2ba16c5846fc76793f11218da9c475b"
+checksum = "95af15f345b17af2efc8ead6080fb8bc376f8cec1b35277b935637595fe77498"
 dependencies = [
  "libc",
- "winapi",
 ]
 
 [[package]]

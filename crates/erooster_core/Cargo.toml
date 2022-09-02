@@ -48,13 +48,14 @@ vergen = "7"
 
 [dependencies.maildir]
 version = "0.6"
-#git = "https://github.com/soywod/maildir"
+git = "https://github.com/erooster-mail/maildir.git"
 #rev = "179625c3cc15212fb26eca5b819f7fe0d6f802e1"
+branch = "MTRNord/clippy"
 optional = true
 
 [features]
 default = ["maildir"]
-maildir = ["dep:maildir", "maildir/memmap"]
+maildir = ["dep:maildir", "maildir/mmap"]
 jaeger = ["dep:opentelemetry-jaeger"]
 
 #[profile.release]

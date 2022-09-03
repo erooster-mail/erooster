@@ -243,7 +243,7 @@ pub async fn listen_tls(
                                 {
                                     error!("Unable to send error response: {}", e);
                                 }
-                                error!("Failure happened: {}", e);
+                                error!("[SMTP][TLS] Failure happened: {}", e);
                                 debug!("[SMTP][TLS] Closing TLS connection");
                                 sender.abort();
                                 break;

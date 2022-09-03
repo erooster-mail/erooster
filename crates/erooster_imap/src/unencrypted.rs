@@ -132,6 +132,7 @@ async fn listen(
                         {
                             error!("Unable to send error response: {}", e);
                         }
+                        error!("[IMAP] Failure happened: {}", e);
                         debug!("[IMAP] Closing connection");
                         sender.abort();
                         break;

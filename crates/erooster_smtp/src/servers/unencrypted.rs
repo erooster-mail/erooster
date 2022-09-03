@@ -166,7 +166,8 @@ async fn listen(
                         {
                             error!("[SMTP] Error sending response: {:?}", e);
                         }
-                        debug!("Closing connection");
+                        error!("[SMTP] Failure happened: {}", e);
+                        debug!("[SMTP] Closing connection");
                         sender.abort();
                         break;
                     }

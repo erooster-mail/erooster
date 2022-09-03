@@ -17,10 +17,6 @@ impl Mail<'_> {
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
-        info!("{:#?}", command_data.arguments);
-        if command_data.arguments.len() != 1 {
-            bail!("Failed to parse localpart arguments");
-        }
         if let Ok(args) = localpart_arguments(command_data.arguments[0]).map(|(_, senders)| senders)
         {
             let senders: Vec<_> = args.iter().map(ToString::to_string).collect();

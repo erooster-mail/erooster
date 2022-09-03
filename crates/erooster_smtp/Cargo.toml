@@ -35,11 +35,11 @@ tokio-stream = { version = "0.1", features = ["net", "io-util"] }
 tokio-util = { version = "0.7", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = {version = "0.3", features=["env-filter"]}
-trust-dns-resolver = "0.21"
+trust-dns-resolver = "0.22"
 webpki-roots = "0.22"
 secrecy = "0.8.0"
 cfdkim = {version = "0.2.3", git = "https://github.com/erooster-mail/dkim"}
-time = "0.3.13"
+time = {version = "0.3.13", features = ["local-offset", "formatting"]}
 
 [[bench]]
 name = "smtp_bench"

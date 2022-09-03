@@ -15,6 +15,7 @@ use erooster_core::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{collections::HashMap, path::Path, sync::Arc};
+use time::{macros::format_description, OffsetDateTime};
 use tracing::{debug, instrument};
 
 #[allow(clippy::module_name_repetitions)]
@@ -57,6 +58,11 @@ impl DataCommand<'_> {
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         debug!("Reading incoming data");
+
+        let date_format = format_description!(
+            "[weekday repr:short], [day] [month] [year] [hour]:[minute]:[second] [offset_hour \
+         sign:mandatory]"
+        );
         {
             let mut write_lock = self.data.con_state.write().await;
             if line == "." {
@@ -75,31 +81,47 @@ impl DataCommand<'_> {
                     } else {
                         color_eyre::eyre::bail!("No data")
                     };
-                    let mut to = HashMap::new();
                     for address in receipts {
+                        let mut to = HashMap::new();
                         let domain = address.split('@').collect::<Vec<&str>>()[1];
                         to.entry(domain.to_string())
                             .or_insert(Vec::new())
-                            .push(address);
+                            .push(address.clone());
+                        let data = format!(
+                            "Received: from {} ({} [{}])\r\n
+        by {} (Erooster) with ESMTPS\r\n
+        id 00000001\r\n
+        (envelope-from <{}>)\r\n
+        for <{}>; {}\r\n{}",
+                            write_lock.ehlo.as_ref().context("Missing ehlo")?,
+                            write_lock.ehlo.as_ref().context("Missing ehlo")?,
+                            write_lock.peer_addr,
+                            config.mail.hostname,
+                            write_lock.sender.as_ref().context("Missing sender")?,
+                            address,
+                            OffsetDateTime::now_local()?.format(&date_format)?,
+                            data
+                        );
+                        let email_payload = EmailPayload {
+                            to,
+                            from: write_lock
+                                .sender
+                                .clone()
+                                .context("Missing sender in internal state")?,
+                            body: data,
+                            sender_domain: config.mail.hostname.clone(),
+                            dkim_key_path: config.mail.dkim_key_path.clone(),
+                            dkim_key_selector: config.mail.dkim_key_selector.clone(),
+                        };
+                        let pool = database.get_pool();
+                        send_email_job
+                            .builder()
+                            .set_json(&email_payload)?
+                            .spawn(pool)
+                            .await?;
+                        debug!("Email added to queue");
                     }
-                    let email_payload = EmailPayload {
-                        to,
-                        from: write_lock
-                            .sender
-                            .clone()
-                            .context("Missing sender in internal state")?,
-                        body: data,
-                        sender_domain: config.mail.hostname.clone(),
-                        dkim_key_path: config.mail.dkim_key_path.clone(),
-                        dkim_key_selector: config.mail.dkim_key_selector.clone(),
-                    };
-                    let pool = database.get_pool();
-                    send_email_job
-                        .builder()
-                        .set_json(&email_payload)?
-                        .spawn(pool)
-                        .await?;
-                    debug!("Email added to queue");
+
                     lines.send(String::from("250 OK")).await?;
 
                     State::Authenticated(username.clone())
@@ -108,7 +130,7 @@ impl DataCommand<'_> {
                     for receipt in receipts {
                         let folder = "INBOX".to_string();
                         let mailbox_path = Path::new(&config.mail.maildir_folders)
-                            .join(receipt)
+                            .join(receipt.clone())
                             .join(folder.clone());
                         if !mailbox_path.exists() {
                             storage.create_dirs(&mailbox_path)?;
@@ -120,6 +142,19 @@ impl DataCommand<'_> {
                         } else {
                             color_eyre::eyre::bail!("No data")
                         };
+                        let data = format!(
+                            "Received: from {} ({} [{}])\r\n
+        by {} (Erooster) with ESMTPS\r\n
+        id 00000001\r\n
+        for <{}>; {}\r\n{}",
+                            write_lock.ehlo.as_ref().context("Missing ehlo")?,
+                            write_lock.ehlo.as_ref().context("Missing ehlo")?,
+                            write_lock.peer_addr,
+                            config.mail.hostname,
+                            receipt,
+                            OffsetDateTime::now_local()?.format(&date_format)?,
+                            data
+                        );
                         // TODO remove debug
                         debug!("{:?}", data);
                         let message_id = storage.store_new(&mailbox_path, data.as_bytes()).await?;

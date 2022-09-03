@@ -97,6 +97,8 @@ async fn listen(
                 data: None,
                 receipts: None,
                 sender: None,
+                ehlo: None,
+                peer_addr: peer.to_string(),
             }));
 
             let do_starttls = Arc::new(AtomicBool::new(false));

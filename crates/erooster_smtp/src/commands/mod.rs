@@ -207,7 +207,7 @@ impl Data {
                     }
                     Commands::EHLO => {
                         Ehlo { data: self }
-                            .exec(config.mail.hostname.clone(), lines)
+                            .exec(config.mail.hostname.clone(), lines, &command_data)
                             .await?;
                     }
                     Commands::QUIT => {

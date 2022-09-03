@@ -10,16 +10,20 @@ pub struct Connection {
     pub data: Option<String>,
     pub receipts: Option<Vec<String>>,
     pub sender: Option<String>,
+    pub ehlo: Option<String>,
+    pub peer_addr: String,
 }
 
 impl Connection {
-    pub fn new(secure: bool) -> Arc<RwLock<Self>> {
+    pub fn new(secure: bool, peer_addr: String) -> Arc<RwLock<Self>> {
         Arc::new(RwLock::new(Connection {
             secure,
             state: State::NotAuthenticated,
             data: None,
             receipts: None,
             sender: None,
+            ehlo: None,
+            peer_addr,
         }))
     }
 }

@@ -155,7 +155,8 @@ pub async fn listen_tls(
     upper_data: Option<Data>,
     starttls: bool,
 ) {
-    debug!("[SMTP] Got new TLS peer: {:?}", tcp_stream.peer_addr());
+    let peer = tcp_stream.peer_addr().expect("[SMTP] peer addr to exist");
+    debug!("[SMTP] Got new TLS peer: {:?}", peer);
     let peer = tcp_stream.peer_addr().expect("peer addr to exist");
 
     // We need to clone these as we move into a new thread
@@ -190,7 +191,7 @@ pub async fn listen_tls(
                 });
 
                 // Create our Connection
-                let connection = Connection::new(true);
+                let connection = Connection::new(true, peer.to_string());
                 if !starttls {
                     // Greet the client with the capabilities we provide
                     if let Err(e) = send_capabilities(Arc::clone(&config), &mut tx).await {

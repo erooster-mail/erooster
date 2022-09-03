@@ -39,7 +39,7 @@ trust-dns-resolver = "0.22"
 webpki-roots = "0.22"
 secrecy = "0.8.0"
 cfdkim = {version = "0.2.3", git = "https://github.com/erooster-mail/dkim"}
-time = {version = "0.3.13", features = ["local-offset", "formatting"]}
+time = {version = "0.3.13", features = ["formatting"]}
 
 [[bench]]
 name = "smtp_bench"

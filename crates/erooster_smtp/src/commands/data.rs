@@ -99,7 +99,7 @@ impl DataCommand<'_> {
                             config.mail.hostname,
                             write_lock.sender.as_ref().context("Missing sender")?,
                             address,
-                            OffsetDateTime::now_local()?.format(&date_format)?,
+                            OffsetDateTime::now_utc().format(&date_format)?,
                             data
                         );
                         let email_payload = EmailPayload {
@@ -152,7 +152,7 @@ impl DataCommand<'_> {
                             write_lock.peer_addr,
                             config.mail.hostname,
                             receipt,
-                            OffsetDateTime::now_local()?.format(&date_format)?,
+                            OffsetDateTime::now_utc().format(&date_format)?,
                             data
                         );
                         // TODO remove debug

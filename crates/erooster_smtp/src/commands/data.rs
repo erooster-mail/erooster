@@ -88,11 +88,7 @@ impl DataCommand<'_> {
                             .or_insert(Vec::new())
                             .push(address.clone());
                         let data = format!(
-                            "Received: from {} ({} [{}])\r\n
-        by {} (Erooster) with ESMTPS\r\n
-        id 00000001\r\n
-        (envelope-from <{}>)\r\n
-        for <{}>; {}\r\n{}",
+                            "Received: from {} ({} [{}])\r\nby {} (Erooster) with ESMTPS\r\nid 00000001\r\n(envelope-from <{}>)\r\nfor <{}>; {}\r\n{}",
                             write_lock.ehlo.as_ref().context("Missing ehlo")?,
                             write_lock.ehlo.as_ref().context("Missing ehlo")?,
                             write_lock.peer_addr,
@@ -143,10 +139,7 @@ impl DataCommand<'_> {
                             color_eyre::eyre::bail!("No data")
                         };
                         let data = format!(
-                            "Received: from {} ({} [{}])\r\n
-        by {} (Erooster) with ESMTPS\r\n
-        id 00000001\r\n
-        for <{}>; {}\r\n{}",
+                            "Received: from {} ({} [{}])\r\nby {} (Erooster) with ESMTPS\r\nid 00000001\r\nfor <{}>; {}\r\n{}",
                             write_lock.ehlo.as_ref().context("Missing ehlo")?,
                             write_lock.ehlo.as_ref().context("Missing ehlo")?,
                             write_lock.peer_addr,

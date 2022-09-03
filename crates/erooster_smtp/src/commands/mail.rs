@@ -1,7 +1,7 @@
 use crate::commands::{parsers::localpart_arguments, CommandData, Data};
 use color_eyre::eyre::bail;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use tracing::{info, instrument};
+use tracing::instrument;
 
 pub struct Mail<'a> {
     pub data: &'a Data,

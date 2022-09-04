@@ -21,7 +21,7 @@ pub struct Config {
     /// The config of the webserver
     pub webserver: Webserver,
     /// The config related to the optional rspamd integration
-    pub rspamd: Option<Rspamd>
+    pub rspamd: Option<Rspamd>,
 }
 
 /// The config for the webserver

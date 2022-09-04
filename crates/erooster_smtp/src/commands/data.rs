@@ -195,7 +195,7 @@ impl DataCommand<'_> {
             .user_agent("Erooster")
             .build()?;
         let base_req = client
-            .post(format!("https://{}/checkv2", rspamd_config.address))
+            .post(format!("{}/checkv2", rspamd_config.address))
             .body(data.clone())
             .header("User-Agent", "Erooster");
         let req = if let Some(username) = username {

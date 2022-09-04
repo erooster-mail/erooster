@@ -91,15 +91,7 @@ async fn listen(
             let lines = Framed::new(tcp_stream, LinesCodec::new_with_max_length(LINE_LIMIT));
             let (mut lines_sender, mut lines_reader) = lines.split();
 
-            let state = Arc::new(RwLock::new(Connection {
-                secure: false,
-                state: State::NotAuthenticated,
-                data: None,
-                receipts: None,
-                sender: None,
-                ehlo: None,
-                peer_addr: peer.to_string(),
-            }));
+            let state = Connection::new(false, peer.ip().to_string());
 
             let do_starttls = Arc::new(AtomicBool::new(false));
             let (mut tx, mut rx) = mpsc::unbounded();

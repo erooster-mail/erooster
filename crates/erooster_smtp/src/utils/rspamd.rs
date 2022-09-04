@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -6,20 +8,25 @@ pub struct Response {
     pub score: f64,
     pub required_score: f64,
     pub action: Action,
-    pub symbols: Vec<Symbol>,
+    pub symbols: HashMap<String, Symbol>,
     pub subject: Option<String>,
     pub urls: Option<Vec<String>>,
     pub emails: Option<Vec<String>>,
     #[serde(rename = "message-id")]
     pub message_id: Option<String>,
-    pub messages: Option<serde_json::Value>,
+    pub messages: serde_json::Value,
+    pub time_real: f64,
+    pub dkim_signatures: Option<String>,
+    pub milter: serde_json::Value,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Symbol {
     pub name: String,
     pub score: f64,
-    pub options: Vec<String>,
+    pub metric_score: f64,
+    pub description: Option<String>,
+    pub options: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

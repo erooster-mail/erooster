@@ -3,7 +3,7 @@ use crate::{
     servers::{
         encrypted::{get_tls_acceptor, listen_tls},
         send_capabilities,
-        state::{Connection, State},
+        state::Connection,
     },
 };
 use color_eyre::{eyre::Context, Result};
@@ -21,7 +21,7 @@ use std::{
         Arc,
     },
 };
-use tokio::{net::TcpListener, sync::RwLock, task::JoinHandle};
+use tokio::{net::TcpListener, task::JoinHandle};
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, info, instrument};

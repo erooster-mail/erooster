@@ -101,8 +101,13 @@ impl DataCommand<'_> {
                         );
 
                         let data = if let Some(rspamd_config) = &config.rspamd {
-                            self.call_rspamd(rspamd_config, data, Some(username.to_string()))
-                                .await?
+                            self.call_rspamd(
+                                rspamd_config,
+                                data,
+                                write_lock.sender.as_ref().context("Missing sender")?,
+                                Some(username.to_string()),
+                            )
+                            .await?
                         } else {
                             data
                         };
@@ -159,7 +164,13 @@ impl DataCommand<'_> {
                         );
 
                         let data = if let Some(rspamd_config) = &config.rspamd {
-                            self.call_rspamd(rspamd_config, data, None).await?
+                            self.call_rspamd(
+                                rspamd_config,
+                                data,
+                                write_lock.sender.as_ref().context("Missing sender")?,
+                                None,
+                            )
+                            .await?
                         } else {
                             data
                         };
@@ -188,6 +199,7 @@ impl DataCommand<'_> {
         &self,
         rspamd_config: &Rspamd,
         data: String,
+        sender: &str,
         username: Option<String>,
     ) -> color_eyre::Result<String> {
         let client = reqwest::Client::builder()
@@ -197,7 +209,7 @@ impl DataCommand<'_> {
         let base_req = client
             .post(format!("{}/checkv2", rspamd_config.address))
             .body(data.clone())
-            .header("User-Agent", "Erooster");
+            .header("From", sender);
         let req = if let Some(username) = username {
             base_req.header("User", username)
         } else {

@@ -20,6 +20,8 @@ pub struct Config {
     pub sentry: bool,
     /// The config of the webserver
     pub webserver: Webserver,
+    /// The config related to the optional rspamd integration
+    pub rspamd: Option<Rspamd>
 }
 
 /// The config for the webserver
@@ -47,6 +49,13 @@ pub struct Tls {
     pub key_path: String,
     /// Path to the certificate file
     pub cert_path: String,
+}
+
+/// Configuration specific to rspamd
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Rspamd {
+    /// Address where the rspamd worker is at
+    pub address: String,
 }
 
 /// Configurations specific to the mail concept itself

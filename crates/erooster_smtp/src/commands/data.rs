@@ -4,6 +4,7 @@ use crate::{
         sending::{send_email_job, EmailPayload},
         state::State,
     },
+    utils::rspamd::Response,
 };
 use color_eyre::eyre::ContextCompat;
 use erooster_core::{
@@ -11,10 +12,10 @@ use erooster_core::{
         database::{Database, DB},
         storage::{MailStorage, Storage},
     },
-    config::Config,
+    config::{Config, Rspamd},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{collections::HashMap, path::Path, sync::Arc, time::Duration};
 use time::{macros::format_description, OffsetDateTime};
 use tracing::{debug, instrument};
 
@@ -98,6 +99,14 @@ impl DataCommand<'_> {
                             OffsetDateTime::now_utc().format(&date_format)?,
                             data
                         );
+
+                        let data = if let Some(rspamd_config) = &config.rspamd {
+                            self.call_rspamd(rspamd_config, data, Some(username.to_string()))
+                                .await?
+                        } else {
+                            data
+                        };
+
                         let email_payload = EmailPayload {
                             to,
                             from: write_lock
@@ -148,8 +157,13 @@ impl DataCommand<'_> {
                             OffsetDateTime::now_utc().format(&date_format)?,
                             data
                         );
-                        // TODO remove debug
-                        debug!("{:?}", data);
+
+                        let data = if let Some(rspamd_config) = &config.rspamd {
+                            self.call_rspamd(rspamd_config, data, None).await?
+                        } else {
+                            data
+                        };
+
                         let message_id = storage.store_new(&mailbox_path, data.as_bytes()).await?;
                         debug!("Stored message: {}", message_id);
                     }
@@ -168,5 +182,31 @@ impl DataCommand<'_> {
             }
         };
         Ok(())
+    }
+
+    async fn call_rspamd(
+        &self,
+        rspamd_config: &Rspamd,
+        data: String,
+        username: Option<String>,
+    ) -> color_eyre::Result<String> {
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(30))
+            .user_agent("Erooster")
+            .build()?;
+        let base_req = client
+            .post(format!("https://{}/checkv2", rspamd_config.address))
+            .body(data.clone())
+            .header("User-Agent", "Erooster");
+        let req = if let Some(username) = username {
+            base_req.header("User", username)
+        } else {
+            base_req
+        };
+        let rspamd_res = req.send().await?.json::<Response>().await?;
+        debug!("{:?}", rspamd_res);
+        // TODO apply rspamd actions
+
+        Ok(data)
     }
 }

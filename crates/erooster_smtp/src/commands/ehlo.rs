@@ -1,3 +1,4 @@
+use color_eyre::eyre::bail;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use tracing::instrument;
 
@@ -18,6 +19,9 @@ impl Ehlo<'_> {
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
+        if command_data.arguments.is_empty() {
+            bail!("Invalid EHLO arguments");
+        }
         let mut write_lock = self.data.con_state.write().await;
         write_lock.ehlo = Some(command_data.arguments[0].to_string());
         lines.feed(format!("250-{}", hostname)).await?;

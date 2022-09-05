@@ -2,6 +2,7 @@ use crate::{
     commands::{parsers::localpart_arguments, CommandData, Data},
     servers::state::State,
 };
+use color_eyre::eyre::bail;
 use erooster_core::backend::database::{Database, DB};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use tracing::{info, instrument};
@@ -22,7 +23,9 @@ impl Rcpt<'_> {
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         info!("{:#?}", command_data.arguments);
-        assert!(command_data.arguments.len() == 1);
+        if command_data.arguments.is_empty() {
+            bail!("Failed to parse rcpt arguments");
+        }
         let receipts: Vec<String> = localpart_arguments(command_data.arguments[0])
             .map(|(_, receipts)| receipts)
             .expect("Failed to parse localpart arguments")

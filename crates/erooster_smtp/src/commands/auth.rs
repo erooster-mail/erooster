@@ -27,6 +27,12 @@ impl Auth<'_> {
         //let secure = self.data.con_state.read().await.secure;
         let secure = true;
         if secure {
+            if command_data.arguments.is_empty() {
+                lines
+                    .send(String::from("504 Unrecognized authentication type."))
+                    .await?;
+                return Ok(());
+            }
             if command_data.arguments[0] == "LOGIN" {
                 {
                     self.data.con_state.write().await.state =

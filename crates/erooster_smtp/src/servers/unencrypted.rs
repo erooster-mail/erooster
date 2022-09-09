@@ -175,7 +175,7 @@ async fn listen(
                 debug!("[SMTP] Finished to reunite");
                 let acceptor = get_tls_acceptor(&config)?;
                 debug!("[SMTP] Starting to listen using tls");
-                listen_tls(
+                if let Err(e) = listen_tls(
                     stream,
                     config,
                     database,
@@ -184,7 +184,10 @@ async fn listen(
                     Some(data),
                     true,
                 )
-                .await;
+                .await
+                {
+                    error!("[SMTP] Error while upgrading to tls: {}", e);
+                }
             }
             Ok(())
         });

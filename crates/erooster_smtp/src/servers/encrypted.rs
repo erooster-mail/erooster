@@ -2,6 +2,7 @@ use crate::{
     commands::{Data, Response},
     servers::{send_capabilities, state::Connection},
 };
+use color_eyre::eyre::Context;
 use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
@@ -133,7 +134,7 @@ async fn listen(
 ) {
     // Looks for new peers
     while let Some(Ok(tcp_stream)) = stream.next().await {
-        listen_tls(
+        if let Err(e) = listen_tls(
             tcp_stream,
             Arc::clone(&config),
             Arc::clone(&database),
@@ -142,7 +143,10 @@ async fn listen(
             None,
             false,
         )
-        .await;
+        .await
+        {
+            error!("[SMTP][ENCRYPTED] Error while listening: {}", e);
+        }
     }
 }
 
@@ -154,8 +158,10 @@ pub async fn listen_tls(
     acceptor: TlsAcceptor,
     upper_data: Option<Data>,
     starttls: bool,
-) {
-    let peer = tcp_stream.peer_addr().expect("[SMTP] peer addr to exist");
+) -> color_eyre::eyre::Result<()> {
+    let peer = tcp_stream
+        .peer_addr()
+        .context("[SMTP] peer addr to exist")?;
     debug!("[SMTP] Got new TLS peer: {:?}", peer);
 
     // We need to clone these as we move into a new thread
@@ -254,4 +260,5 @@ pub async fn listen_tls(
             Err(e) => error!("[SMTP][TLS] Got error while accepting TLS: {}", e),
         }
     });
+    Ok(())
 }

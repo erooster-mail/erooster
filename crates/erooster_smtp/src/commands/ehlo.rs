@@ -20,7 +20,7 @@ impl Ehlo<'_> {
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         if command_data.arguments.is_empty() {
-            bail!("Invalid EHLO arguments");
+            bail!("Invalid EHLO arguments: {:?}", command_data.arguments);
         }
         let mut write_lock = self.data.con_state.write().await;
         write_lock.ehlo = Some(command_data.arguments[0].to_string());

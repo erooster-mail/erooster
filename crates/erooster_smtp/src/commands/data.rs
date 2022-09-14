@@ -1,15 +1,8 @@
-use crate::{
-    commands::Data,
-    servers::{
-        sending::{send_email_job, EmailPayload},
-        state::State,
-    },
-    utils::rspamd::Response,
-};
+use crate::{commands::Data, servers::state::State, utils::rspamd::Response};
 use color_eyre::eyre::ContextCompat;
 use erooster_core::{
     backend::{
-        database::{Database, DB},
+        database::DB,
         storage::{MailStorage, Storage},
     },
     config::{Config, Rspamd},
@@ -18,6 +11,11 @@ use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use std::{collections::HashMap, path::Path, sync::Arc, time::Duration};
 use time::{macros::format_description, OffsetDateTime};
 use tracing::{debug, instrument};
+
+#[cfg(not(feature = "honeypot"))]
+use crate::servers::sending::{send_email_job, EmailPayload};
+#[cfg(not(feature = "honeypot"))]
+use erooster_core::backend::database::Database;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct DataCommand<'a> {
@@ -112,24 +110,28 @@ impl DataCommand<'_> {
                             data
                         };
 
-                        let email_payload = EmailPayload {
-                            to,
-                            from: write_lock
-                                .sender
-                                .clone()
-                                .context("Missing sender in internal state")?,
-                            body: data,
-                            sender_domain: config.mail.hostname.clone(),
-                            dkim_key_path: config.mail.dkim_key_path.clone(),
-                            dkim_key_selector: config.mail.dkim_key_selector.clone(),
-                        };
-                        let pool = database.get_pool();
-                        send_email_job
-                            .builder()
-                            .set_json(&email_payload)?
-                            .spawn(pool)
-                            .await?;
-                        debug!("Email added to queue");
+                        cfg_if::cfg_if! {
+                            if #[cfg(not(feature = "honeypot"))] {
+                                let email_payload = EmailPayload {
+                                    to,
+                                    from: write_lock
+                                        .sender
+                                        .clone()
+                                        .context("Missing sender in internal state")?,
+                                    body: data,
+                                    sender_domain: config.mail.hostname.clone(),
+                                    dkim_key_path: config.mail.dkim_key_path.clone(),
+                                    dkim_key_selector: config.mail.dkim_key_selector.clone(),
+                                };
+                                let pool = database.get_pool();
+                                send_email_job
+                                    .builder()
+                                    .set_json(&email_payload)?
+                                    .spawn(pool)
+                                    .await?;
+                                debug!("Email added to queue");
+                            }
+                        }
                     }
 
                     lines.send(String::from("250 OK")).await?;

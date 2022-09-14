@@ -3,9 +3,12 @@ use crate::{
     servers::state::State,
 };
 use color_eyre::eyre::bail;
-use erooster_core::backend::database::{Database, DB};
+use erooster_core::backend::database::DB;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use tracing::{info, instrument};
+
+#[cfg(not(feature = "honeypot"))]
+use erooster_core::backend::database::Database;
 
 pub struct Rcpt<'a> {
     pub data: &'a Data,

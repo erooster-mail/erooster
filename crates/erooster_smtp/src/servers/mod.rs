@@ -1,4 +1,3 @@
-use crate::servers::sending::send_email_job;
 use erooster_core::{
     backend::{
         database::{Database, DB},
@@ -12,9 +11,14 @@ use std::error::Error;
 use std::sync::Arc;
 use tracing::instrument;
 
+#[cfg(not(feature = "honeypot"))]
+use crate::servers::sending::send_email_job;
+
 pub(crate) mod encrypted;
-pub(crate) mod sending;
 pub(crate) mod state;
+
+#[cfg(not(feature = "honeypot"))]
+pub(crate) mod sending;
 
 // TODO make this only pub for benches and tests
 #[allow(missing_docs)]
@@ -74,7 +78,13 @@ pub async fn start(
     let pool = database.get_pool();
 
     // Construct a job registry from our job.
-    let mut registry = JobRegistry::new(&[send_email_job]);
+    cfg_if::cfg_if! {
+        if #[cfg(not(feature = "honeypot"))] {
+            let mut registry = JobRegistry::new(&[send_email_job]);
+        } else {
+            let mut registry = JobRegistry::new(&[]);
+        }
+    }
     // Here is where you can configure the registry
     registry.set_error_handler(|name: &str, error: Box<dyn Error + Send + 'static>| {
         tracing::error!("Job `{}` failed: {}", name, error);

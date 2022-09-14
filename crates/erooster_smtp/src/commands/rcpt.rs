@@ -3,9 +3,12 @@ use crate::{
     servers::state::State,
 };
 use color_eyre::eyre::bail;
-use erooster_core::backend::database::{Database, DB};
+use erooster_core::backend::database::DB;
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use tracing::{info, instrument};
+
+#[cfg(not(feature = "honeypot"))]
+use erooster_core::backend::database::Database;
 
 pub struct Rcpt<'a> {
     pub data: &'a Data,
@@ -36,10 +39,14 @@ impl Rcpt<'_> {
         {
             let mut write_lock = self.data.con_state.write().await;
             if matches!(&write_lock.state, State::NotAuthenticated) {
-                for receipt in &receipts {
-                    if !database.user_exists(&receipt.to_lowercase()).await {
-                        lines.send(String::from("550 No such user here")).await?;
-                        return Ok(());
+                cfg_if::cfg_if! {
+                    if #[cfg(not(feature = "honeypot"))] {
+                        for receipt in &receipts {
+                            if !database.user_exists(&receipt.to_lowercase()).await {
+                                lines.send(String::from("550 No such user here")).await?;
+                                return Ok(());
+                            }
+                        }
                     }
                 }
             }

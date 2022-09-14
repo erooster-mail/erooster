@@ -53,6 +53,7 @@ struct Args {
 }
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> Result<()> {
     // Setup logging and metrics
     let builder = color_eyre::config::HookBuilder::default().panic_message(EroosterPanicMessage);
@@ -81,7 +82,11 @@ async fn main() -> Result<()> {
                     .init();
             } else {
                  tracing_subscriber::Registry::default()
-                    .with(sentry::integrations::tracing::layer())
+                    .with(sentry::integrations::tracing::layer().event_filter(|md| match md.level() {
+                        &tracing::Level::ERROR => sentry::integrations::tracing::EventFilter::Exception,
+                        &tracing::Level::WARN | &tracing::Level::INFO | &tracing::Level::DEBUG => sentry::integrations::tracing::EventFilter::Breadcrumb,
+                        &tracing::Level::TRACE => sentry::integrations::tracing::EventFilter::Ignore,
+                    }))
                     .with(filter_layer)
                     .with(tracing_subscriber::fmt::Layer::default())
                     .with(ErrorLayer::default())

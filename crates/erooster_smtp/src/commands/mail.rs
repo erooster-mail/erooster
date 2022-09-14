@@ -18,7 +18,7 @@ impl Mail<'_> {
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
         if command_data.arguments.is_empty() {
-            bail!("Failed to parse localpart arguments");
+            bail!("Failed to parse localpart arguments (no arguments)");
         }
 
         match localpart_arguments(command_data.arguments[0]).map(|(_, senders)| senders) {

@@ -23,7 +23,7 @@ color-eyre = "0.6"
 futures = { version = "0.3", features = ["thread-pool"]}
 mailparse = "0.13"
 nom = "7.1"
-opentelemetry-jaeger = { version = "0.16", features = ["tokio"], optional = true }
+opentelemetry-jaeger = { version = "0.17", features = ["tokio"], optional = true }
 owo-colors = "3"
 rand_core = { version = "0.6", features = ["std"] }
 rustls = "0.20"

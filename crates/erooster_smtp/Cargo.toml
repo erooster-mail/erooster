@@ -48,8 +48,8 @@ name = "smtp_bench"
 harness = false
 
 [dev-dependencies]
-convert_case = "0.5"
-criterion = {version = "0.3", features = ["async_tokio"]}
+convert_case = "0.6"
+criterion = {version = "0.4", features = ["async_tokio"]}
 sqlx = { version = "0.6", features = [ "postgres", "runtime-tokio-rustls"] }
 enum-iterator = "1.1"
 enum-display-derive = "0.1"

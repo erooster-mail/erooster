@@ -138,6 +138,7 @@ impl DataCommand<'_> {
 
                     State::Authenticated(username.clone())
                 } else if matches!(write_lock.state, State::ReceivingData(None)) {
+                    // TODO rewrite to also have some extra honeypot info logging and make it not pass into inbox but into top level of the address
                     debug!("No authenticated user");
                     for receipt in receipts {
                         let folder = "INBOX".to_string();

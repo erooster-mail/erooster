@@ -203,6 +203,7 @@ impl DataCommand<'_> {
         username: Option<String>,
     ) -> color_eyre::Result<String> {
         let client = reqwest::Client::builder()
+            .trust_dns(true)
             .timeout(Duration::from_secs(30))
             .user_agent("Erooster")
             .build()?;

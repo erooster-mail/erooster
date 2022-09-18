@@ -144,7 +144,12 @@ impl Select<'_> {
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
-        if self.data.con_state.read().await.state == State::Authenticated {
+        if matches!(self.data.con_state.read().await.state, State::Authenticated)
+            || matches!(
+                self.data.con_state.read().await.state,
+                State::Selected(_, _)
+            )
+        {
             select(self.data, lines, storage, true, command_data).await?;
         } else {
             lines
@@ -170,7 +175,12 @@ impl Examine<'_> {
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
-        if self.data.con_state.read().await.state == State::Authenticated {
+        if matches!(self.data.con_state.read().await.state, State::Authenticated)
+            || matches!(
+                self.data.con_state.read().await.state,
+                State::Selected(_, _)
+            )
+        {
             select(self.data, lines, storage, false, command_data).await?;
         } else {
             lines

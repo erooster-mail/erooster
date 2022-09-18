@@ -9,6 +9,7 @@ use erooster_core::{
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use nom::{error::convert_error, Finish};
+use std::io::Write;
 use std::{path::Path, sync::Arc};
 use tracing::{debug, error, instrument};
 
@@ -134,8 +135,7 @@ impl Append<'_> {
             .context("Username missing in internal State")?;
         if let State::Appending(state) = &mut write_lock.state {
             if let Some(buffer) = &mut state.data {
-                let mut bytes = format!("{}\r\n", append_data).as_bytes().to_vec();
-                buffer.append(&mut bytes);
+                write!(buffer, "{}\r\n", append_data)?;
                 debug!("Buffer length: {}", buffer.len());
                 debug!("expected: {}", state.datalen);
                 if buffer.len() >= state.datalen {
@@ -158,8 +158,7 @@ impl Append<'_> {
                 }
             } else {
                 let mut buffer = Vec::with_capacity(state.datalen);
-                let mut bytes = format!("{}\r\n", append_data).as_bytes().to_vec();
-                buffer.append(&mut bytes);
+                write!(buffer, "{}\r\n", append_data)?;
 
                 state.data = Some(buffer);
             }

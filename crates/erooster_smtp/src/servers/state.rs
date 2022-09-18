@@ -7,7 +7,6 @@ use tokio::sync::RwLock;
 pub struct Connection {
     pub state: State,
     pub secure: bool,
-    pub data: Option<String>,
     pub receipts: Option<Vec<String>>,
     pub sender: Option<String>,
     pub ehlo: Option<String>,
@@ -19,7 +18,6 @@ impl Connection {
         Arc::new(RwLock::new(Connection {
             secure,
             state: State::NotAuthenticated,
-            data: None,
             receipts: None,
             sender: None,
             ehlo: None,
@@ -33,7 +31,7 @@ pub enum State {
     /// Initial State
     NotAuthenticated,
     /// DATA command issued, if not None this means we were authenticated
-    ReceivingData(Option<String>),
+    ReceivingData((Option<String>, Vec<u8>)),
     /// Authentication in progress
     Authenticating(AuthState),
     /// Authentication done

@@ -15,6 +15,8 @@ use erooster_core::{
     config::{Config, Rspamd},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use simdutf8::compat::from_utf8;
+use std::io::Write;
 use std::{collections::BTreeMap, path::Path, sync::Arc, time::Duration};
 use time::{macros::format_description, OffsetDateTime};
 use tracing::{debug, instrument};
@@ -38,7 +40,7 @@ impl DataCommand<'_> {
             } else {
                 None
             };
-            write_lock.state = State::ReceivingData(username);
+            write_lock.state = State::ReceivingData((username, Vec::new()));
         };
         lines
             .send(String::from("354 Start mail input; end with <CRLF>.<CRLF>"))
@@ -65,40 +67,39 @@ impl DataCommand<'_> {
          sign:mandatory]"
         );
         {
-            let mut write_lock = self.data.con_state.write().await;
+            let write_lock = &mut self.data.con_state.write().await;
             if line == "." {
                 debug!("Got end of line");
-                let receipts = if let Some(receipts) = write_lock.receipts.clone() {
+                let receipts = if let Some(receipts) = &write_lock.receipts {
                     receipts
                 } else {
                     color_eyre::eyre::bail!("No receipts")
                 };
-                write_lock.state = if let State::ReceivingData(Some(username)) = &write_lock.state {
+                write_lock.state = if let State::ReceivingData((Some(username), data)) =
+                    &write_lock.state
+                {
                     debug!("Authenticated user: {}", username);
 
-                    let data = if let Some(mut data) = write_lock.data.clone() {
-                        data.truncate(data.len() - 2);
-                        data
-                    } else {
-                        color_eyre::eyre::bail!("No data")
-                    };
+                    let mut inner_data = data.clone();
+                    inner_data.truncate(inner_data.len() - 2);
                     for address in receipts {
                         let mut to: BTreeMap<String, Vec<String>> = BTreeMap::new();
                         let domain = address.split('@').collect::<Vec<&str>>()[1];
                         to.entry(domain.to_string())
                             .or_default()
                             .push(address.clone());
-                        let data = format!(
-                            "Received: from {} ({} [{}])\r\n	by {} (Erooster) with ESMTPS\r\n	id 00000001\r\n	(envelope-from <{}>)\r\n	for <{}>; {}\r\n{}",
+                        let received_header = format!(
+                            "Received: from {} ({} [{}])\r\n	by {} (Erooster) with ESMTPS\r\n	id 00000001\r\n	(envelope-from <{}>)\r\n	for <{}>; {}\r\n",
                             write_lock.ehlo.as_ref().context("Missing ehlo")?,
                             write_lock.ehlo.as_ref().context("Missing ehlo")?,
                             write_lock.peer_addr,
                             config.mail.hostname,
                             write_lock.sender.as_ref().context("Missing sender")?,
                             address,
-                            OffsetDateTime::now_utc().format(&date_format)?,
-                            data
+                            OffsetDateTime::now_utc().format(&date_format)?
                         );
+                        let temp_data = [received_header.as_bytes(), &inner_data].concat();
+                        let data = from_utf8(&temp_data)?;
 
                         let data = if let Some(rspamd_config) = &config.rspamd {
                             self.call_rspamd(
@@ -118,7 +119,7 @@ impl DataCommand<'_> {
                                 .sender
                                 .clone()
                                 .context("Missing sender in internal state")?,
-                            body: data,
+                            body: data.to_string(),
                             sender_domain: config.mail.hostname.clone(),
                             dkim_key_path: config.mail.dkim_key_path.clone(),
                             dkim_key_selector: config.mail.dkim_key_selector.clone(),
@@ -135,7 +136,7 @@ impl DataCommand<'_> {
                     lines.send(String::from("250 OK")).await?;
 
                     State::Authenticated(username.clone())
-                } else if matches!(write_lock.state, State::ReceivingData(None)) {
+                } else if let State::ReceivingData((None, data)) = &write_lock.state {
                     debug!("No authenticated user");
                     for receipt in receipts {
                         let folder = "INBOX".to_string();
@@ -147,21 +148,17 @@ impl DataCommand<'_> {
                             storage.add_flag(&mailbox_path, "\\Subscribed").await?;
                             storage.add_flag(&mailbox_path, "\\NoInferiors").await?;
                         }
-                        let data = if let Some(data) = write_lock.data.clone() {
-                            data
-                        } else {
-                            color_eyre::eyre::bail!("No data")
-                        };
-                        let data = format!(
-                            "Received: from {} ({} [{}])\r\n	by {} (Erooster) with ESMTPS\r\n	id 00000001\r\n	for <{}>; {}\r\n{}",
+                        let received_header = format!(
+                            "Received: from {} ({} [{}])\r\n	by {} (Erooster) with ESMTPS\r\n	id 00000001\r\n	for <{}>; {}\r\n",
                             write_lock.ehlo.as_ref().context("Missing ehlo")?,
                             write_lock.ehlo.as_ref().context("Missing ehlo")?,
                             write_lock.peer_addr,
                             config.mail.hostname,
                             receipt,
                             OffsetDateTime::now_utc().format(&date_format)?,
-                            data
                         );
+                        let temp_data = [received_header.as_bytes(), data].concat();
+                        let data = from_utf8(&temp_data)?;
 
                         let data = if let Some(rspamd_config) = &config.rspamd {
                             self.call_rspamd(
@@ -186,22 +183,20 @@ impl DataCommand<'_> {
                     lines.send(String::from("250 OK")).await?;
                     color_eyre::eyre::bail!("Invalid state");
                 };
-            } else if let Some(data) = &write_lock.data {
-                write_lock.data = Some(format!("{}\r\n{}", data, line));
-            } else {
-                write_lock.data = Some(line.to_string());
+            } else if let State::ReceivingData((_, data)) = &mut write_lock.state {
+                write!(data, "{}\r\n", line)?;
             }
         };
         Ok(())
     }
 
-    async fn call_rspamd(
+    async fn call_rspamd<'a>(
         &self,
         rspamd_config: &Rspamd,
-        data: String,
+        data: &'a str,
         sender: &str,
         username: Option<String>,
-    ) -> color_eyre::Result<String> {
+    ) -> color_eyre::Result<&'a str> {
         let client = reqwest::Client::builder()
             .trust_dns(true)
             .timeout(Duration::from_secs(30))
@@ -209,7 +204,7 @@ impl DataCommand<'_> {
             .build()?;
         let base_req = client
             .post(format!("{}/checkv2", rspamd_config.address))
-            .body(data.clone())
+            .body(data.to_string())
             .header("From", sender);
         let req = if let Some(username) = username {
             base_req.header("User", username)

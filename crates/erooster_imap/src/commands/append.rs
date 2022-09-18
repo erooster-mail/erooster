@@ -145,6 +145,8 @@ impl Append<'_> {
                         .join(username)
                         .join(folder.clone());
                     debug!("[Append] Mailbox path: {:?}", mailbox_path);
+                    // TODO verify that we need this
+                    buffer.truncate(buffer.len() - 2);
                     let message_id = storage
                         .store_cur_with_flags(
                             &mailbox_path,

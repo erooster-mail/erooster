@@ -259,7 +259,6 @@ where
         &email.dkim_key_path,
         &email.dkim_key_selector,
     )?;
-    ///////////////////////////////////
     lines_sender.send(signed_body).await?;
     lines_sender.send(String::from(".")).await?;
     debug!(

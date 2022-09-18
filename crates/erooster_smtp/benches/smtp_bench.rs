@@ -13,11 +13,13 @@ use tokio_util::codec::Framed;
 use tracing::{error, info};
 
 // Warning: This seems to fail on windows but works on linux fine
-async fn login() {
+async fn receive_message() {
     let stream = TcpStream::connect("127.0.0.1:25").await.unwrap();
 
     let stream_codec = Framed::new(stream, LinesCodec::new());
     let (mut sender, mut reader) = stream_codec.split();
+
+    // Send EHLO
     sender.send(String::from("EHLO localhost")).await.unwrap();
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("220 localhost ESMTP Erooster"));
@@ -29,7 +31,10 @@ async fn login() {
     assert_eq!(resp, String::from("250-STARTTLS"));
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("250 SMTPUTF8"));
+
+    // Login to SMTP server (not needed here)
     // TODO we need to make sure to do tls here.
+    /*
     sender.send(String::from("AUTH LOGIN")).await.unwrap();
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("334 VXNlcm5hbWU6"));
@@ -42,6 +47,39 @@ async fn login() {
     sender.send(String::from("dGVzdA==")).await.unwrap();
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("235 ok"));
+     */
+
+    // Set FROM envelope address
+    sender
+        .send(String::from("MAIL FROM:<test@remote>"))
+        .await
+        .unwrap();
+    let resp = reader.next().await.unwrap().unwrap();
+    assert_eq!(resp, String::from("250 OK"));
+
+    // Set TO envelope address
+    sender
+        .send(String::from("RCPT TO:<test@localhost>"))
+        .await
+        .unwrap();
+    let resp = reader.next().await.unwrap().unwrap();
+    assert_eq!(resp, String::from("250 OK"));
+
+    // Announce that we want to send some DATA
+    sender.send(String::from("DATA")).await.unwrap();
+    let resp = reader.next().await.unwrap().unwrap();
+    assert_eq!(
+        resp,
+        String::from("354 Start mail input; end with <CRLF>.<CRLF>")
+    );
+
+    // Send data and terminate with a <CRLF>.<CRLF>
+    sender.send(String::from("12345\r\n.")).await.unwrap();
+    let resp = reader.next().await.unwrap().unwrap();
+    assert_eq!(resp, String::from("250 OK"));
+
+    // QUIT the connection
+    sender.send(String::from("QUIT")).await.unwrap();
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
@@ -98,12 +136,12 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     });
     thread::sleep(Duration::from_millis(5000));
 
-    c.bench_function("login", |b| {
+    c.bench_function("receive_message", |b| {
         let rt = runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
             .unwrap();
-        b.to_async(rt).iter(login);
+        b.to_async(rt).iter(receive_message);
     });
 }
 

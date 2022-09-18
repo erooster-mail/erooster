@@ -37,7 +37,7 @@ impl Fetch<'_> {
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
-        let offset = if is_uid { 1 } else { 0 };
+        let offset = usize::from(is_uid);
         // TODO handle the various request types defined in https://www.rfc-editor.org/rfc/rfc9051.html#name-fetch-command
         if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
             let folder = folder.replace('/', ".");

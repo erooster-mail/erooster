@@ -15,7 +15,7 @@ use erooster_core::{
     config::{Config, Rspamd},
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
-use std::{collections::HashMap, path::Path, sync::Arc, time::Duration};
+use std::{collections::BTreeMap, path::Path, sync::Arc, time::Duration};
 use time::{macros::format_description, OffsetDateTime};
 use tracing::{debug, instrument};
 
@@ -83,10 +83,10 @@ impl DataCommand<'_> {
                         color_eyre::eyre::bail!("No data")
                     };
                     for address in receipts {
-                        let mut to = HashMap::new();
+                        let mut to: BTreeMap<String, Vec<String>> = BTreeMap::new();
                         let domain = address.split('@').collect::<Vec<&str>>()[1];
                         to.entry(domain.to_string())
-                            .or_insert(Vec::new())
+                            .or_default()
                             .push(address.clone());
                         let data = format!(
                             "Received: from {} ({} [{}])\r\n	by {} (Erooster) with ESMTPS\r\n	id 00000001\r\n	(envelope-from <{}>)\r\n	for <{}>; {}\r\n{}",

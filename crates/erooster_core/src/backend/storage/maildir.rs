@@ -132,7 +132,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let maildir_flags = imap_flags
             .iter()
             .filter_map(|flag| {
-                let normalized_flag = flag.to_lowercase().replace('(', "").replace(')', "");
+                let normalized_flag = flag.to_lowercase().replace(['(', ')'], "");
                 if normalized_flag == "\\seen" {
                     Some("S")
                 } else if normalized_flag == "\\deleted" {
@@ -302,7 +302,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let maildir_flags = imap_flags
             .iter()
             .filter_map(|flag| {
-                let normalized_flag = flag.to_lowercase().replace('(', "").replace(')', "");
+                let normalized_flag = flag.to_lowercase().replace(['(', ')'], "");
                 if normalized_flag == "\\seen" {
                     Some("S")
                 } else if normalized_flag == "\\deleted" {
@@ -334,7 +334,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let maildir_flags = imap_flags
             .iter()
             .filter_map(|flag| {
-                let normalized_flag = flag.to_lowercase().replace('(', "").replace(')', "");
+                let normalized_flag = flag.to_lowercase().replace(['(', ')'], "");
                 if normalized_flag == "\\seen" {
                     Some("S")
                 } else if normalized_flag == "\\deleted" {
@@ -367,7 +367,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let maildir_flags = imap_flags
             .iter()
             .filter_map(|flag| {
-                let normalized_flag = flag.to_lowercase().replace('(', "").replace(')', "");
+                let normalized_flag = flag.to_lowercase().replace(['(', ')'], "");
                 if normalized_flag == "\\seen" {
                     Some("S")
                 } else if normalized_flag == "\\deleted" {
@@ -399,7 +399,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let maildir_flags = imap_flags
             .iter()
             .filter_map(|flag| {
-                let normalized_flag = flag.to_lowercase().replace('(', "").replace(')', "");
+                let normalized_flag = flag.to_lowercase().replace(['(', ')'], "");
                 if normalized_flag == "\\seen" {
                     Some("S")
                 } else if normalized_flag == "\\deleted" {

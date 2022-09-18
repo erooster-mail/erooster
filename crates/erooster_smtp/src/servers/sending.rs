@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use simdutf8::compat::from_utf8;
 use sqlxmq::{job, CurrentJob};
 use std::{
-    collections::HashMap, error::Error, io, net::IpAddr, path::Path, sync::Arc, time::Duration,
+    collections::BTreeMap, error::Error, io, net::IpAddr, path::Path, sync::Arc, time::Duration,
 };
 use tokio::{net::TcpStream, time::timeout};
 use tokio_rustls::TlsConnector;
@@ -19,7 +19,7 @@ use trust_dns_resolver::TokioAsyncResolver;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EmailPayload {
     // Map to addresses by domain
-    pub to: HashMap<String, Vec<String>>,
+    pub to: BTreeMap<String, Vec<String>>,
     pub from: String,
     pub body: String,
     pub sender_domain: String,

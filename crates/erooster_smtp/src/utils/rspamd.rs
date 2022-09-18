@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +8,7 @@ pub struct Response {
     pub score: f64,
     pub required_score: f64,
     pub action: Action,
-    pub symbols: HashMap<String, Symbol>,
+    pub symbols: BTreeMap<String, Symbol>,
     pub subject: Option<String>,
     pub urls: Option<Vec<String>>,
     pub emails: Option<Vec<String>>,

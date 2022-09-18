@@ -23,7 +23,7 @@ impl Store<'_> {
     where
         S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
     {
-        let offset = if uid { 1 } else { 0 };
+        let offset = usize::from(uid);
         let arguments = &command_data.arguments;
         assert!(arguments.len() >= 2 + offset);
         if arguments.len() >= 2 + offset {
@@ -193,7 +193,7 @@ impl Store<'_> {
                             .iter()
                             .copied()
                             .filter_map(|x| {
-                                let x = x.replace('(', "").replace(')', "");
+                                let x = x.replace(['(', ')'], "");
                                 (!flags.contains(&x.as_str())).then_some(x)
                             })
                             .collect::<Vec<_>>();

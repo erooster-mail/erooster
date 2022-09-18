@@ -250,7 +250,7 @@ async fn register(username: Option<String>, password: Option<SecretString>, conf
             .read_line(&mut username)
             .expect("Couldn't read line");
         // We remove the newline
-        username = username.replace('\n', "").replace('\r', "");
+        username = username.replace(['\n', '\r'], "");
 
         // TODO input validation
 
@@ -358,7 +358,7 @@ async fn change_password(
             .read_line(&mut username)
             .expect("Couldn't read line");
         // We remove the newline
-        username = username.replace('\n', "").replace('\r', "");
+        username = username.replace(['\n', '\r'], "");
 
         // TODO input validation
 

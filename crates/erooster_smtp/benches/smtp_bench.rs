@@ -85,6 +85,7 @@ async fn receive_message() {
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     //tracing_subscriber::fmt::init();
+    let mut group = c.benchmark_group("high_sample_count");
 
     let rt = runtime::Builder::new_multi_thread()
         .enable_all()
@@ -137,13 +138,15 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     });
     thread::sleep(Duration::from_millis(5000));
 
-    c.bench_function("receive_message", |b| {
+    group.significance_level(0.05).sample_size(10000);
+    group.bench_function("receive_message", |b| {
         let rt = runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
             .unwrap();
         b.to_async(rt).iter(receive_message);
     });
+    group.finish();
 }
 
 criterion_group!(benches, criterion_benchmark);

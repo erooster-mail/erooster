@@ -74,7 +74,8 @@ async fn receive_message() {
     );
 
     // Send data and terminate with a <CRLF>.<CRLF>
-    sender.send(String::from("12345\r\n.")).await.unwrap();
+    let email = include_str!("example_mail.txt");
+    sender.send(format!("{}\r\n.", email)).await.unwrap();
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("250 OK"));
 

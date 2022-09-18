@@ -1,0 +1,56 @@
+Received: from localhost (localhost [127.0.0.1])
+        by redacted.redacted.de (Postfix) with ESMTP id 6CDDD2196229
+        for <test@localhost>; Sun, 29 May 2022 18:24:49 +0200 (CEST)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=redacted.de; h=
+        subject:subject:from:from:content-language:user-agent
+        :mime-version:date:date:message-id:content-type:content-type; s=
+        default; t=1653841463; x=1655655864; bh=p535ltNdjejYRAaPNZKcqnlx
+        GhN9bu+nJmPB4GaglUM=; b=GRGXBvqhHAgpFBmf/USqVsoA8Qu3hohf5E10HCgz
+        +iW0cDgPApV9J6PC3kF2wQjbZdTuZDtRsVcP3BevmIKbsBAL/gT43XPLSKwQaKjE
+        Adm9XjUi5kvoBFHggXsqLKzONBjKeTs9RL01ipC9bUW/foVlm8l1mnhaxLev73r+
+        blQ=
+X-Virus-Scanned: Debian amavisd-new at redacted.redacted.de
+Received: from redacted.redacted.de ([127.0.0.1])
+        by localhost (redacted.redacted.de [127.0.0.1]) (amavisd-new, port 10026)
+        with LMTP id AoapQnWn5g8o for <test@localhost>;
+        Sun, 29 May 2022 18:24:23 +0200 (CEST)
+Received: from [redacted] (unknown [redacted])
+        (Authenticated sender: marcel@redacted.de)
+        by redacted.redacted.de (Postfix) with ESMTPSA id 036A92196069
+        for <test@localhost>; Sun, 29 May 2022 18:24:22 +0200 (CEST)
+Content-Type: multipart/alternative;
+ boundary="------------04sYZAark5NaRzFVkJd1ENy0"
+Message-ID: <357d047f-02a5-e2f5-a8ca-a2b9e60cfd5e@redacted.de>
+Date: Sun, 29 May 2022 18:24:15 +0200
+MIME-Version: 1.0
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101
+ Thunderbird/91.9.1
+Content-Language: de-DE
+To: test@localhost
+From: Marcel redacted <redacted@redacted.de>
+Subject: test
+
+This is a multi-part message in MIME format.
+--------------04sYZAark5NaRzFVkJd1ENy0
+Content-Type: text/plain; charset=UTF-8; format=flowed
+Content-Transfer-Encoding: 7bit
+
+test
+
+--------------04sYZAark5NaRzFVkJd1ENy0
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+<html data-lt-installed="true">
+  <head>
+
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  </head>
+  <body>
+    <p>test<br>
+    </p>
+  </body>
+  <lt-container></lt-container>
+</html>
+
+--------------04sYZAark5NaRzFVkJd1ENy0--

@@ -10,7 +10,7 @@ impl Quit {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        lines.send(String::from("221 OK")).await?;
+        lines.send(String::from("221 2.0.0 Goodbye")).await?;
         Ok(())
     }
 }

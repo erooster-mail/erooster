@@ -17,6 +17,7 @@ impl Rcpt<'_> {
         &self,
         lines: &mut S,
         database: DB,
+        hostname: &str,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -38,8 +39,24 @@ impl Rcpt<'_> {
             let mut write_lock = self.data.con_state.write().await;
             if matches!(&write_lock.state, State::NotAuthenticated) {
                 for receipt in &receipts {
+                    if !receipt.contains(hostname) {
+                        lines
+                            .feed(String::from(
+                                "551-5.7.1 Forwarding to remote hosts disabled",
+                            ))
+                            .await?;
+                        lines
+                            .feed(String::from(
+                                "551 5.7.1 Select another host to act as your forwarder",
+                            ))
+                            .await?;
+                        lines.flush().await?;
+                        return Ok(());
+                    }
                     if !database.user_exists(&receipt.to_lowercase()).await {
-                        lines.send(String::from("550 No such user here")).await?;
+                        lines
+                            .send(format!("550 5.1.1 Mailbox \"{}\" does not exist", receipt))
+                            .await?;
                         return Ok(());
                     }
                 }
@@ -48,7 +65,12 @@ impl Rcpt<'_> {
             write_lock.receipts = Some(receipts);
         };
 
-        lines.send(String::from("250 OK")).await?;
+        lines
+            .send(format!(
+                "250  2.1.5 Recipient {} OK",
+                command_data.arguments[0]
+            ))
+            .await?;
         Ok(())
     }
 }

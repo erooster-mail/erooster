@@ -135,7 +135,9 @@ impl DataCommand<'_> {
                         debug!("Email added to queue");
                     }
 
-                    lines.send(String::from("250 OK")).await?;
+                    lines
+                        .send(String::from("250 2.6.0 Message accepted"))
+                        .await?;
 
                     State::Authenticated(username.clone())
                 } else if let State::ReceivingData((None, data)) = &write_lock.state {
@@ -178,11 +180,15 @@ impl DataCommand<'_> {
                         debug!("Stored message: {}", message_id);
                     }
                     // TODO cleanup after we are done
-                    lines.send(String::from("250 OK")).await?;
+                    lines
+                        .send(String::from("250 2.6.0 Message accepted"))
+                        .await?;
                     State::NotAuthenticated
                 } else {
                     write_lock.state = State::NotAuthenticated;
-                    lines.send(String::from("250 OK")).await?;
+                    lines
+                        .send(String::from("250 2.6.0 Message accepted"))
+                        .await?;
                     color_eyre::eyre::bail!("Invalid state");
                 };
             } else if let State::ReceivingData((_, data)) = &mut write_lock.state {

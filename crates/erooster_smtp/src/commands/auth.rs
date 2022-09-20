@@ -30,7 +30,7 @@ impl Auth<'_> {
         if secure {
             if command_data.arguments.is_empty() {
                 lines
-                    .send(String::from("504 Unrecognized authentication type."))
+                    .send(String::from("454 4.7.0 Temporary authentication failure"))
                     .await?;
                 return Ok(());
             }
@@ -53,13 +53,13 @@ impl Auth<'_> {
                 }
             } else {
                 lines
-                    .send(String::from("504 Unrecognized authentication type."))
+                    .send(String::from("535 4.7.8 Authentication credentials invalid"))
                     .await?;
             }
         } else {
             lines
                 .send(String::from(
-                    "538 Encryption required for requested authentication mechanism",
+                    "538 5.7.11 Encryption required for requested authentication mechanism",
                 ))
                 .await?;
         }
@@ -84,7 +84,9 @@ impl Auth<'_> {
             }
             Err(_) => {
                 lines
-                    .send(String::from("501 Syntax error in parameters or arguments"))
+                    .send(String::from(
+                        "535 5.7.8 Authentication credentials invalid",
+                    ))
                     .await?;
             }
         }
@@ -145,11 +147,13 @@ impl Auth<'_> {
                                 debug!("[SMTP] User authenticated");
                             };
 
-                            lines.send(String::from("235 ok")).await?;
+                            lines
+                                .send(String::from("235 2.7.0 Authentication Succeeded"))
+                                .await?;
                         } else {
                             lines
                                 .send(String::from(
-                                    "530 5.7.0 Encryption required for requested authentication mechanism",
+                                    "538 5.7.11 Encryption required for requested authentication mechanism",
                                 ))
                                 .await?;
                         }
@@ -166,7 +170,7 @@ impl Auth<'_> {
                         write_lock.state = State::NotAuthenticated;
                     };
                     lines
-                        .send(String::from("503 Bad sequence of commands"))
+                        .send(String::from("432 4.7.12 A password transition is needed"))
                         .await?;
                 }
             }
@@ -176,7 +180,7 @@ impl Auth<'_> {
                 };
                 error!("Error logging in: {}", e);
                 lines
-                    .send(String::from("503 Bad sequence of commands"))
+                    .send(String::from("432 4.7.12 A password transition is needed"))
                     .await?;
             }
         }
@@ -225,7 +229,7 @@ impl Auth<'_> {
                     } else {
                         write_lock.state = State::NotAuthenticated;
                         lines
-                            .send(String::from("503 Bad sequence of commands"))
+                            .send(String::from("432 4.7.12 A password transition is needed"))
                             .await?;
                         return Ok(());
                     }
@@ -234,11 +238,13 @@ impl Auth<'_> {
                         write_lock.state = State::Authenticated(username.to_string());
                     }
                 };
-                lines.send(String::from("235 ok")).await?;
+                lines
+                    .send(String::from("235 2.7.0  Authentication Succeeded"))
+                    .await?;
             }
             Err(_) => {
                 lines
-                    .send(String::from("501 Syntax error in parameters or arguments"))
+                    .send(String::from("454 4.7.0 Temporary authentication failure"))
                     .await?;
             }
         }

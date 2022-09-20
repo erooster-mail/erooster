@@ -29,7 +29,12 @@ impl Mail<'_> {
                     let mut write_lock = self.data.con_state.write().await;
                     write_lock.sender = Some(senders[0].clone());
                 };
-                lines.send(String::from("250 OK")).await?;
+                lines
+                    .send(format!(
+                        "250 2.1.0 Originator {} OK",
+                        command_data.arguments[0]
+                    ))
+                    .await?;
             }
             Err(e) => {
                 error!("Failed to parse localpart arguments: {:?}", e);

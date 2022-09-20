@@ -208,7 +208,7 @@ impl Data {
                     }
                     Commands::EHLO => {
                         Ehlo { data: self }
-                            .exec(config.mail.hostname.clone(), lines, &command_data)
+                            .exec(&config.mail.hostname, lines, &command_data)
                             .await?;
                     }
                     Commands::QUIT => {
@@ -221,7 +221,7 @@ impl Data {
                     }
                     Commands::RCPTTO => {
                         Rcpt { data: self }
-                            .exec(lines, database, &command_data)
+                            .exec(lines, database, &config.mail.hostname, &command_data)
                             .await?;
                     }
                     Commands::DATA => {

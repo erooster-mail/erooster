@@ -12,7 +12,7 @@ impl Ehlo<'_> {
     #[instrument(skip(self, hostname, lines, command_data))]
     pub async fn exec<S, E>(
         &self,
-        hostname: String,
+        hostname: &str,
         lines: &mut S,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>

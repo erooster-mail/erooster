@@ -1,6 +1,6 @@
 use crate::{
     commands::Data,
-    state::{Connection, State},
+    servers::state::{Connection, State},
     Server, CAPABILITY_HELLO,
 };
 use async_trait::async_trait;

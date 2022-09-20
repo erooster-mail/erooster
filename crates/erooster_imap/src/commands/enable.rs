@@ -1,6 +1,6 @@
 use crate::{
     commands::{CommandData, Data},
-    state::Capabilities,
+    servers::state::Capabilities,
 };
 use futures::{channel::mpsc::SendError, Sink, SinkExt};
 use tracing::instrument;

@@ -1,6 +1,6 @@
 use crate::{
     commands::{CommandData, Data},
-    state::{Access, State},
+    servers::state::{Access, State},
 };
 use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailStorage, Storage};

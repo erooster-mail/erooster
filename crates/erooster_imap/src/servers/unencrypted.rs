@@ -1,4 +1,4 @@
-use crate::{commands::Data, state::Connection, Server, CAPABILITY_HELLO};
+use crate::{commands::Data, servers::state::Connection, Server, CAPABILITY_HELLO};
 use async_trait::async_trait;
 use erooster_core::{
     backend::{database::DB, storage::Storage},

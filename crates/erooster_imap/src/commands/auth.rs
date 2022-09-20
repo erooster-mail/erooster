@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::{
     commands::{CommandData, Data},
-    state::State,
+    servers::state::State,
 };
 use erooster_core::backend::database::{Database, DB};
 use futures::{channel::mpsc::SendError, Sink, SinkExt};

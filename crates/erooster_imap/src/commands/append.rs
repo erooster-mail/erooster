@@ -1,6 +1,6 @@
 use crate::{
     commands::{parsers::append_arguments, CommandData, Data},
-    state::{AppendingState, State},
+    servers::state::{AppendingState, State},
 };
 use color_eyre::eyre::ContextCompat;
 use erooster_core::{

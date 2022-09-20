@@ -49,9 +49,7 @@ use tokio::sync::broadcast;
 use tracing::instrument;
 
 pub(crate) mod commands;
-pub(crate) mod encrypted;
-pub(crate) mod state;
-pub(crate) mod unencrypted;
+pub(crate) mod servers;
 
 /// A const variant of the Capabilities we welcome clients with
 pub const CAPABILITY_HELLO: &str = formatcp!(
@@ -108,7 +106,7 @@ pub fn start(
     let storage_clone = Arc::clone(&storage);
     let tx_clone2 = tx_clone.clone();
     tokio::spawn(async move {
-        if let Err(e) = unencrypted::Unencrypted::run(
+        if let Err(e) = servers::unencrypted::Unencrypted::run(
             Arc::clone(&config_clone),
             Arc::clone(&db_clone),
             Arc::clone(&storage_clone),
@@ -120,7 +118,7 @@ pub fn start(
         }
     });
     tokio::spawn(async move {
-        if let Err(e) = encrypted::Encrypted::run(
+        if let Err(e) = servers::encrypted::Encrypted::run(
             Arc::clone(&config),
             Arc::clone(&database),
             Arc::clone(&storage),

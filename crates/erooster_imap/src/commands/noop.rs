@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     commands::{CommandData, Data},
-    state::State,
+    servers::state::State,
 };
 use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailEntryType, MailStorage, Storage};

@@ -1,8 +1,4 @@
-use crate::{
-    commands::Data,
-    servers::state::{Connection, State},
-    Server, CAPABILITY_HELLO,
-};
+use crate::{commands::Data, servers::state::Connection, Server, CAPABILITY_HELLO};
 use async_trait::async_trait;
 use erooster_core::{
     backend::{database::DB, storage::Storage},
@@ -10,12 +6,7 @@ use erooster_core::{
     line_codec::LinesCodec,
     LINE_LIMIT,
 };
-use futures::SinkExt;
-use futures::{
-    channel::mpsc::{self, UnboundedSender},
-    StreamExt,
-};
-use notify::Event;
+use futures::{SinkExt, StreamExt};
 use std::{
     fs::{self},
     io::{self, BufReader},
@@ -23,10 +14,7 @@ use std::{
     path::Path,
     sync::Arc,
 };
-use tokio::{
-    net::TcpListener,
-    sync::{broadcast, RwLock},
-};
+use tokio::net::TcpListener;
 use tokio_rustls::{
     rustls::{self, Certificate, PrivateKey},
     TlsAcceptor,
@@ -81,12 +69,11 @@ impl Server for Encrypted {
     ///
     /// Returns an error if the cert setup fails
     #[allow(clippy::too_many_lines)]
-    #[instrument(skip(config, database, storage, file_watcher))]
+    #[instrument(skip(config, database, storage))]
     async fn run(
         config: Arc<Config>,
         database: DB,
         storage: Arc<Storage>,
-        file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()> {
         // Load SSL Keys
         let certs = Encrypted::load_certs(Path::new(&config.tls.cert_path))?;
@@ -121,7 +108,6 @@ impl Server for Encrypted {
             let config = Arc::clone(&config);
             let database = Arc::clone(&database);
             let storage = Arc::clone(&storage);
-            let file_watcher = file_watcher.clone();
             let acceptor = acceptor.clone();
             tokio::spawn(async move {
                 listen(
@@ -129,7 +115,6 @@ impl Server for Encrypted {
                     Arc::clone(&config),
                     Arc::clone(&database),
                     Arc::clone(&storage),
-                    file_watcher.clone(),
                     acceptor.clone(),
                 )
                 .await;
@@ -140,17 +125,14 @@ impl Server for Encrypted {
     }
 }
 
-#[instrument(skip(stream, config, database, storage, file_watcher, acceptor))]
+#[instrument(skip(stream, config, database, storage, acceptor))]
 async fn listen(
     mut stream: TcpListenerStream,
     config: Arc<Config>,
     database: DB,
     storage: Arc<Storage>,
-    file_watcher: broadcast::Sender<Event>,
     acceptor: TlsAcceptor,
 ) {
-    // This clone is needed but as it is an arc it is "cheap"
-    let file_watcher = file_watcher.clone();
     // Looks for new peers
     while let Some(Ok(tcp_stream)) = stream.next().await {
         debug!("[IMAP] Got new TLS peer: {:?}", tcp_stream.peer_addr());
@@ -160,7 +142,6 @@ async fn listen(
         let config = Arc::clone(&config);
         let database = Arc::clone(&database);
         let storage = Arc::clone(&storage);
-        let file_watcher = file_watcher.clone();
 
         // Start talking with new peer on new thread
         let acceptor = acceptor.clone();
@@ -189,31 +170,6 @@ async fn listen(
                     // Create our Connection
                     let connection = Connection::new(true);
 
-                    // Prepare our custom return path
-                    let (mut tx, mut rx) = mpsc::unbounded();
-                    let cloned_tx = tx.clone();
-                    let sender = tokio::spawn(async move {
-                        while let Some(res) = rx.next().await {
-                            if let Err(error) = lines_sender.send(res).await {
-                                error!("[IMAP] Error sending response to client: {:?}", error);
-                                break;
-                            }
-                        }
-                    });
-                    // Connection needed for the file watcher
-                    let cloned_connection = Arc::clone(&connection);
-
-                    // Start listening to file changes for this session
-                    let mut file_watcher_subscriber = file_watcher.subscribe();
-
-                    // Listen to file changes on another thread
-                    tokio::spawn(async move {
-                        while let Ok(res) = file_watcher_subscriber.recv().await {
-                            check_changes(cloned_tx.clone(), Arc::clone(&cloned_connection), res)
-                                .await;
-                        }
-                    });
-
                     // Read lines from the stream
                     while let Some(Ok(line)) = lines_reader.next().await {
                         let data = Data {
@@ -225,7 +181,7 @@ async fn listen(
                         {
                             let close = data
                                 .parse(
-                                    &mut tx,
+                                    &mut lines_sender,
                                     Arc::clone(&config),
                                     Arc::clone(&database),
                                     Arc::clone(&storage),
@@ -243,7 +199,7 @@ async fn listen(
                                 }
                                 // We try a last time to do a graceful shutdown before closing
                                 Err(e) => {
-                                    if let Err(e) = tx
+                                    if let Err(e) = lines_sender
                                         .send(format!(
                                             "* BAD [SERVERBUG] This should not happen: {}",
                                             e
@@ -254,7 +210,6 @@ async fn listen(
                                     }
                                     error!("[IMAP] Failure happened: {}", e);
                                     debug!("[IMAP] Closing TLS connection");
-                                    sender.abort();
                                     break;
                                 }
                             }
@@ -264,16 +219,5 @@ async fn listen(
                 Err(e) => error!("[IMAP] Got error while accepting TLS: {}", e),
             }
         });
-    }
-}
-
-async fn check_changes(
-    _lines: UnboundedSender<String>,
-    state: Arc<RwLock<Connection>>,
-    event: Event,
-) {
-    let state = { &state.read().await.state };
-    if matches!(state, State::Authenticated) || matches!(state, State::Selected(_, _)) {
-        println!("{:?}", event);
     }
 }

@@ -6,10 +6,9 @@ use erooster_core::{
     line_codec::LinesCodec,
     LINE_LIMIT,
 };
-use futures::{channel::mpsc, SinkExt, StreamExt};
-use notify::Event;
+use futures::{SinkExt, StreamExt};
 use std::{net::SocketAddr, sync::Arc};
-use tokio::{net::TcpListener, sync::broadcast};
+use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, info, instrument};
@@ -19,12 +18,11 @@ pub struct Unencrypted;
 
 #[async_trait]
 impl Server for Unencrypted {
-    #[instrument(skip(config, database, storage, file_watcher))]
+    #[instrument(skip(config, database, storage))]
     async fn run(
         config: Arc<Config>,
         database: DB,
         storage: Arc<Storage>,
-        file_watcher: broadcast::Sender<Event>,
     ) -> color_eyre::eyre::Result<()> {
         let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
@@ -44,14 +42,12 @@ impl Server for Unencrypted {
             let config = Arc::clone(&config);
             let database = Arc::clone(&database);
             let storage = Arc::clone(&storage);
-            let file_watcher = file_watcher.clone();
             tokio::spawn(async move {
                 listen(
                     stream,
                     Arc::clone(&config),
                     Arc::clone(&database),
                     Arc::clone(&storage),
-                    file_watcher.clone(),
                 )
                 .await;
             });
@@ -60,13 +56,12 @@ impl Server for Unencrypted {
     }
 }
 
-#[instrument(skip(stream, config, database, storage, _file_watcher))]
+#[instrument(skip(stream, config, database, storage))]
 async fn listen(
     mut stream: TcpListenerStream,
     config: Arc<Config>,
     database: DB,
     storage: Arc<Storage>,
-    mut _file_watcher: broadcast::Sender<Event>,
 ) {
     while let Some(Ok(tcp_stream)) = stream.next().await {
         let peer = tcp_stream.peer_addr().expect("peer addr to exist");
@@ -87,15 +82,6 @@ async fn listen(
             }
             let state = Connection::new(false);
 
-            let (mut tx, mut rx) = mpsc::unbounded();
-            let sender = tokio::spawn(async move {
-                while let Some(res) = rx.next().await {
-                    if let Err(error) = lines_sender.send(res).await {
-                        error!("[IMAP] Error sending response to client: {:?}", error);
-                        break;
-                    }
-                }
-            });
             while let Some(Ok(line)) = lines_reader.next().await {
                 let data = Data {
                     con_state: Arc::clone(&state),
@@ -107,7 +93,7 @@ async fn listen(
                 // TODO pass lines and make it possible to not need new lines in responds but instead directly use `lines.send`
                 let response = data
                     .parse(
-                        &mut tx,
+                        &mut lines_sender,
                         Arc::clone(&config),
                         Arc::clone(&database),
                         Arc::clone(&storage),
@@ -126,7 +112,7 @@ async fn listen(
                     }
                     // We try a last time to do a graceful shutdown before closing
                     Err(e) => {
-                        if let Err(e) = tx
+                        if let Err(e) = lines_sender
                             .send(format!("* BAD [SERVERBUG] This should not happen: {}", e))
                             .await
                         {
@@ -134,7 +120,6 @@ async fn listen(
                         }
                         error!("[IMAP] Failure happened: {}", e);
                         debug!("[IMAP] Closing connection");
-                        sender.abort();
                         break;
                     }
                 }

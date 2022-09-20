@@ -15,7 +15,7 @@ use color_eyre::{
 use erooster_core::backend::storage::{
     maildir::MaildirMailEntry, MailEntry, MailEntryType, MailStorage, Storage,
 };
-use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use futures::{Sink, SinkExt};
 use nom::{error::convert_error, Finish};
 use std::sync::Arc;
 use tracing::{debug, error, instrument};
@@ -27,7 +27,7 @@ pub struct Fetch<'a> {
 impl Fetch<'_> {
     #[allow(clippy::too_many_lines)]
     #[instrument(skip(self, lines, command_data, storage))]
-    pub async fn exec<S>(
+    pub async fn exec<S, E>(
         &self,
         lines: &mut S,
         command_data: &CommandData<'_>,
@@ -35,7 +35,8 @@ impl Fetch<'_> {
         is_uid: bool,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         let offset = usize::from(is_uid);
         // TODO handle the various request types defined in https://www.rfc-editor.org/rfc/rfc9051.html#name-fetch-command

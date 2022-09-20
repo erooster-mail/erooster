@@ -1,18 +1,19 @@
 use crate::commands::CommandData;
-use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use futures::{Sink, SinkExt};
 use tracing::instrument;
 
 pub struct Capability;
 
 impl Capability {
     #[instrument(skip(self, lines, command_data))]
-    pub async fn exec<S>(
+    pub async fn exec<S, E>(
         &self,
         lines: &mut S,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         let capabilities = get_capabilities();
         lines.feed(format!("* {}", capabilities)).await?;

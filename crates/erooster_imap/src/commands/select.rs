@@ -4,7 +4,7 @@ use crate::{
 };
 use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailStorage, Storage};
-use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use futures::{Sink, SinkExt};
 use std::{
     path::PathBuf,
     sync::Arc,
@@ -17,7 +17,7 @@ pub struct Select<'a> {
 }
 
 #[instrument(skip(data, lines, storage, rw, command_data))]
-async fn select<S>(
+async fn select<S, E>(
     data: &Data,
     lines: &mut S,
     storage: Arc<Storage>,
@@ -25,7 +25,8 @@ async fn select<S>(
     command_data: &CommandData<'_>,
 ) -> color_eyre::eyre::Result<()>
 where
-    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+    E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+    S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
 {
     let args = &command_data.arguments;
     let mut write_lock = data.con_state.write().await;
@@ -61,7 +62,7 @@ where
 }
 
 #[instrument(skip(lines, folder, storage, mailbox_path, rw, command_data))]
-async fn send_success<S>(
+async fn send_success<S, E>(
     lines: &mut S,
     folder: String,
     storage: Arc<Storage>,
@@ -70,7 +71,8 @@ async fn send_success<S>(
     command_data: &CommandData<'_>,
 ) -> color_eyre::eyre::Result<()>
 where
-    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+    E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+    S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
 {
     let count = storage.count_cur(&mailbox_path) + storage.count_new(&mailbox_path);
     lines.feed(format!("* {} EXISTS", count)).await?;
@@ -135,14 +137,15 @@ where
 
 impl Select<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
-    pub async fn exec<S>(
+    pub async fn exec<S, E>(
         &self,
         lines: &mut S,
         storage: Arc<Storage>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         if matches!(self.data.con_state.read().await.state, State::Authenticated)
             || matches!(
@@ -166,14 +169,15 @@ pub struct Examine<'a> {
 
 impl Examine<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
-    pub async fn exec<S>(
+    pub async fn exec<S, E>(
         &self,
         lines: &mut S,
         storage: Arc<Storage>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         if matches!(self.data.con_state.read().await.state, State::Authenticated)
             || matches!(

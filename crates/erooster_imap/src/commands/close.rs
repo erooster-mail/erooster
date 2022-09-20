@@ -4,7 +4,7 @@ use crate::{
 };
 use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailEntry, MailStorage, Storage};
-use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use futures::{Sink, SinkExt};
 use std::sync::Arc;
 use tokio::fs;
 use tracing::{debug, instrument};
@@ -15,14 +15,15 @@ pub struct Close<'a> {
 
 impl Close<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
-    pub async fn exec<S>(
+    pub async fn exec<S, E>(
         &self,
         lines: &mut S,
         storage: Arc<Storage>,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         let mut write_lock = self.data.con_state.write().await;
 
@@ -77,7 +78,7 @@ impl Close<'_> {
 mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};
-    use crate::state::{Access, Connection};
+    use crate::servers::state::{Access, Connection};
     use futures::{channel::mpsc, StreamExt};
     use std::sync::Arc;
     use tokio::sync::RwLock;

@@ -7,13 +7,13 @@ use erooster_core::{
     backend::storage::{MailStorage, Storage},
     config::Config,
 };
-use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use futures::{Sink, SinkExt};
 use std::{path::Path, sync::Arc};
 use tracing::{debug, instrument};
 
 #[allow(clippy::too_many_lines)]
 #[instrument(skip(data, lines, config, storage, command_data))]
-pub async fn basic<S>(
+pub async fn basic<S, E>(
     data: &Data,
     lines: &mut S,
     config: Arc<Config>,
@@ -21,7 +21,8 @@ pub async fn basic<S>(
     command_data: &CommandData<'_>,
 ) -> color_eyre::eyre::Result<()>
 where
-    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+    E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+    S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
 {
     if matches!(data.con_state.read().await.state, State::NotAuthenticated) {
         lines
@@ -233,13 +234,14 @@ impl List<'_> {
 
     // TODO setup
     #[instrument(skip(self, lines, command_data))]
-    pub async fn extended<S>(
+    pub async fn extended<S, E>(
         &self,
         lines: &mut S,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         debug!("extended");
         if self.data.con_state.read().await.state == State::NotAuthenticated {
@@ -267,7 +269,7 @@ impl List<'_> {
 
 impl List<'_> {
     #[instrument(skip(self, lines, config, storage, command_data))]
-    pub async fn exec<S>(
+    pub async fn exec<S, E>(
         &self,
         lines: &mut S,
         config: Arc<Config>,
@@ -275,7 +277,8 @@ impl List<'_> {
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         let arguments = &command_data.arguments;
         assert!(arguments.len() >= 2);
@@ -301,7 +304,7 @@ pub struct LSub<'a> {
 
 impl LSub<'_> {
     #[instrument(skip(self, lines, config, storage, command_data))]
-    pub async fn exec<S>(
+    pub async fn exec<S, E>(
         &self,
         lines: &mut S,
         config: Arc<Config>,
@@ -309,7 +312,8 @@ impl LSub<'_> {
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         let arguments = &command_data.arguments;
         assert!(arguments.len() == 2);

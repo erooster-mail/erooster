@@ -1,7 +1,7 @@
 use crate::commands::{CommandData, Data};
 use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailStorage, Storage};
-use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use futures::{Sink, SinkExt};
 use std::sync::Arc;
 use tokio::fs;
 use tracing::instrument;
@@ -12,14 +12,15 @@ pub struct Rename<'a> {
 
 impl Rename<'_> {
     #[instrument(skip(self, lines, command_data, storage))]
-    pub async fn exec<S>(
+    pub async fn exec<S, E>(
         &self,
         lines: &mut S,
         command_data: &CommandData<'_>,
         storage: Arc<Storage>,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         let args = &command_data.arguments;
         assert!(args.len() == 2);

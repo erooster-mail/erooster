@@ -5,7 +5,7 @@ use crate::{
     servers::state::State,
 };
 use erooster_core::backend::database::{Database, DB};
-use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use futures::{Sink, SinkExt};
 use secrecy::SecretString;
 use simdutf8::compat::from_utf8;
 use tracing::{debug, error, instrument};
@@ -22,14 +22,15 @@ pub struct Authenticate<'a> {
 
 impl Authenticate<'_> {
     #[instrument(skip(self, lines, database, command_data))]
-    pub async fn plain<S>(
+    pub async fn plain<S, E>(
         &self,
         lines: &mut S,
         database: DB,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         let bytes = base64::decode(self.auth_data.as_bytes());
         let mut write_lock = self.data.con_state.write().await;
@@ -114,14 +115,15 @@ impl Authenticate<'_> {
 
 impl Authenticate<'_> {
     #[instrument(skip(self, lines, database, command_data))]
-    pub async fn exec<S>(
+    pub async fn exec<S, E>(
         &self,
         lines: &mut S,
         database: DB,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         if self.data.con_state.read().await.state == State::NotAuthenticated {
             let args = &command_data.arguments;

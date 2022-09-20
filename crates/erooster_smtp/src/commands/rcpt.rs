@@ -4,7 +4,7 @@ use crate::{
 };
 use color_eyre::eyre::bail;
 use erooster_core::backend::database::{Database, DB};
-use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use futures::{Sink, SinkExt};
 use tracing::{info, instrument};
 
 pub struct Rcpt<'a> {
@@ -13,14 +13,15 @@ pub struct Rcpt<'a> {
 
 impl Rcpt<'_> {
     #[instrument(skip(self, lines, database, command_data))]
-    pub async fn exec<S>(
+    pub async fn exec<S, E>(
         &self,
         lines: &mut S,
         database: DB,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         info!("{:#?}", command_data.arguments);
         if command_data.arguments.is_empty() {

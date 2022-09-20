@@ -9,7 +9,7 @@ use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
 };
-use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use futures::{Sink, SinkExt};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while1},
@@ -142,7 +142,7 @@ impl Data {
 
     #[instrument(skip(self, lines, config, database, storage, line))]
     #[allow(clippy::too_many_lines)]
-    pub async fn parse<S>(
+    pub async fn parse<S, E>(
         &self,
         lines: &mut S,
         config: Arc<Config>,
@@ -151,7 +151,8 @@ impl Data {
         line: String,
     ) -> color_eyre::eyre::Result<Response>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         debug!("Current state: {:?}", self.con_state.read().await.state);
         debug!("Current request: {}", line);

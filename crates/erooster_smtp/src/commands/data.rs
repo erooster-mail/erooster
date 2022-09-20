@@ -14,7 +14,7 @@ use erooster_core::{
     },
     config::{Config, Rspamd},
 };
-use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use futures::{Sink, SinkExt};
 use simdutf8::compat::from_utf8;
 use std::io::Write;
 use std::{collections::BTreeMap, path::Path, sync::Arc, time::Duration};
@@ -28,9 +28,10 @@ pub struct DataCommand<'a> {
 
 impl DataCommand<'_> {
     #[instrument(skip(self, lines))]
-    pub async fn exec<S>(&self, lines: &mut S) -> color_eyre::eyre::Result<()>
+    pub async fn exec<S, E>(&self, lines: &mut S) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         debug!("Waiting for incoming data");
         {
@@ -49,7 +50,7 @@ impl DataCommand<'_> {
     }
 
     #[instrument(skip(self, config, lines, line, database, storage))]
-    pub async fn receive<S>(
+    pub async fn receive<S, E>(
         &self,
         config: Arc<Config>,
         lines: &mut S,
@@ -58,7 +59,8 @@ impl DataCommand<'_> {
         storage: Arc<Storage>,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         debug!("Reading incoming data");
 

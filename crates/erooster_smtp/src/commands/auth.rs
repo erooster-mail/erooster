@@ -5,7 +5,7 @@ use crate::{
     servers::state::{AuthState, State},
 };
 use erooster_core::backend::database::{Database, DB};
-use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use futures::{Sink, SinkExt};
 use secrecy::{ExposeSecret, SecretString, SecretVec};
 use simdutf8::compat::from_utf8;
 use tracing::{debug, error, instrument};
@@ -15,14 +15,15 @@ pub struct Auth<'a> {
 
 impl Auth<'_> {
     #[instrument(skip(self, lines, database, command_data))]
-    pub async fn exec<S>(
+    pub async fn exec<S, E>(
         &self,
         lines: &mut S,
         database: DB,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         //let secure = self.data.con_state.read().await.secure;
         let secure = true;
@@ -66,9 +67,10 @@ impl Auth<'_> {
     }
 
     #[instrument(skip(self, lines, line))]
-    pub async fn username<S>(&self, lines: &mut S, line: &str) -> color_eyre::eyre::Result<()>
+    pub async fn username<S, E>(&self, lines: &mut S, line: &str) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         let bytes = base64::decode(line.as_bytes());
         match bytes {
@@ -91,14 +93,15 @@ impl Auth<'_> {
     }
 
     #[instrument(skip(self, lines, database, line))]
-    pub async fn plain<S>(
+    pub async fn plain<S, E>(
         &self,
         lines: &mut S,
         database: DB,
         line: &str,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         let bytes = base64::decode(line.as_bytes());
         let mut write_lock = self.data.con_state.write().await;
@@ -181,14 +184,15 @@ impl Auth<'_> {
     }
 
     #[instrument(skip(self, lines, database, line))]
-    pub async fn password<S>(
+    pub async fn password<S, E>(
         &self,
         lines: &mut S,
         database: DB,
         line: &str,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         let bytes = base64::decode(line.as_bytes());
         match bytes {

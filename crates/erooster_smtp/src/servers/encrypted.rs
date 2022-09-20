@@ -9,7 +9,7 @@ use erooster_core::{
     line_codec::LinesCodec,
     LINE_LIMIT,
 };
-use futures::{channel::mpsc, SinkExt, StreamExt};
+use futures::{SinkExt, StreamExt};
 use std::{
     fs,
     io::{self, BufReader},
@@ -184,22 +184,12 @@ pub async fn listen_tls(
                 // We split these as we handle the sink in a broadcast instead to be able to push non linear data over the socket
                 let (mut lines_sender, mut lines_reader) = lines.split();
 
-                // Prepare our custom return path
-                let (mut tx, mut rx) = mpsc::unbounded();
-                let sender = tokio::spawn(async move {
-                    while let Some(res) = rx.next().await {
-                        if let Err(error) = lines_sender.send(res).await {
-                            error!("[SMTP] Error sending response to client: {:?}", error);
-                            break;
-                        }
-                    }
-                });
-
                 // Create our Connection
                 let connection = Connection::new(true, peer.ip().to_string());
                 if !starttls {
                     // Greet the client with the capabilities we provide
-                    if let Err(e) = send_capabilities(Arc::clone(&config), &mut tx).await {
+                    if let Err(e) = send_capabilities(Arc::clone(&config), &mut lines_sender).await
+                    {
                         error!(
                             "Unable to send greeting to client. Closing connection. Error: {}",
                             e
@@ -225,7 +215,7 @@ pub async fn listen_tls(
                     {
                         let response = data
                             .parse(
-                                &mut tx,
+                                &mut lines_sender,
                                 Arc::clone(&config),
                                 Arc::clone(&database),
                                 Arc::clone(&storage),
@@ -243,14 +233,15 @@ pub async fn listen_tls(
                             }
                             // We try a last time to do a graceful shutdown before closing
                             Err(e) => {
-                                if let Err(e) =
-                                    tx.send(format!("500 This should not happen: {}", e)).await
+                                if let Err(e) = lines_sender
+                                    .send(format!("500 This should not happen: {}", e))
+                                    .await
                                 {
                                     error!("Unable to send error response: {}", e);
                                 }
                                 error!("[SMTP][TLS] Failure happened: {}", e);
                                 debug!("[SMTP][TLS] Closing TLS connection");
-                                sender.abort();
+
                                 break;
                             }
                         }

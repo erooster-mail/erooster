@@ -6,7 +6,7 @@ use erooster_core::{
     },
     config::Config,
 };
-use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use futures::{Sink, SinkExt};
 use sqlxmq::{JobRegistry, JobRunnerHandle};
 use std::error::Error;
 use std::sync::Arc;
@@ -20,12 +20,13 @@ pub(crate) mod state;
 #[allow(missing_docs)]
 pub mod unencrypted;
 
-pub(crate) async fn send_capabilities<S>(
+pub(crate) async fn send_capabilities<S, E>(
     config: Arc<Config>,
     lines_sender: &mut S,
 ) -> color_eyre::eyre::Result<()>
 where
-    S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+    E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+    S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
 {
     lines_sender
         .send(format!("220 {} ESMTP Erooster", config.mail.hostname))

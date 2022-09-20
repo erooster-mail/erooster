@@ -1,5 +1,5 @@
 use color_eyre::eyre::bail;
-use futures::{channel::mpsc::SendError, Sink, SinkExt};
+use futures::{Sink, SinkExt};
 use tracing::instrument;
 
 use crate::commands::{CommandData, Data};
@@ -10,14 +10,15 @@ pub struct Ehlo<'a> {
 
 impl Ehlo<'_> {
     #[instrument(skip(self, hostname, lines, command_data))]
-    pub async fn exec<S>(
+    pub async fn exec<S, E>(
         &self,
         hostname: String,
         lines: &mut S,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
-        S: Sink<String, Error = SendError> + std::marker::Unpin + std::marker::Send,
+        E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         if command_data.arguments.is_empty() {
             bail!("Invalid EHLO arguments: {:?}", command_data.arguments);

@@ -13,14 +13,8 @@ use erooster_core::{
     line_codec::LinesCodec,
     LINE_LIMIT,
 };
-use futures::{channel::mpsc, SinkExt, StreamExt};
-use std::{
-    net::SocketAddr,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-};
+use futures::{SinkExt, StreamExt};
+use std::{net::SocketAddr, sync::Arc};
 use tokio::{net::TcpListener, task::JoinHandle};
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
@@ -93,32 +87,16 @@ async fn listen(
 
             let state = Connection::new(false, peer.ip().to_string());
 
-            let do_starttls = Arc::new(AtomicBool::new(false));
-            let (mut tx, mut rx) = mpsc::unbounded();
-            let cloned_do_starttls = Arc::clone(&do_starttls);
-            let sender = tokio::spawn(async move {
-                while let Some(res) = rx.next().await {
-                    if let Err(e) = lines_sender.send(res).await {
-                        error!("[SMTP] Error sending response: {:?}", e);
-                        break;
-                    }
-                    if Arc::clone(&cloned_do_starttls).load(Ordering::Relaxed) {
-                        debug!("[SMTP] releasing the sender");
-                        break;
-                    }
-                }
-                lines_sender
-            });
-
             // Greet the client with the capabilities we provide
-            send_capabilities(Arc::clone(&config), &mut tx)
+            send_capabilities(Arc::clone(&config), &mut lines_sender)
                 .await
                 .context("Unable to send greeting to client. Closing connection.")?;
-            let do_starttls = Arc::clone(&do_starttls);
 
             let data = Data {
                 con_state: Arc::clone(&state),
             };
+
+            let mut do_starttls = false;
             while let Some(Ok(line)) = lines_reader.next().await {
                 debug!("[SMTP] [{}] Got Command: {}", peer, line);
 
@@ -126,7 +104,7 @@ async fn listen(
                 // TODO pass lines and make it possible to not need new lines in responds but instead directly use `lines.send`
                 let response = data
                     .parse(
-                        &mut tx,
+                        &mut lines_sender,
                         Arc::clone(&config),
                         Arc::clone(&database),
                         Arc::clone(&storage),
@@ -145,8 +123,8 @@ async fn listen(
                             }
                             Response::STARTTLS => {
                                 debug!("[SMTP] Switching context");
-                                Arc::clone(&do_starttls).store(true, Ordering::Relaxed);
-                                tx.send(String::from("220 TLS go ahead")).await?;
+                                do_starttls = true;
+                                lines_sender.send(String::from("220 TLS go ahead")).await?;
                                 break;
                             }
                             Response::Continue => {}
@@ -154,23 +132,21 @@ async fn listen(
                     }
                     // We try a last time to do a graceful shutdown before closing
                     Err(e) => {
-                        if let Err(e) = tx.send(format!("500 This should not happen: {}", e)).await
+                        if let Err(e) = lines_sender
+                            .send(format!("500 This should not happen: {}", e))
+                            .await
                         {
                             error!("[SMTP] Error sending response: {:?}", e);
                         }
                         error!("[SMTP] Failure happened: {}", e);
                         debug!("[SMTP] Closing connection");
-                        sender.abort();
                         break;
                     }
                 }
             }
-            if do_starttls.load(Ordering::Relaxed) {
-                debug!("[SMTP] Waiting for sender");
-                //sender.abort();
-                let sender = sender.await?;
+            if do_starttls {
                 debug!("[SMTP] Starting to reunite");
-                let framed_stream = sender.reunite(lines_reader)?;
+                let framed_stream = lines_sender.reunite(lines_reader)?;
                 let stream = framed_stream.into_inner();
                 debug!("[SMTP] Finished to reunite");
                 let acceptor = get_tls_acceptor(&config)?;

@@ -55,7 +55,7 @@ async fn receive_message() {
         .await
         .unwrap();
     let resp = reader.next().await.unwrap().unwrap();
-    assert_eq!(resp, String::from("250 OK"));
+    assert_eq!(resp, String::from("250 2.1.0 Originator <test@remote> OK"));
 
     // Set TO envelope address
     sender
@@ -63,7 +63,10 @@ async fn receive_message() {
         .await
         .unwrap();
     let resp = reader.next().await.unwrap().unwrap();
-    assert_eq!(resp, String::from("250 OK"));
+    assert_eq!(
+        resp,
+        String::from("250 2.1.5 Recipient <test@localhost> OK")
+    );
 
     // Announce that we want to send some DATA
     sender.send(String::from("DATA")).await.unwrap();
@@ -77,7 +80,7 @@ async fn receive_message() {
     let email = include_str!("example_mail.txt");
     sender.send(format!("{}\r\n.", email)).await.unwrap();
     let resp = reader.next().await.unwrap().unwrap();
-    assert_eq!(resp, String::from("250 OK"));
+    assert_eq!(resp, String::from("250 2.6.0 Message accepted"));
 
     // QUIT the connection
     sender.send(String::from("QUIT")).await.unwrap();

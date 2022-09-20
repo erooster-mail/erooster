@@ -67,7 +67,7 @@ impl Rcpt<'_> {
 
         lines
             .send(format!(
-                "250  2.1.5 Recipient {} OK",
+                "250 2.1.5 Recipient {} OK",
                 command_data.arguments[0]
             ))
             .await?;

@@ -5,6 +5,8 @@ mail:
   maildir_folders: "./maildir"
   hostname: "localhost"
   displayname: Erooster
+  dkim_key_path: "/etc/erooster/keys/default.private"
+  dkim_key_selector: "default"
 database:
   postgres_url: ""
 listen_ips:
@@ -14,3 +16,5 @@ webserver:
   port: 80
   tls: false
 sentry: false
+rspamd:
+  address: http://localhost:11333

@@ -6,7 +6,7 @@ description = "An IMAP4v2 compatible mail server"
 license = "Apache-2.0"
 authors = ["MTRNord <mtrnord@nordgedanken.dev>"]
 repository = "https://github.com/MTRNord/erooster/"
-keywords = ["email","imap","smtp","simple","fast"]
+keywords = ["email", "imap", "smtp", "simple", "fast"]
 categories = ["email", "network-programming"]
 
 include = ["src/**/*"]
@@ -19,8 +19,8 @@ bench = false
 [dependencies]
 base64 = "0.13"
 color-eyre = "0.6"
-erooster_core = {version = "0.1.0", path="../erooster_core"}
-futures = { version = "0.3", features = ["thread-pool"]}
+erooster_core = { version = "0.1.0", path = "../erooster_core" }
+futures = { version = "0.3", features = ["thread-pool"] }
 nom = "7.1"
 rustls = "0.20"
 rustls-pemfile = "1.0"
@@ -28,19 +28,25 @@ serde = { version = "1.0", features = ["derive"] }
 simdutf8 = { version = "0.1" }
 mailparse = "0.13"
 rsa = "0.6"
-sqlxmq = { version = "0.4", default-features = false, features = [ "runtime-tokio-rustls"], git = "https://github.com/erooster-mail/sqlxmq.git" }
+sqlxmq = { version = "0.4", default-features = false, features = [
+    "runtime-tokio-rustls",
+], git = "https://github.com/erooster-mail/sqlxmq.git" }
 tokio = { version = "1", features = ["full"] }
-tokio-rustls ={ version = "0.23", features = ["tls12"] }
+tokio-rustls = { version = "0.23", features = ["tls12"] }
 tokio-stream = { version = "0.1", features = ["net", "io-util"] }
 tokio-util = { version = "0.7", features = ["full"] }
 tracing = "0.1"
-tracing-subscriber = {version = "0.3", features=["env-filter"]}
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 trust-dns-resolver = "0.22"
 webpki-roots = "0.22"
 secrecy = "0.8.0"
-cfdkim = {version = "0.2.3", git = "https://github.com/erooster-mail/dkim"}
-time = {version = "0.3.13", features = ["formatting"]}
-reqwest = {version = "0.11.11", features = ["json","rustls-tls","trust-dns"]}
+cfdkim = { version = "0.2.3", git = "https://github.com/erooster-mail/dkim" }
+time = { version = "0.3.13", features = ["formatting"] }
+reqwest = { version = "0.11.11", default-features = false, features = [
+    "json",
+    "rustls-tls",
+    "trust-dns",
+] }
 serde_json = "1.0.85"
 
 [[bench]]
@@ -49,7 +55,7 @@ harness = false
 
 [dev-dependencies]
 convert_case = "0.6"
-criterion = {version = "0.4", features = ["async_tokio"]}
-sqlx = { version = "0.6", features = [ "postgres", "runtime-tokio-rustls"] }
+criterion = { version = "0.4", features = ["async_tokio"] }
+sqlx = { version = "0.6", features = ["postgres", "runtime-tokio-rustls"] }
 enum-iterator = "1.1"
 enum-display-derive = "0.1"

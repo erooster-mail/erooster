@@ -107,7 +107,10 @@ impl DataCommand<'_> {
                             self.call_rspamd(
                                 rspamd_config,
                                 data,
+                                write_lock.ehlo.as_ref().context("Missing ehlo")?,
+                                &write_lock.peer_addr,
                                 write_lock.sender.as_ref().context("Missing sender")?,
+                                address,
                                 Some(username.to_string()),
                             )
                             .await?
@@ -168,7 +171,10 @@ impl DataCommand<'_> {
                             self.call_rspamd(
                                 rspamd_config,
                                 data,
+                                write_lock.ehlo.as_ref().context("Missing ehlo")?,
+                                &write_lock.peer_addr,
                                 write_lock.sender.as_ref().context("Missing sender")?,
+                                receipt,
                                 None,
                             )
                             .await?
@@ -198,11 +204,15 @@ impl DataCommand<'_> {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn call_rspamd<'a>(
         &self,
         rspamd_config: &Rspamd,
         data: &'a str,
+        ehlo: &str,
+        ip: &str,
         sender: &str,
+        rcpt: &str,
         username: Option<String>,
     ) -> color_eyre::Result<&'a str> {
         let client = reqwest::Client::builder()
@@ -213,7 +223,10 @@ impl DataCommand<'_> {
         let base_req = client
             .post(format!("{}/checkv2", rspamd_config.address))
             .body(data.to_string())
-            .header("From", sender);
+            .header("From", sender)
+            .header("HELO", ehlo)
+            .header("IP", ip)
+            .header("RCPT", rcpt);
         let req = if let Some(username) = username {
             base_req.header("User", username)
         } else {

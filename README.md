@@ -30,6 +30,7 @@ tls:
 mail:
   maildir_folders: "./maildir"
   hostname: "localhost"
+  displayname: Erooster
   dkim_key_path: "/etc/erooster/keys/default.private"
   dkim_key_selector: "default"
 database:
@@ -38,10 +39,11 @@ listen_ips:
   - "[::1]"
   - "127.0.0.1"
 webserver:
-  port: "80"
+  port: 80
   tls: false
-  displayname: Erooster
 sentry: false
+rspamd:
+  address: http://localhost:11333
 ```
 
 The maildir_folders defines where the emails and folders can be found at. This is close to the maildir format postfix uses. (We use other files to keep track of the state of it)

@@ -225,12 +225,11 @@ impl DataCommand<'_> {
             .body(data.to_string())
             .header("From", sender)
             .header("HELO", ehlo)
-            .header("IP", ip)
             .header("RCPT", rcpt);
         let req = if let Some(username) = username {
             base_req.header("User", username)
         } else {
-            base_req
+            base_req.header("IP", ip)
         };
         let rspamd_res = req.send().await?.json::<Response>().await?;
         debug!("{:?}", rspamd_res);

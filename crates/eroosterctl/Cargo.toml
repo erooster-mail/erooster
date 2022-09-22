@@ -6,7 +6,7 @@ description = "An IMAP4v2 compatible mail server"
 license = "Apache-2.0"
 authors = ["MTRNord <mtrnord@nordgedanken.dev>"]
 repository = "https://github.com/MTRNord/erooster/"
-keywords = ["email","imap","smtp","simple","fast"]
+keywords = ["email", "imap", "smtp", "simple", "fast"]
 categories = ["email", "network-programming"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -16,20 +16,26 @@ name = "eroosterctl"
 path = "src/main.rs"
 
 [dependencies]
-erooster_core = {version = "0.1.0", path="../erooster_core"}
+erooster_core = { version = "0.1.0", path = "../erooster_core" }
 clearscreen = "1.0"
-clap = { version = "3.1", features = ["derive", "color", "suggestions","env"] }
+clap = { version = "3.1", features = ["derive", "color", "suggestions", "env"] }
 color-eyre = "0.6"
 indicatif = "0.17"
 owo-colors = "3"
 rpassword = "7.0"
-sentry = { version = "0.27", default-features = false, features = ["tracing", "backtrace", "contexts", "panic", "ureq"]}
+sentry = { version = "0.27", default-features = false, features = [
+    "tracing",
+    "backtrace",
+    "contexts",
+    "panic",
+    "ureq",
+] }
 sys-info = "0.9"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1.21", features = ["full"] }
 tracing = "0.1"
 tracing-error = "0.2"
-tracing-subscriber = {version = "0.3", features=["env-filter"]}
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 secrecy = "0.8.0"
 
 [build-dependencies]
-vergen = "7"
+vergen = "7.4"

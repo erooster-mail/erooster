@@ -31,7 +31,7 @@ rsa = "0.6"
 sqlxmq = { version = "0.4", default-features = false, features = [
     "runtime-tokio-rustls",
 ], git = "https://github.com/erooster-mail/sqlxmq.git" }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1.21", features = ["full"] }
 tokio-rustls = { version = "0.23", features = ["tls12"] }
 tokio-stream = { version = "0.1", features = ["net", "io-util"] }
 tokio-util = { version = "0.7", features = ["full"] }

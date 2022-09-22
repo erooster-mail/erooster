@@ -64,7 +64,7 @@ jaeger = ["dep:opentelemetry-jaeger"]
 #debug = true
 
 [dev-dependencies]
-convert_case = "0.5"
-criterion = { version = "0.3", features = ["async_tokio"] }
+convert_case = "0.6"
+criterion = { version = "0.4", features = ["async_tokio"] }
 enum-iterator = "1.1"
 enum-display-derive = "0.1"

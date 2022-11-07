@@ -17,7 +17,6 @@
       },
       "original": {
         "owner": "cargo2nix",
-        "ref": "release-0.11.0",
         "repo": "cargo2nix",
         "type": "github"
       }

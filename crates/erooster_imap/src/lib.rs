@@ -90,7 +90,7 @@ pub fn start(
         )
         .await
         {
-            panic!("Unable to start server: {:?}", e);
+            panic!("Unable to start server: {e:?}");
         }
     });
     tokio::spawn(async move {
@@ -101,7 +101,7 @@ pub fn start(
         )
         .await
         {
-            panic!("Unable to start TLS server: {:?}", e);
+            panic!("Unable to start TLS server: {e:?}");
         }
     });
     Ok(())

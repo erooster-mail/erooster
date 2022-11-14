@@ -138,7 +138,7 @@ impl Append<'_> {
             .context("Username missing in internal State")?;
         if let State::Appending(state) = &mut write_lock.state {
             if let Some(buffer) = &mut state.data {
-                write!(buffer, "{}\r\n", append_data)?;
+                write!(buffer, "{append_data}\r\n")?;
                 debug!("Buffer length: {}", buffer.len());
                 debug!("expected: {}", state.datalen);
                 if buffer.len() >= state.datalen {
@@ -159,16 +159,16 @@ impl Append<'_> {
                         .await?;
                     debug!("Stored message via append: {}", message_id);
                     write_lock.state = State::GotAppendData;
-                    lines.send(format!("{} OK APPEND completed", tag)).await?;
+                    lines.send(format!("{tag} OK APPEND completed")).await?;
                 }
             } else {
                 let mut buffer = Vec::with_capacity(state.datalen);
-                write!(buffer, "{}\r\n", append_data)?;
+                write!(buffer, "{append_data}\r\n")?;
 
                 state.data = Some(buffer);
             }
         } else {
-            lines.send(format!("{} NO invalid state", tag)).await?;
+            lines.send(format!("{tag} NO invalid state")).await?;
         }
         Ok(())
     }

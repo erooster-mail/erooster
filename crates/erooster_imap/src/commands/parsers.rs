@@ -383,9 +383,9 @@ fn time(input: &str) -> Res<Time> {
             )),
             |(hours, _, minutes, seconds)| {
                 if let Some((_, seconds)) = seconds {
-                    Time(format!("{}:{}:{}", hours, minutes, seconds))
+                    Time(format!("{hours}:{minutes}:{seconds}"))
                 } else {
-                    Time(format!("{}:{}", hours, minutes))
+                    Time(format!("{hours}:{minutes}"))
                 }
             },
         ),

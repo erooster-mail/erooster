@@ -27,7 +27,7 @@ impl Server for Unencrypted {
         let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
                 .iter()
-                .map(|ip| format!("{}:143", ip).parse())
+                .map(|ip| format!("{ip}:143").parse())
                 .filter_map(Result::ok)
                 .collect()
         } else {
@@ -113,7 +113,7 @@ async fn listen(
                     // We try a last time to do a graceful shutdown before closing
                     Err(e) => {
                         if let Err(e) = lines_sender
-                            .send(format!("* BAD [SERVERBUG] This should not happen: {}", e))
+                            .send(format!("* BAD [SERVERBUG] This should not happen: {e}"))
                             .await
                         {
                             error!("Unable to send error response: {}", e);

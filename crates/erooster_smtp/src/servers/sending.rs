@@ -70,7 +70,7 @@ fn dkim_sign(
         .build()?;
     let header = signer.sign(&email)?;
 
-    Ok(format!("{}\r\n{}", header, raw_email))
+    Ok(format!("{header}\r\n{raw_email}"))
 }
 
 #[allow(clippy::too_many_lines)]

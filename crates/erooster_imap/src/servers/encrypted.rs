@@ -93,7 +93,7 @@ impl Server for Encrypted {
         let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
                 .iter()
-                .map(|ip| format!("{}:993", ip).parse())
+                .map(|ip| format!("{ip}:993").parse())
                 .filter_map(Result::ok)
                 .collect()
         } else {

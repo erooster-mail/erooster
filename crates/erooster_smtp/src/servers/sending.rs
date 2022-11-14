@@ -187,7 +187,7 @@ where
     // We send RCPT TO
     // TODO actually follow spec here. This may be garbage :P
     for to in to {
-        lines_sender.send(format!("RCPT TO:<{}>", to)).await?;
+        lines_sender.send(format!("RCPT TO:<{to}>")).await?;
         debug!(
             "[{}] [{}] Sent RCPT TO",
             current_job.id(),

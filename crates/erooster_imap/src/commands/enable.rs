@@ -25,7 +25,7 @@ impl Enable<'_> {
         for arg in command_data.arguments.iter() {
             if arg == &"UTF8=ACCEPT" {
                 write_lock.active_capabilities.push(Capabilities::UTF8);
-                lines.feed(format!("* ENABLED {}", arg)).await?;
+                lines.feed(format!("* ENABLED {arg}")).await?;
             } else {
                 write_lock
                     .active_capabilities

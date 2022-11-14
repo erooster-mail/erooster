@@ -55,7 +55,7 @@ impl Rcpt<'_> {
                     }
                     if !database.user_exists(&receipt.to_lowercase()).await {
                         lines
-                            .send(format!("550 5.1.1 Mailbox \"{}\" does not exist", receipt))
+                            .send(format!("550 5.1.1 Mailbox \"{receipt}\" does not exist"))
                             .await?;
                         return Ok(());
                     }

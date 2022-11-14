@@ -16,6 +16,7 @@ use tracing::{debug, error, instrument};
 pub struct Append<'a> {
     pub data: &'a Data,
 }
+
 impl Append<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(

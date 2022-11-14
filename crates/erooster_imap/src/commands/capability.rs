@@ -16,7 +16,7 @@ impl Capability {
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         let capabilities = get_capabilities();
-        lines.feed(format!("* {}", capabilities)).await?;
+        lines.feed(format!("* {capabilities}")).await?;
         lines
             .feed(format!("{} OK CAPABILITY completed", command_data.tag))
             .await?;

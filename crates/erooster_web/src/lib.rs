@@ -53,7 +53,7 @@ pub async fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
     let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
         listen_ips
             .iter()
-            .map(|ip| format!("{}:{}", ip, config.webserver.port).parse())
+            .map(|ip| format!("{ip}:{}", config.webserver.port).parse())
             .filter_map(Result::ok)
             .collect()
     } else {
@@ -151,7 +151,7 @@ where
                 .into_response(),
             Err(err) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to render template. Error: {}", err),
+                format!("Failed to render template. Error: {err}"),
             )
                 .into_response(),
         }

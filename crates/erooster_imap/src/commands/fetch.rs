@@ -133,7 +133,7 @@ impl Fetch<'_> {
                                     if is_uid {
                                         if resp.contains("UID") {
                                             lines
-                                                .feed(format!("* {} FETCH ({})", sequence, resp))
+                                                .feed(format!("* {sequence} FETCH ({resp})"))
                                                 .await?;
                                         } else {
                                             lines
@@ -144,9 +144,7 @@ impl Fetch<'_> {
                                                 .await?;
                                         }
                                     } else {
-                                        lines
-                                            .feed(format!("* {} FETCH ({})", sequence, resp))
-                                            .await?;
+                                        lines.feed(format!("* {sequence} FETCH ({resp})")).await?;
                                     }
                                 }
                             }
@@ -209,7 +207,7 @@ pub fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Resul
                     if resp.is_empty() {
                         resp = extra_resp;
                     } else {
-                        resp = format!("{} {}", resp, extra_resp);
+                        resp = format!("{resp} {extra_resp}");
                     }
                 }
             }
@@ -235,7 +233,7 @@ fn generate_response_for_attributes(
                     .collect::<Vec<_>>()
                     .join("\r\n");
 
-                Ok(Some(format!("RFC822.HEADER{}", headers)))
+                Ok(Some(format!("RFC822.HEADER{headers}")))
             } else {
                 Ok(Some(String::from("RFC822.HEADER\r\n")))
             }
@@ -289,12 +287,12 @@ fn generate_response_for_attributes(
                 }
             }
 
-            Ok(Some(format!("FLAGS ({})", flags)))
+            Ok(Some(format!("FLAGS ({flags})")))
         }
         FetchAttributes::RFC822Size => {
             if let Ok(parsed) = mail.parsed() {
                 let size = parsed.raw_bytes.len();
-                Ok(Some(format!("RFC822.SIZE {}", size)))
+                Ok(Some(format!("RFC822.SIZE {size}")))
             } else {
                 Ok(Some(String::from("RFC822.SIZE 0")))
             }
@@ -335,7 +333,7 @@ fn body(
                             };
                             let body_text = body_text.get((start as usize)..end).unwrap_or(&[]);
                             let body_text = String::from_utf8_lossy(body_text);
-                            format!("BODY[] {{{}}}\r\n{}", body_text.as_bytes().len(), body_text)
+                            format!("BODY[] {{{}}}\r\n{body_text}", body_text.as_bytes().len())
                         } else {
                             String::from("BODY[TEXT] NIL\r\n")
                         }
@@ -345,7 +343,7 @@ fn body(
                 } else if let Ok(body) = mail.parsed() {
                     if let Ok(body_text) = body.get_body_raw() {
                         let body_text = String::from_utf8_lossy(&body_text);
-                        format!("BODY[] {{{}}}\r\n{}", body_text.as_bytes().len(), body_text)
+                        format!("BODY[] {{{}}}\r\n{body_text}", body_text.as_bytes().len())
                     } else {
                         String::from("BODY[TEXT] NIL\r\n")
                     }
@@ -395,8 +393,8 @@ fn body(
                         .map(|header| format!("{}: {}", header.get_key(), header.get_value()))
                         .collect::<Vec<_>>()
                         .join("\r\n");
-                    let data = format!("{}\r\n", headers);
-                    format!("BODY[HEADER] {{{}}}\r\n{}", data.as_bytes().len(), data)
+                    let data = format!("{headers}\r\n");
+                    format!("BODY[HEADER] {{{}}}\r\n{data}", data.as_bytes().len())
                 } else {
                     String::from("BODY[HEADER] NIL\r\n")
                 }
@@ -405,7 +403,7 @@ fn body(
     } else if let Ok(mail) = mail.parsed() {
         let mail = String::from_utf8_lossy(mail.raw_bytes);
 
-        format!("BODY[] {{{}}}\r\n{}", mail.as_bytes().len(), mail)
+        format!("BODY[] {{{}}}\r\n{mail}", mail.as_bytes().len())
     } else {
         String::from("BODY[] NIL\r\n")
     }

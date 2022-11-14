@@ -56,7 +56,7 @@ pub async fn start(
         )
         .await
         {
-            panic!("Unable to start server: {:?}", e);
+            panic!("Unable to start server: {e:?}");
         }
     });
     let db_clone = Arc::clone(&database);
@@ -68,7 +68,7 @@ pub async fn start(
         )
         .await
         {
-            panic!("Unable to start TLS server: {:?}", e);
+            panic!("Unable to start TLS server: {e:?}");
         }
     });
 

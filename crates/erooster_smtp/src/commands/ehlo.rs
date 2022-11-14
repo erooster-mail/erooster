@@ -25,7 +25,7 @@ impl Ehlo<'_> {
         }
         let mut write_lock = self.data.con_state.write().await;
         write_lock.ehlo = Some(command_data.arguments[0].to_string());
-        lines.feed(format!("250-{}", hostname)).await?;
+        lines.feed(format!("250-{hostname}")).await?;
         lines.feed(String::from("250-ENHANCEDSTATUSCODES")).await?;
         if !write_lock.secure {
             lines.feed(String::from("250-STARTTLS")).await?;

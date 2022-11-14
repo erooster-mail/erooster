@@ -93,7 +93,7 @@ impl Encrypted {
         let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
                 .iter()
-                .map(|ip| format!("{}:465", ip).parse())
+                .map(|ip| format!("{ip}:465").parse())
                 .filter_map(Result::ok)
                 .collect()
         } else {
@@ -234,7 +234,7 @@ pub async fn listen_tls(
                             // We try a last time to do a graceful shutdown before closing
                             Err(e) => {
                                 if let Err(e) = lines_sender
-                                    .send(format!("500 This should not happen: {}", e))
+                                    .send(format!("500 This should not happen: {e}"))
                                     .await
                                 {
                                     error!("Unable to send error response: {}", e);

@@ -48,7 +48,7 @@ where
 
     if mailbox_patterns.is_empty() {
         lines
-            .feed(format!("* {} (\\Noselect) \".\" \"\"", command_resp))
+            .feed(format!("* {command_resp} (\\Noselect) \".\" \"\""))
             .await?;
     } else if mailbox_patterns.ends_with('*') {
         let mut folder = Path::new(&config.mail.maildir_folders).join(
@@ -77,7 +77,7 @@ where
         let sub_folders = storage.list_subdirs(&folder)?;
         if reference_name.is_empty() && mailbox_patterns == "*" {
             lines
-                .feed(format!("* {} (\\Subscribed) \".\" \"INBOX\"", command_resp,))
+                .feed(format!("* {command_resp} (\\Subscribed) \".\" \"INBOX\"",))
                 .await?;
         }
         for sub_folder in sub_folders {
@@ -141,7 +141,7 @@ where
         let sub_folders = storage.list_subdirs(&folder)?;
         if reference_name.is_empty() && mailbox_patterns == "%" {
             lines
-                .feed(format!("* {} (\\Subscribed) \".\" \"INBOX\"", command_resp,))
+                .feed(format!("* {command_resp} (\\Subscribed) \".\" \"INBOX\"",))
                 .await?;
         }
         for sub_folder in sub_folders {
@@ -218,8 +218,8 @@ where
     }
     lines
         .feed(format!(
-            "{} OK {} completed",
-            command_data.tag, command_resp
+            "{} OK {command_resp} completed",
+            command_data.tag
         ))
         .await?;
     lines.flush().await?;

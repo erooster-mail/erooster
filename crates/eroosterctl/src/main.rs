@@ -182,7 +182,7 @@ fn status() {
         if char == ';' {
             current_color_index += 1;
         } else {
-            out = format!("{}{}", out, char.color(colors[current_color_index]).bold());
+            out = format!("{out}{}", char.color(colors[current_color_index]).bold());
         }
     }
 
@@ -223,7 +223,7 @@ fn status() {
                 "OK".fg::<BrightGreen>().bold()
             );
         } else {
-            println!("{}", line);
+            println!("{line}");
         }
     }
 }

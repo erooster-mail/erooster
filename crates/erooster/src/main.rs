@@ -145,7 +145,7 @@ async fn main() -> Result<()> {
         {
             error!("Job `erooster_core::smtp_servers::sending::send_email_job` failed");
         } else {
-            eprintln!("{}", report);
+            eprintln!("{report}");
             next(panic_info);
         }
     }));

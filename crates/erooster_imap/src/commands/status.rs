@@ -42,7 +42,7 @@ impl Status<'_> {
         let mut values = String::new();
         if responses.contains(&"MESSAGES") {
             let count = storage.count_cur(&mailbox_path) + storage.count_new(&mailbox_path);
-            values.push_str(&format!("MESSAGES {}", count));
+            values.push_str(&format!("MESSAGES {count}"));
         }
         if responses.contains(&"UIDNEXT") {
             let current_uid = storage.get_uid_for_folder(&mailbox_path)?;
@@ -54,18 +54,18 @@ impl Status<'_> {
             #[allow(clippy::cast_possible_truncation)]
             let timestamp = unix_timestamp.as_millis() as u32;
 
-            values.push_str(&format!("UIDVALIDITY {}", timestamp));
+            values.push_str(&format!("UIDVALIDITY {timestamp}"));
         }
         if responses.contains(&"UNSEEN") {
             let mails = storage.list_cur(&mailbox_path).await;
             let count =
                 mails.iter().filter(|m| !m.is_seen()).count() + storage.count_new(&mailbox_path);
-            values.push_str(&format!("UNSEEN {}", count));
+            values.push_str(&format!("UNSEEN {count}"));
         }
         if responses.contains(&"DELETED") {
             let mails = storage.list_cur(&mailbox_path).await;
             let count = mails.iter().filter(|m| m.is_trashed()).count();
-            values.push_str(&format!("DELETED {}", count));
+            values.push_str(&format!("DELETED {count}"));
         }
         if responses.contains(&"SIZE") {
             let size: usize = storage
@@ -80,10 +80,10 @@ impl Status<'_> {
                     }
                 })
                 .sum();
-            values.push_str(&format!("SIZE {}", size));
+            values.push_str(&format!("SIZE {size}"));
         }
         lines
-            .feed(format!("* STATUS {} ({})", folder_on_disk, values))
+            .feed(format!("* STATUS {folder_on_disk} ({values})"))
             .await?;
         lines
             .feed(format!("{} OK STATUS completed", command_data.tag))

@@ -108,7 +108,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .await?;
 
         for line in lines {
-            let line = format!("{}\n", line);
+            let line = format!("{line}\n");
             file.write_all(line.as_bytes()).await?;
         }
 

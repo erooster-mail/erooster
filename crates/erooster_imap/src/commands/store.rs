@@ -101,7 +101,7 @@ impl Store<'_> {
                                 .await?;
                         } else {
                             lines
-                                .feed(format!("* {} FETCH (FLAGS {})", mail.uid(), flags_string))
+                                .feed(format!("* {} FETCH (FLAGS {flags_string})", mail.uid()))
                                 .await?;
                         }
                     }
@@ -153,7 +153,7 @@ impl Store<'_> {
                                 .await?;
                         } else {
                             lines
-                                .feed(format!("* {} FETCH (FLAGS {})", mail.uid(), flags_string))
+                                .feed(format!("* {} FETCH (FLAGS {flags_string})", mail.uid()))
                                 .await?;
                         }
                     }

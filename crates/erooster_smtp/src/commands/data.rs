@@ -198,7 +198,7 @@ impl DataCommand<'_> {
                     color_eyre::eyre::bail!("Invalid state");
                 };
             } else if let State::ReceivingData((_, data)) = &mut write_lock.state {
-                write!(data, "{}\r\n", line)?;
+                write!(data, "{line}\r\n")?;
             }
         };
         Ok(())

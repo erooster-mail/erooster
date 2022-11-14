@@ -15,7 +15,8 @@
         };
 
         rustPkgs = pkgs.rustBuilder.makePackageSet {
-          rustVersion = "1.64.0";
+          #rustVersion = "1.64.0";
+          rustChannel = "nightly";
           packageFun = import ./Cargo.nix;
           # Use the existing all list of overrides and append your override
           packageOverrides = pkgs:

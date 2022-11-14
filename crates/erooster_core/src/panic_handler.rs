@@ -64,7 +64,9 @@ fn custom_url(location: &Location<'_>, message: &str) -> impl fmt::Display {
 ## More info
 ",
                     VERSION,
-                    env!("VERGEN_GIT_SHA_SHORT"),
+                    option_env!("VERGEN_GIT_SHA_SHORT")
+                        .or_else(|| Some("unknown"))
+                        .expect("Failed to get git commit or fallback"),
                     os_type().unwrap_or_else(|_| "unavailable".to_string()),
                     os_release().unwrap_or_else(|_| "unavailable".to_string()),
                     message,
@@ -75,7 +77,7 @@ fn custom_url(location: &Location<'_>, message: &str) -> impl fmt::Display {
         ],
     );
     match &url_result {
-        Ok(url_struct) => format!("{}", url_struct),
+        Ok(url_struct) => format!("{url_struct}"),
         Err(_e) => String::from("https://github.com/MTRNord/erooster/issues/new"),
     }
 }

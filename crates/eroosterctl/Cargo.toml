@@ -23,7 +23,7 @@ color-eyre = "0.6"
 indicatif = "0.17"
 owo-colors = "3"
 rpassword = "7.0"
-sentry = { version = "0.27", default-features = false, features = [
+sentry = { version = "0.28", default-features = false, features = [
     "tracing",
     "backtrace",
     "contexts",

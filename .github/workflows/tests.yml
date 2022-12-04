@@ -124,6 +124,7 @@ jobs:
             static.rust-lang.org:443
             api.github.com:443
             gitlab.com:443
+            crates.io:443
 
       - uses: actions/checkout@7884fcad6b5d53d10323aee724dc68d8b9096a2e
       - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af

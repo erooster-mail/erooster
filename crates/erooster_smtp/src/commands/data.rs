@@ -72,11 +72,9 @@ impl DataCommand<'_> {
             let write_lock = &mut self.data.con_state.write().await;
             if line == "." {
                 debug!("Got end of line");
-                let receipts = if let Some(receipts) = &write_lock.receipts {
-                    receipts
-                } else {
-                    color_eyre::eyre::bail!("No receipts")
-                };
+                let Some(receipts) = &write_lock.receipts else {
+color_eyre::eyre::bail!("No receipts")
+};
                 write_lock.state = if let State::ReceivingData((Some(username), data)) =
                     &write_lock.state
                 {

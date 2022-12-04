@@ -17,45 +17,45 @@ bench = false
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-base64 = "0.13"
-color-eyre = "0.6"
+base64 = "0.13.1"
+color-eyre = "0.6.2"
 erooster_core = { version = "0.1.0", path = "../erooster_core" }
-futures = { version = "0.3", features = ["thread-pool"] }
-nom = "7.1"
-rustls = "0.20"
-rustls-pemfile = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-simdutf8 = { version = "0.1" }
-mailparse = "0.13"
-rsa = "0.7"
+futures = { version = "0.3.25", features = ["thread-pool"] }
+nom = "7.1.1"
+rustls = "0.20.7"
+rustls-pemfile = "1.0.1"
+serde = { version = "1.0.148", features = ["derive"] }
+simdutf8 = { version = "0.1.4" }
+mailparse = "0.13.8"
+rsa = "0.7.2"
 sqlxmq = { version = "0.4", default-features = false, features = [
     "runtime-tokio-rustls",
 ], git = "https://github.com/erooster-mail/sqlxmq.git" }
-tokio = { version = "1.21", features = ["full"] }
-tokio-rustls = { version = "0.23", features = ["tls12"] }
-tokio-stream = { version = "0.1", features = ["net", "io-util"] }
-tokio-util = { version = "0.7", features = ["full"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-trust-dns-resolver = "0.22"
-webpki-roots = "0.22"
+tokio = { version = "1.22.0", features = ["full"] }
+tokio-rustls = { version = "0.23.4", features = ["tls12"] }
+tokio-stream = { version = "0.1.11", features = ["net", "io-util"] }
+tokio-util = { version = "0.7.4", features = ["full"] }
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+trust-dns-resolver = "0.22.0"
+webpki-roots = "0.22.5"
 secrecy = "0.8.0"
 cfdkim = { version = "0.2.4", git = "https://github.com/erooster-mail/dkim" }
-time = { version = "0.3.13", features = ["formatting"] }
-reqwest = { version = "0.11.11", default-features = false, features = [
+time = { version = "0.3.17", features = ["formatting"] }
+reqwest = { version = "0.11.13", default-features = false, features = [
     "json",
     "rustls-tls",
     "trust-dns",
 ] }
-serde_json = "1.0.85"
+serde_json = "1.0.89"
 
 [[bench]]
 name = "smtp_bench"
 harness = false
 
 [dev-dependencies]
-convert_case = "0.6"
-criterion = { version = "0.4", features = ["async_tokio"] }
-sqlx = { version = "0.6", features = ["postgres", "runtime-tokio-rustls"] }
-enum-iterator = "1.1"
-enum-display-derive = "0.1"
+convert_case = "0.6.0"
+criterion = { version = "0.4.0", features = ["async_tokio"] }
+sqlx = { version = "0.6.2", features = ["postgres", "runtime-tokio-rustls"] }
+enum-iterator = "1.2.0"
+enum-display-derive = "0.1.1"

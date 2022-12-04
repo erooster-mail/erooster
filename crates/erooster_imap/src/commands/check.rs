@@ -28,10 +28,7 @@ impl Check<'_> {
         // It also only is allowed in selected state
         if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
             let folder = folder.replace('/', ".");
-            let username = if let Some(username) = self.data.con_state.read().await.username.clone()
-            {
-                username
-            } else {
+            let Some(username) = self.data.con_state.read().await.username.clone() else {
                 lines
                     .send(format!("{} NO invalid state", command_data.tag))
                     .await?;

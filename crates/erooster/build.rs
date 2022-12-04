@@ -20,7 +20,7 @@ fn main() -> std::io::Result<()> {
         .about("An IMAP4v2 compatible mail server")
         .arg(clap::arg!(-c --config <CONFIG>).help("The config file location for the server. Defaults to config.yml or config.yaml at workspace or /etc/erooster")
                 .required(false)
-                .takes_value(true)
+                .num_args(1)
                 .default_value("config.yml"));
 
     let man = clap_mangen::Man::new(cmd);
@@ -39,7 +39,7 @@ fn main() -> std::io::Result<()> {
         .arg(clap::arg!(-c --config [CONFIG])
         .help("The config file location for the server. Defaults to config.yml or config.yaml at workspace or /etc/erooster")
                 .required(false)
-                .takes_value(true)
+                .num_args(1)
                 .default_value("config.yml"))
         .subcommand(
             clap::Command::new("status")
@@ -51,24 +51,24 @@ fn main() -> std::io::Result<()> {
                 .arg(clap::arg!(-e --email [EMAIL])
                 .help("The email of the new user (optional, required if --password is set)")
                 .required(false)
-                .takes_value(true))
+                .num_args(1))
                 .arg(clap::arg!(-p --password [PASSWORD])
                 .help("The password of the new user (optional, required if --username is set)")
                 .required(false)
-                .takes_value(true)),
+                .num_args(1)),
         )
         .subcommand(
             clap::Command::new("change-password")
                 .about("Change a users password").arg(clap::arg!(-e --email [EMAIL])
                 .help("The email of the user (optional, required if any option is set)")
                 .required(false)
-                .takes_value(true)).arg(clap::arg!(-c --current_password [CURRENT_PASSWORD])
+                .num_args(1)).arg(clap::arg!(-c --current_password [CURRENT_PASSWORD])
                 .help("The current password of the user (optional, required if any option is set)")
                 .required(false)
-                .takes_value(true)).arg(clap::arg!(-n --new_password [NEW_PASSWORD])
+                .num_args(1)).arg(clap::arg!(-n --new_password [NEW_PASSWORD])
                 .help("The new password of the user (optional, required if any option is set)")
                 .required(false)
-                .takes_value(true)),
+                .num_args(1)),
         );
 
     let man = clap_mangen::Man::new(cmd);

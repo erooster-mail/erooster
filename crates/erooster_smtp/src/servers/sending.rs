@@ -397,10 +397,7 @@ pub async fn send_email_job(
                 debug!("[{}] No address found for {}", current_job.id(), target);
                 continue;
             }
-            let address = match address {
-                Some(address) => address,
-                None => continue,
-            };
+            let Some(address) = address else { continue };
 
             match get_secure_connection(address, &current_job, target, &tls_domain).await {
                 Ok(secure_con) => {

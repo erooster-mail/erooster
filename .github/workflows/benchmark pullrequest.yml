@@ -62,7 +62,7 @@ jobs:
           echo 'webserver:' >> /etc/erooster/config.yml
           echo '  port: 80' >> /etc/erooster/config.yml
           echo '  tls: false' >> /etc/erooster/config.yml
-      - uses: boa-dev/criterion-compare-action@3548f9d3266b71c77c03892df0293869884a4d76
+      - uses: boa-dev/criterion-compare-action@adfd3a94634fe2041ce5613eb7df09d247555b87
         with:
           branchName: ${{ github.base_ref }}
           token: ${{ github.token }}

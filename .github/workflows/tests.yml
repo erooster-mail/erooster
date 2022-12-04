@@ -104,7 +104,7 @@ jobs:
       - name: Generate code coverage for codecov
         run: cargo +nightly llvm-cov --all-features --workspace --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@29386c70ef20e286228c72b668a06fd0e8399192
+        uses: codecov/codecov-action@d9f34f8cd5cb3b3eb79b3e4b5dae3a16df499a70
         with:
           files: lcov.info
           fail_ci_if_error: false

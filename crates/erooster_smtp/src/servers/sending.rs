@@ -1,11 +1,9 @@
-use cfdkim::{DkimPrivateKey, SignerBuilder};
-use color_eyre::Result;
+use color_eyre::{eyre::Context, Result};
 use erooster_core::line_codec::{LinesCodec, LinesCodecError};
 use futures::{Sink, SinkExt, Stream, StreamExt};
-use rsa::pkcs1::DecodeRsaPrivateKey;
+use mail_auth::{common::headers::HeaderWriter, dkim::Signature, PrivateKey};
 use rustls::OwnedTrustAnchor;
 use serde::{Deserialize, Serialize};
-use simdutf8::compat::from_utf8;
 use sqlxmq::{job, CurrentJob};
 use std::{
     collections::BTreeMap, error::Error, io, net::IpAddr, path::Path, sync::Arc, time::Duration,
@@ -33,44 +31,16 @@ fn dkim_sign(
     dkim_key_path: &str,
     dkim_key_selector: &str,
 ) -> Result<String> {
-    let email = mailparse::parse_mail(raw_email.as_bytes())?;
-    debug!("raw_bytes: {:?}", from_utf8(email.raw_bytes)?);
+    let private_key = std::fs::read_to_string(Path::new(&dkim_key_path))?;
+    let pk_rsa = PrivateKey::from_rsa_pkcs1_pem(&private_key).expect("Failed to load private key");
+    let signature_rsa = Signature::new()
+        .headers(["From", "To", "Subject"])
+        .domain(domain)
+        .selector(dkim_key_selector)
+        .sign(raw_email.as_bytes(), &pk_rsa)
+        .expect("Failed to sign email");
 
-    let private_key = rsa::RsaPrivateKey::read_pkcs1_pem_file(Path::new(&dkim_key_path))?;
-    let time = time::OffsetDateTime::now_utc();
-
-    let signer = SignerBuilder::new()
-        .with_signed_headers(&[
-            "From",
-            "Reply-To",
-            "Subject",
-            "Date",
-            "To",
-            "CC",
-            "Resent-Date",
-            "Resent-From",
-            "Resent-To",
-            "Resent-Cc",
-            "In-Reply-To",
-            "References",
-            "List-Id",
-            "List-Help",
-            "List-Unsubscribe",
-            "List-Subscribe",
-            "List-Post",
-            "List-Owner",
-            "List-Archive",
-        ])?
-        .with_body_canonicalization(cfdkim::canonicalization::Type::Relaxed)
-        .with_header_canonicalization(cfdkim::canonicalization::Type::Relaxed)
-        .with_private_key(DkimPrivateKey::Rsa(private_key))
-        .with_selector(dkim_key_selector)
-        .with_signing_domain(domain)
-        .with_time(time)
-        .build()?;
-    let header = signer.sign(&email)?;
-
-    Ok(format!("{header}\r\n{raw_email}"))
+    Ok(format!("{}{raw_email}", signature_rsa.to_header()))
 }
 
 #[allow(clippy::too_many_lines)]

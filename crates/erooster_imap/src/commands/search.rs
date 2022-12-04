@@ -24,7 +24,6 @@ impl Search<'_> {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-       
         lines.flush().await?;
         Ok(())
     }

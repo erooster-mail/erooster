@@ -101,9 +101,7 @@ where
         ))
         .await?;
     // TODO generate proper list command
-    lines
-        .feed(format!("* LIST () \".\" \"{folder}\""))
-        .await?;
+    lines.feed(format!("* LIST () \".\" \"{folder}\"")).await?;
     let sub_folders = storage.list_subdirs(&mailbox_path)?;
     for sub_folder in sub_folders {
         let flags_raw = storage.get_flags(&sub_folder).await;

@@ -15,7 +15,7 @@ bench = false
 
 [dependencies]
 async-trait = "0.1.59"
-base64 = "0.13.1"
+base64 = "0.20.0"
 color-eyre = "0.6.2"
 const_format = "0.2.30"
 erooster_core = { version = "0.1.0", path = "../erooster_core" }

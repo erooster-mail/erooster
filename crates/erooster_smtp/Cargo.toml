@@ -24,7 +24,7 @@ futures = { version = "0.3.25", features = ["thread-pool"] }
 nom = "7.1.1"
 rustls = "0.20.7"
 rustls-pemfile = "1.0.1"
-serde = { version = "1.0.149", features = ["derive"] }
+serde = { version = "1.0.150", features = ["derive"] }
 simdutf8 = { version = "0.1.4" }
 mailparse = "0.13.8"
 rsa = "0.7.2"

@@ -846,9 +846,9 @@ dependencies = [
 
 [[package]]
 name = "data-encoding"
-version = "2.3.2"
+version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ee2393c4a91429dffb4bedf19f4d6abf27d8a732c8ce4980305d782e5426d57"
+checksum = "23d8666cb01533c39dde32bcbab8e227b4ed6679b2c925eba05feabea39508fb"
 
 [[package]]
 name = "debugid"
@@ -1057,7 +1057,7 @@ dependencies = [
  "enum-iterator",
  "futures",
  "maildir",
- "mailparse",
+ "mailparse 0.14.0",
  "nom 7.1.1",
  "opentelemetry-jaeger",
  "owo-colors",
@@ -1120,7 +1120,7 @@ dependencies = [
  "erooster_core",
  "futures",
  "mail-auth",
- "mailparse",
+ "mailparse 0.14.0",
  "nom 7.1.1",
  "reqwest",
  "rsa",
@@ -1968,7 +1968,7 @@ version = "0.6.1"
 source = "git+https://github.com/erooster-mail/maildir.git?branch=MTRNord/clippy#3da685d8e2e3c21d8523a70fc660d511dc62b7b9"
 dependencies = [
  "gethostname 0.2.3",
- "mailparse",
+ "mailparse 0.13.8",
  "memmap2",
 ]
 
@@ -1977,6 +1977,17 @@ name = "mailparse"
 version = "0.13.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8cae768a50835557749599277fc59f7c728118724eb34185e8feb633ef266a32"
+dependencies = [
+ "charset",
+ "data-encoding",
+ "quoted_printable",
+]
+
+[[package]]
+name = "mailparse"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b56570f5f8c0047260d1c8b5b331f62eb9c660b9dd4071a8c46f8c7d3f280aa"
 dependencies = [
  "charset",
  "data-encoding",

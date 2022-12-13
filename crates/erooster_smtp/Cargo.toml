@@ -26,7 +26,7 @@ rustls = "0.20.7"
 rustls-pemfile = "1.0.1"
 serde = { version = "1.0.150", features = ["derive"] }
 simdutf8 = { version = "0.1.4" }
-mailparse = "0.13.8"
+mailparse = "0.14.0"
 rsa = "0.7.2"
 sqlxmq = { version = "0.4", default-features = false, features = [
     "runtime-tokio-rustls",

@@ -138,8 +138,7 @@ impl Fetch<'_> {
                                         } else {
                                             lines
                                                 .feed(format!(
-                                                    "* {} FETCH (UID {} {})",
-                                                    sequence, uid, resp
+                                                    "* {sequence} FETCH (UID {uid} {resp})"
                                                 ))
                                                 .await?;
                                         }

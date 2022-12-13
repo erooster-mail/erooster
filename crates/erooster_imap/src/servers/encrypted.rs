@@ -201,8 +201,7 @@ async fn listen(
                                 Err(e) => {
                                     if let Err(e) = lines_sender
                                         .send(format!(
-                                            "* BAD [SERVERBUG] This should not happen: {}",
-                                            e
+                                            "* BAD [SERVERBUG] This should not happen: {e}"
                                         ))
                                         .await
                                     {

@@ -72,7 +72,7 @@ async fn main() -> Result<()> {
             .or_else(|_| tracing_subscriber::EnvFilter::try_new("info"))?;
         cfg_if::cfg_if! {
             if #[cfg(feature = "jaeger")] {
-                let tracer = opentelemetry_jaeger::new_pipeline().with_service_name(env!("CARGO_PKG_NAME")).with_auto_split_batch(true).install_batch(opentelemetry::runtime::Tokio)?;
+                let tracer = opentelemetry_jaeger::new_agent_pipeline().with_service_name(env!("CARGO_PKG_NAME")).with_auto_split_batch(true).install_batch(opentelemetry::runtime::Tokio)?;
                 tracing_subscriber::Registry::default()
                     .with(sentry::integrations::tracing::layer())
                     .with(filter_layer)
@@ -116,7 +116,7 @@ async fn main() -> Result<()> {
             .or_else(|_| tracing_subscriber::EnvFilter::try_new("info"))?;
         cfg_if::cfg_if! {
             if #[cfg(feature = "jaeger")] {
-                let tracer = opentelemetry_jaeger::new_pipeline().with_service_name(env!("CARGO_PKG_NAME")).with_auto_split_batch(true).install_batch(opentelemetry::runtime::Tokio)?;
+                let tracer = opentelemetry_jaeger::new_agent_pipeline().with_service_name(env!("CARGO_PKG_NAME")).with_auto_split_batch(true).install_batch(opentelemetry::runtime::Tokio)?;
                 tracing_subscriber::Registry::default()
                     .with(sentry::integrations::tracing::layer())
                     .with(filter_layer)

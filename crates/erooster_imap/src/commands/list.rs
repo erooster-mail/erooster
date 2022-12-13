@@ -123,8 +123,7 @@ where
                 mailbox_patterns_folder.remove_matches('%');
                 lines
                     .feed(format!(
-                        "* {} () \".\" \"{}\"",
-                        command_resp, mailbox_patterns_folder
+                        "* {command_resp} () \".\" \"{mailbox_patterns_folder}\""
                     ))
                     .await?;
             }

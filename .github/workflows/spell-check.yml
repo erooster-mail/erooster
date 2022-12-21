@@ -26,6 +26,6 @@ jobs:
         uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v2
 
       - name: Check spelling
-        uses: crate-ci/typos@39b28c3010d1efbba33f7a08554e0d5ed636eafb # master
+        uses: crate-ci/typos@9be36f97fdbe645ee9a12449fb13aca856c2516a # master
         with:
           config: ${{github.workspace}}/_typos.toml

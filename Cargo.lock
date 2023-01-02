@@ -529,9 +529,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.0.29"
+version = "4.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d63b9e9c07271b9957ad22c173bae2a4d9a81127680962039296abcd2f8251d"
+checksum = "a7db700bc935f9e43e88d00b0850dae18a63773cfbec6d8e070fccf7fef89a39"
 dependencies = [
  "bitflags",
  "clap_derive",
@@ -579,7 +579,7 @@ version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904eb24d05ad587557e0f484ddce5c737c30cf81372badb16d13e41c4b8340b1"
 dependencies = [
- "clap 4.0.29",
+ "clap 4.0.32",
  "roff",
 ]
 
@@ -1022,7 +1022,7 @@ dependencies = [
  "auditable",
  "auditable-build",
  "cfg-if 1.0.0",
- "clap 4.0.29",
+ "clap 4.0.32",
  "clap_mangen",
  "color-eyre",
  "erooster_core",
@@ -1163,7 +1163,7 @@ dependencies = [
 name = "eroosterctl"
 version = "0.1.0"
 dependencies = [
- "clap 4.0.29",
+ "clap 4.0.32",
  "clearscreen",
  "color-eyre",
  "erooster_core",

@@ -134,7 +134,7 @@ dependencies = [
  "humansize",
  "mime",
  "mime_guess",
- "nom 7.1.1",
+ "nom 7.1.2",
  "num-traits",
  "percent-encoding",
  "proc-macro2",
@@ -1058,7 +1058,7 @@ dependencies = [
  "futures",
  "maildir",
  "mailparse",
- "nom 7.1.1",
+ "nom 7.1.2",
  "opentelemetry-jaeger",
  "owo-colors",
  "rand_core 0.6.4",
@@ -1094,7 +1094,7 @@ dependencies = [
  "enum-iterator",
  "erooster_core",
  "futures",
- "nom 7.1.1",
+ "nom 7.1.2",
  "notify",
  "rustls",
  "rustls-pemfile",
@@ -1121,7 +1121,7 @@ dependencies = [
  "futures",
  "mail-auth",
  "mailparse",
- "nom 7.1.1",
+ "nom 7.1.2",
  "reqwest",
  "rsa",
  "rustls",
@@ -2119,9 +2119,9 @@ dependencies = [
 
 [[package]]
 name = "nom"
-version = "7.1.1"
+version = "7.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8903e5a29a317527874d0402f867152a3d21c908bb0b933e416c65e301d4c36"
+checksum = "e5507769c4919c998e69e49c839d9dc6e693ede4cc4290d6ad8b41d4f09c548c"
 dependencies = [
  "memchr",
  "minimal-lexical",
@@ -3339,7 +3339,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f87e292b4291f154971a43c3774364e2cbcaec599d3f5bf6fa9d122885dbc38a"
 dependencies = [
  "itertools",
- "nom 7.1.1",
+ "nom 7.1.2",
  "unicode_categories",
 ]
 

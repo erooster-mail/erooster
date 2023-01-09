@@ -14,7 +14,7 @@ categories = ["email", "network-programming"]
 bench = false
 
 [dependencies]
-async-trait = "0.1.60"
+async-trait = "0.1.61"
 base64 = "0.20.0"
 color-eyre = "0.6.2"
 const_format = "0.2.30"

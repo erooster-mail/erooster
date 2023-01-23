@@ -21,7 +21,7 @@ erooster_smtp = { version = "0.1.0", path = "../erooster_smtp" }
 erooster_imap = { version = "0.1.0", path = "../erooster_imap" }
 erooster_web = { version = "0.1.0", path = "../erooster_web" }
 cfg-if = "1.0.0"
-clap = { version = "4.0.32", features = ["derive", "color", "suggestions", "env"] }
+clap = { version = "4.1.2", features = ["derive", "color", "suggestions", "env"] }
 color-eyre = "0.6.2"
 opentelemetry = { version = "0.18.0", features = ["metrics", "rt-tokio"] }
 opentelemetry-jaeger = { version = "0.17.0", features = [
@@ -47,7 +47,7 @@ default = []
 jaeger = ["dep:opentelemetry-jaeger"]
 
 [build-dependencies]
-clap = { version = "4.0.32", features = ["derive", "color", "suggestions", "env"] }
+clap = { version = "4.1.2", features = ["derive", "color", "suggestions", "env"] }
 clap_mangen = "0.2.6"
 vergen = { git = "https://github.com/erooster-mail/vergen.git", rev = "e9502aad12f9fa0bfee7c9ee6581f759901b7426" }
 auditable-build = "0.2.0"

@@ -18,7 +18,7 @@ path = "src/main.rs"
 [dependencies]
 erooster_core = { version = "0.1.0", path = "../erooster_core" }
 clearscreen = "2.0.0"
-clap = { version = "4.0.32", features = ["derive", "color", "suggestions", "env"] }
+clap = { version = "4.1.4", features = ["derive", "color", "suggestions", "env"] }
 color-eyre = "0.6.2"
 indicatif = "0.17.2"
 owo-colors = "3.5.0"

@@ -48,6 +48,6 @@ jaeger = ["dep:opentelemetry-jaeger"]
 
 [build-dependencies]
 clap = { version = "4.0.32", features = ["derive", "color", "suggestions", "env"] }
-clap_mangen = "0.2.6"
+clap_mangen = "0.2.7"
 vergen = { git = "https://github.com/erooster-mail/vergen.git", rev = "e9502aad12f9fa0bfee7c9ee6581f759901b7426" }
 auditable-build = "0.2.0"

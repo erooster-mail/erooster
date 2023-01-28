@@ -28,7 +28,7 @@ opentelemetry-jaeger = { version = "0.17.0", features = [
 ], optional = true }
 owo-colors = "3.5.0"
 rand_core = { version = "0.6.4", features = ["std"] }
-rustls = "0.20.7"
+rustls = "0.20.8"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_yaml = "0.9.16"
 simdutf8 = { version = "0.1.4" }

@@ -23,7 +23,7 @@ erooster_core = { version = "0.1.0", path = "../erooster_core" }
 futures = { version = "0.3.25", features = ["thread-pool"] }
 nom = "7.1.3"
 rustls = "0.20.8"
-rustls-pemfile = "1.0.1"
+rustls-pemfile = "1.0.2"
 serde = { version = "1.0.152", features = ["derive"] }
 simdutf8 = { version = "0.1.4" }
 mailparse = "0.14.0"

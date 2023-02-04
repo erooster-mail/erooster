@@ -21,7 +21,7 @@ const_format = "0.2.30"
 erooster_core = { version = "0.1.0", path = "../erooster_core" }
 futures = { version = "0.3.25", features = ["thread-pool"] }
 nom = "7.1.3"
-notify = "5.0.0"
+notify = "5.1.0"
 rustls = "0.20.8"
 rustls-pemfile = "1.0.1"
 simdutf8 = { version = "0.1.4" }

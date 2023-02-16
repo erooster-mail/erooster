@@ -106,7 +106,9 @@ async fn main() -> Result<()> {
                     env!("CARGO_PKG_VERSION"),
                     env!("VERGEN_GIT_SHA_SHORT")
                 ))),
-                traces_sample_rate: 0.2,
+                traces_sample_rate: 1.0,
+                enable_profiling: true,
+                profiles_sample_rate: 1.0,
                 ..Default::default()
             },
         ));

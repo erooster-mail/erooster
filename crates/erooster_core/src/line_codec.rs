@@ -196,7 +196,7 @@ impl Encoder<String> for LinesCodec {
         buf.put(line.as_bytes());
         buf.put_u8(b'\r');
         buf.put_u8(b'\n');
-        debug!("sending line: {:?}", buf);
+        //debug!("sending line: {:?}", buf);
         Ok(())
     }
 }

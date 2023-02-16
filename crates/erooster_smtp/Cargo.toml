@@ -27,7 +27,7 @@ rustls-pemfile = "1.0.1"
 serde = { version = "1.0.152", features = ["derive"] }
 simdutf8 = { version = "0.1.4" }
 mailparse = "0.14.0"
-rsa = "0.7.2"
+rsa = "0.8.1"
 sqlxmq = { version = "0.4", default-features = false, features = [
     "runtime-tokio-rustls",
 ], git = "https://github.com/erooster-mail/sqlxmq.git" }
@@ -40,7 +40,7 @@ tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 trust-dns-resolver = "0.22.0"
 webpki-roots = "0.22.6"
 secrecy = "0.8.0"
-mail-auth = "0.1.0"
+mail-auth = { version= "0.3.0", features=["rust-crypto"] }
 time = { version = "0.3.17", features = ["formatting"] }
 reqwest = { version = "0.11.13", default-features = false, features = [
     "json",

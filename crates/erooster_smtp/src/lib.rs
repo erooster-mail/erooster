@@ -29,7 +29,11 @@
     clippy::clone_on_ref_ptr
 )]
 #![warn(missing_docs)]
-#![allow(clippy::missing_panics_doc)]
+#![allow(
+    clippy::missing_panics_doc,
+    // This seems to be buggy with instrument macros
+    clippy::panic_in_result_fn
+)]
 
 pub(crate) mod commands;
 /// The core server logic for the smtpserver.

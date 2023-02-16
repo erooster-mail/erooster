@@ -38,4 +38,4 @@ tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 secrecy = "0.8.0"
 
 [build-dependencies]
-vergen = { git = "https://github.com/erooster-mail/vergen.git", rev = "e9502aad12f9fa0bfee7c9ee6581f759901b7426" }
+vergen = "7.5.1"

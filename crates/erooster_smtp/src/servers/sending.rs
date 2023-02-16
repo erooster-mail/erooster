@@ -1,7 +1,13 @@
-use color_eyre::{eyre::Context, Result};
+use color_eyre::Result;
 use erooster_core::line_codec::{LinesCodec, LinesCodecError};
 use futures::{Sink, SinkExt, Stream, StreamExt};
-use mail_auth::{common::headers::HeaderWriter, dkim::Signature, PrivateKey};
+use mail_auth::{
+    common::{
+        crypto::{RsaKey, Sha256},
+        headers::HeaderWriter,
+    },
+    dkim::DkimSigner,
+};
 use rustls::OwnedTrustAnchor;
 use serde::{Deserialize, Serialize};
 use sqlxmq::{job, CurrentJob};
@@ -32,12 +38,13 @@ fn dkim_sign(
     dkim_key_selector: &str,
 ) -> Result<String> {
     let private_key = std::fs::read_to_string(Path::new(&dkim_key_path))?;
-    let pk_rsa = PrivateKey::from_rsa_pkcs1_pem(&private_key).expect("Failed to load private key");
-    let signature_rsa = Signature::new()
-        .headers(["From", "To", "Subject"])
+    let pk_rsa =
+        RsaKey::<Sha256>::from_pkcs1_pem(&private_key).expect("Failed to load private key");
+    let signature_rsa = DkimSigner::from_key(pk_rsa)
         .domain(domain)
         .selector(dkim_key_selector)
-        .sign(raw_email.as_bytes(), &pk_rsa)
+        .headers(["From", "To", "Subject"])
+        .sign(raw_email.as_bytes())
         .expect("Failed to sign email");
 
     Ok(format!("{}{raw_email}", signature_rsa.to_header()))

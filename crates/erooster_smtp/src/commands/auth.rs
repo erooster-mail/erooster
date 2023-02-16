@@ -4,6 +4,7 @@ use crate::{
     commands::{CommandData, Data},
     servers::state::{AuthState, State},
 };
+use base64::{prelude::BASE64_STANDARD, Engine};
 use erooster_core::backend::database::{Database, DB};
 use futures::{Sink, SinkExt};
 use secrecy::{ExposeSecret, SecretString, SecretVec};
@@ -72,7 +73,7 @@ impl Auth<'_> {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        let bytes = base64::decode(line.as_bytes());
+        let bytes = BASE64_STANDARD.decode(line.as_bytes());
         match bytes {
             Ok(bytes) => {
                 let username = from_utf8(&bytes)?;
@@ -103,7 +104,7 @@ impl Auth<'_> {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        let bytes = base64::decode(line.as_bytes());
+        let bytes = BASE64_STANDARD.decode(line.as_bytes());
         let mut write_lock = self.data.con_state.write().await;
         match bytes {
             Ok(bytes) => {
@@ -196,7 +197,7 @@ impl Auth<'_> {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        let bytes = base64::decode(line.as_bytes());
+        let bytes = BASE64_STANDARD.decode(line.as_bytes());
         match bytes {
             Ok(bytes) => {
                 let password =

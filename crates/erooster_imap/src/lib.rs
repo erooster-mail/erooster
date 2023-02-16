@@ -33,7 +33,9 @@
 #![allow(
     clippy::missing_panics_doc,
     clippy::missing_errors_doc,
-    clippy::module_name_repetitions
+    clippy::module_name_repetitions,
+    // This seems to be buggy with instrument macros
+    clippy::panic_in_result_fn
 )]
 
 use crate::commands::capability::get_capabilities;

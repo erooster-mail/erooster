@@ -36,7 +36,7 @@ sqlx = { version = "0.6.2", features = ["postgres", "runtime-tokio-rustls"] }
 sys-info = "0.9.1"
 tokio = { version = "1.25.0", features = ["full"] }
 tokio-rustls = { version = "0.23.4", features = ["tls12"] }
-tokio-stream = { version = "0.1.11", features = ["net", "io-util"] }
+tokio-stream = { version = "0.1.12", features = ["net", "io-util"] }
 tokio-util = { version = "0.7.7", features = ["full"] }
 tracing = "0.1.37"
 tracing-error = "0.2.0"

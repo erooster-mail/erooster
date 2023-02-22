@@ -34,6 +34,10 @@
 
 use std::{path::Path, sync::Arc};
 
+use base64::{
+    alphabet,
+    engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig},
+};
 use color_eyre::Result;
 use tracing::{error, instrument};
 
@@ -67,3 +71,11 @@ pub async fn get_config(config_path: String) -> Result<Arc<config::Config>> {
 
 /// The maximum size of a line in bytes
 pub const LINE_LIMIT: usize = 8192;
+
+/// A Base64 Decoder config that doesn't care about padding
+pub const BASE64_DECODER_CONFIG: GeneralPurposeConfig = GeneralPurposeConfig::new()
+    .with_encode_padding(true)
+    .with_decode_padding_mode(DecodePaddingMode::Indifferent);
+
+pub const BASE64_DECODER: GeneralPurpose =
+    GeneralPurpose::new(&alphabet::STANDARD, BASE64_DECODER_CONFIG);

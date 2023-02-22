@@ -4,8 +4,11 @@ use crate::{
     commands::{CommandData, Data},
     servers::state::State,
 };
-use base64::{engine::general_purpose::STANDARD_NO_PAD, Engine};
-use erooster_core::backend::database::{Database, DB};
+use base64::Engine;
+use erooster_core::{
+    backend::database::{Database, DB},
+    BASE64_DECODER,
+};
 use futures::{Sink, SinkExt};
 use secrecy::SecretString;
 use simdutf8::compat::from_utf8;
@@ -33,7 +36,7 @@ impl Authenticate<'_> {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        let bytes = STANDARD_NO_PAD.decode(self.auth_data.as_bytes());
+        let bytes = BASE64_DECODER.decode(self.auth_data.as_bytes());
         let mut write_lock = self.data.con_state.write().await;
         match bytes {
             Ok(bytes) => {

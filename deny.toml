@@ -80,6 +80,7 @@ allow = [
     "ISC",
     "CC0-1.0",
     "BSD-3-Clause",
+    "BSD-2-Clause",
     "OpenSSL",
     "Zlib",
     "WTFPL",

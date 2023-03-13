@@ -5,3 +5,5 @@ extend-exclude = []
 locale = "en"
 
 [default.extend-words]
+# EMAIL term
+HELO = "HELO"

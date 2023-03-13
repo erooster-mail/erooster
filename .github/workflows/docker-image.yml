@@ -28,6 +28,7 @@ jobs:
             registry-1.docker.io:443
             storage.googleapis.com:443
             crates.io:443
+            index.crates.io:443
             static.crates.io:443
             gitlab.com:443
             index.docker.io:443

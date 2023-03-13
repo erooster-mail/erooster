@@ -54,6 +54,7 @@ jobs:
           egress-policy: block
           allowed-endpoints: >
             crates.io:443
+            index.crates.io:443
             api.github.com:443
             github.com:443
             gitlab.com:443

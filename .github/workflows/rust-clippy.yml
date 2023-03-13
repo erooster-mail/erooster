@@ -27,6 +27,7 @@ jobs:
             api.github.com:443
             artifactcache.actions.githubusercontent.com:443
             crates.io:443
+            index.crates.io:443
             frsnacprodeus2file1.blob.core.windows.net:443
             github.com:443
             static.crates.io:443

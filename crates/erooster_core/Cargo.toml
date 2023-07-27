@@ -35,14 +35,12 @@ simdutf8 = { version = "0.1.4" }
 sqlx = { version = "0.7.1", features = ["postgres", "runtime-tokio-rustls"] }
 sys-info = "0.9.1"
 tokio = { version = "1.25.0", features = ["full"] }
-tokio-rustls = { version = "0.24.1", features = ["tls12"] }
 tokio-stream = { version = "0.1.12", features = ["net", "io-util"] }
 tokio-util = { version = "0.7.7", features = ["full"] }
 tracing = "0.1.37"
 tracing-error = "0.2.0"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 url = "2.3.1"
-webpki-roots = "0.25.0"
 secrecy = "0.8.0"
 
 [build-dependencies]

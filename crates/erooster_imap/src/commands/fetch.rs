@@ -80,7 +80,11 @@ impl Fetch<'_> {
                                         if is_uid && &mail.uid() == id
                                             || !is_uid && &(index as u32 + 1) == id
                                         {
-                                            mail.sequence_number = Some(index as u32 + 1);
+                                            if is_uid {
+                                                mail.sequence_number = Some(mail.uid());
+                                            } else {
+                                                mail.sequence_number = Some(index as u32 + 1);
+                                            }
                                             return Some(mail);
                                         }
                                     }

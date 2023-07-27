@@ -39,6 +39,8 @@ use erooster_core::{
 use std::sync::Arc;
 use tokio::signal;
 use tracing::{error, info, warn};
+use tracing_error::ErrorLayer;
+use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt};
 
 static COMPRESSED_DEPENDENCY_LIST: &[u8] = auditable::inject_dependency_list!();
 
@@ -67,11 +69,14 @@ async fn main() -> Result<()> {
         if #[cfg(feature = "jaeger")] {
             let tracer = opentelemetry_jaeger::new_agent_pipeline().with_service_name(env!("CARGO_PKG_NAME")).with_auto_split_batch(true).install_batch(opentelemetry::runtime::Tokio)?;
             tracing_subscriber::Registry::default()
-                .with(sentry::integrations::tracing::layer())
-                .with(filter_layer)
                 .with(tracing_subscriber::fmt::Layer::default())
                 .with(ErrorLayer::default())
                 .with(tracing_opentelemetry::layer().with_tracer(tracer))
+                .init();
+        } else {
+            tracing_subscriber::Registry::default()
+                .with(tracing_subscriber::fmt::Layer::default())
+                .with(ErrorLayer::default())
                 .init();
         }
     }

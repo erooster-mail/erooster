@@ -66,7 +66,8 @@ impl Fetch<'_> {
 
             let arguments_borrow = command_data.arguments[offset];
             let range = parse_selected_range(arguments_borrow).finish();
-            debug!("Range: {:?}", range);
+            debug!("Range: {:?}; Mails: {}", range, mails.len());
+
             match range {
                 Ok((_, range)) => {
                     let mut filtered_mails: Vec<MailEntryType> = mails
@@ -105,11 +106,7 @@ impl Fetch<'_> {
                                             if (is_uid && &mail.uid() >= start)
                                                 || (!is_uid && &(index as u32) >= start)
                                             {
-                                                if is_uid {
-                                                    mail.sequence_number = Some(mail.uid());
-                                                } else {
-                                                    mail.sequence_number = Some(index as u32 + 1);
-                                                }
+                                                mail.sequence_number = Some(index as u32 + 1);
                                                 return Some(mail);
                                             }
                                         }
@@ -134,6 +131,7 @@ impl Fetch<'_> {
                     match fetch_arguments(fetch_args_str).finish() {
                         Ok((_, args)) => {
                             debug!("Parsed Fetch args: {:?}", args);
+                            warn!("filtered_mails: {}", filtered_mails.len());
                             for mut mail in filtered_mails {
                                 let uid = mail.uid();
                                 let sequence =

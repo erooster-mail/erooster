@@ -15,6 +15,7 @@ use erooster_core::{
     config::{Config, Rspamd},
 };
 use futures::{Sink, SinkExt};
+use mail_auth::{AuthenticatedMessage, DkimResult, Resolver};
 use simdutf8::compat::from_utf8;
 use std::io::Write;
 use std::{collections::BTreeMap, path::Path, sync::Arc, time::Duration};
@@ -179,6 +180,41 @@ impl DataCommand<'_> {
                         } else {
                             data
                         };
+
+                        // Create a resolver using Quad9 DNS
+                        let resolver = Resolver::new_quad9_tls()?;
+                        // Parse message
+                        let authenticated_message = AuthenticatedMessage::parse(data.as_bytes())
+                            .context("Failed to parse email")?;
+
+                        // Validate signature
+                        let result = resolver.verify_dkim(&authenticated_message).await;
+
+                        // Handle fail
+                        // TODO: generate reports
+                        if !result
+                            .iter()
+                            .any(|s| matches!(s.result(), &DkimResult::Pass))
+                        {
+                            // 'Strict' mode violates the advice of Section 6.1 of RFC6376
+                            if result
+                                .iter()
+                                .any(|d| matches!(d.result(), DkimResult::TempError(_)))
+                            {
+                                lines
+                                    .send(String::from(
+                                        "451 4.7.20 No passing DKIM signatures found.\r\n",
+                                    ))
+                                    .await?;
+                            } else {
+                                lines
+                                    .send(String::from(
+                                        "550 5.7.20 No passing DKIM signatures found.\r\n",
+                                    ))
+                                    .await?;
+                            };
+                            return Ok(());
+                        }
 
                         let message_id = storage.store_new(&mailbox_path, data.as_bytes()).await?;
                         debug!("Stored message: {}", message_id);

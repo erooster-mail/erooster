@@ -257,7 +257,7 @@ impl DataCommand<'_> {
                         let message_id = storage.store_new(&mailbox_path, data.as_bytes()).await?;
                         debug!("Stored message: {}", message_id);
                     }
-                    // TODO cleanup after we are done
+                    // TODO: cleanup after we are done
                     lines
                         .send(String::from("250 2.6.0 Message accepted"))
                         .await?;

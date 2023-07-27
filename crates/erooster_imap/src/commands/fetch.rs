@@ -129,6 +129,7 @@ impl Fetch<'_> {
                                 let uid: i64 = mail.uid();
                                 let sequence =
                                     mail.sequence_number().context("Sequence number missing")?;
+                                warn!("Sequence: {sequence}; UID: {uid}; is_uid: {is_uid}");
                                 if let Some(resp) = generate_response(args.clone(), &mut mail)? {
                                     if is_uid {
                                         // if resp.contains("UID") {

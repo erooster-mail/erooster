@@ -80,11 +80,7 @@ impl Fetch<'_> {
                                         if is_uid && &mail.uid() == id
                                             || !is_uid && &(index as u32 + 1) == id
                                         {
-                                            if is_uid {
-                                                mail.sequence_number = Some(mail.uid());
-                                            } else {
-                                                mail.sequence_number = Some(index as u32 + 1);
-                                            }
+                                            mail.sequence_number = Some(index as u32 + 1);
                                             return Some(mail);
                                         }
                                     }
@@ -97,12 +93,7 @@ impl Fetch<'_> {
                                                     && &(index as u32) >= start
                                                     && &(index as u32) <= end_int)
                                             {
-                                                if is_uid {
-                                                    mail.sequence_number = Some(mail.uid());
-                                                } else {
-                                                    mail.sequence_number = Some(index as u32 + 1);
-                                                }
-
+                                                mail.sequence_number = Some(index as u32 + 1);
                                                 return Some(mail);
                                             }
                                         }
@@ -110,11 +101,7 @@ impl Fetch<'_> {
                                             if (is_uid && &mail.uid() >= start)
                                                 || (!is_uid && &(index as u32) >= start)
                                             {
-                                                if is_uid {
-                                                    mail.sequence_number = Some(mail.uid());
-                                                } else {
-                                                    mail.sequence_number = Some(index as u32 + 1);
-                                                }
+                                                mail.sequence_number = Some(index as u32 + 1);
                                                 return Some(mail);
                                             }
                                         }

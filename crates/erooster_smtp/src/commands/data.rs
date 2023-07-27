@@ -16,7 +16,7 @@ use erooster_core::{
     config::{Config, Rspamd},
 };
 use futures::{Sink, SinkExt};
-use mail_auth::{AuthenticatedMessage, DkimResult, Resolver};
+use mail_auth::{AuthenticatedMessage, DkimResult, DmarcResult, Resolver};
 use simdutf8::compat::from_utf8;
 use std::io::Write;
 use std::{collections::BTreeMap, path::Path, sync::Arc, time::Duration};
@@ -189,16 +189,16 @@ impl DataCommand<'_> {
                             .context("Failed to parse email")?;
 
                         // Validate signature
-                        let result = resolver.verify_dkim(&authenticated_message).await;
+                        let dkim_result = resolver.verify_dkim(&authenticated_message).await;
 
                         // Handle fail
                         // TODO: generate reports
-                        if !result
+                        if !dkim_result
                             .iter()
                             .any(|s| matches!(s.result(), &DkimResult::Pass))
                         {
                             // 'Strict' mode violates the advice of Section 6.1 of RFC6376
-                            if result
+                            if dkim_result
                                 .iter()
                                 .any(|d| matches!(d.result(), DkimResult::TempError(_)))
                             {
@@ -214,6 +214,43 @@ impl DataCommand<'_> {
                                     ))
                                     .await?;
                             };
+                            return Ok(());
+                        }
+
+                        // Verify DMARC
+                        let dmarc_result = resolver
+                            .verify_dmarc(
+                                &authenticated_message,
+                                &dkim_result,
+                                write_lock
+                                    .sender
+                                    .as_ref()
+                                    .context("Missing a MAIL-FROM sender")?,
+                                write_lock
+                                    .spf_result
+                                    .as_ref()
+                                    .context("Missing an SPF result")?,
+                            )
+                            .await;
+
+                        // These should pass at this point
+                        if matches!(dmarc_result.dkim_result(), &DmarcResult::Fail(_))
+                            || matches!(dmarc_result.spf_result(), &DmarcResult::Fail(_))
+                        {
+                            lines
+                                .send(String::from(
+                                    "550 5.7.1 Email rejected per DMARC policy.\r\n",
+                                ))
+                                .await?;
+                            return Ok(());
+                        } else if matches!(dmarc_result.dkim_result(), &DmarcResult::TempError(_))
+                            || matches!(dmarc_result.spf_result(), &DmarcResult::TempError(_))
+                        {
+                            lines
+                                .send(String::from(
+                                    "451 4.7.1 Email temporarily rejected per DMARC policy.\r\n",
+                                ))
+                                .await?;
                             return Ok(());
                         }
 

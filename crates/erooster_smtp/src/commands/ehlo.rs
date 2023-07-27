@@ -52,6 +52,7 @@ impl Ehlo<'_> {
             lines.flush().await?;
             return Ok(());
         }
+        write_lock.spf_result = Some(result);
 
         write_lock.ehlo = Some(command_data.arguments[0].to_string());
         lines.feed(format!("250-{hostname}")).await?;

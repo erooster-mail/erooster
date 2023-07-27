@@ -2,6 +2,7 @@ use crate::{
     commands::Data,
     servers::{
         sending::{send_email_job, EmailPayload},
+        state::Data as StateData,
         state::State,
     },
     utils::rspamd::Response,
@@ -42,7 +43,7 @@ impl DataCommand<'_> {
             } else {
                 None
             };
-            write_lock.state = State::ReceivingData((username, Vec::new()));
+            write_lock.state = State::ReceivingData((username, StateData(Vec::new())));
         };
         lines
             .send(String::from("354 Start mail input; end with <CRLF>.<CRLF>"))
@@ -82,7 +83,7 @@ impl DataCommand<'_> {
                     debug!("Authenticated user: {}", username);
 
                     let mut inner_data = data.clone();
-                    inner_data.truncate(inner_data.len() - 2);
+                    inner_data.0.truncate(inner_data.0.len() - 2);
                     for address in receipts {
                         let mut to: BTreeMap<String, Vec<String>> = BTreeMap::new();
                         let domain = address.split('@').collect::<Vec<&str>>()[1];
@@ -99,7 +100,7 @@ impl DataCommand<'_> {
                             address,
                             OffsetDateTime::now_utc().format(&date_format)?
                         );
-                        let temp_data = [received_header.as_bytes(), &inner_data].concat();
+                        let temp_data = [received_header.as_bytes(), &inner_data.0].concat();
                         let data = from_utf8(&temp_data)?;
 
                         let data = if let Some(rspamd_config) = &config.rspamd {
@@ -163,7 +164,7 @@ impl DataCommand<'_> {
                             receipt,
                             OffsetDateTime::now_utc().format(&date_format)?,
                         );
-                        let temp_data = [received_header.as_bytes(), data].concat();
+                        let temp_data = [received_header.as_bytes(), &data.0].concat();
                         let data = from_utf8(&temp_data)?;
 
                         let data = if let Some(rspamd_config) = &config.rspamd {
@@ -232,7 +233,7 @@ impl DataCommand<'_> {
                     color_eyre::eyre::bail!("Invalid state");
                 };
             } else if let State::ReceivingData((_, data)) = &mut write_lock.state {
-                write!(data, "{line}\r\n")?;
+                write!(data.0, "{line}\r\n")?;
             }
         };
         Ok(())

@@ -73,8 +73,8 @@ impl DataCommand<'_> {
             if line == "." {
                 debug!("Got end of line");
                 let Some(receipts) = &write_lock.receipts else {
-color_eyre::eyre::bail!("No receipts")
-};
+                    color_eyre::eyre::bail!("No receipts")
+                };
                 write_lock.state = if let State::ReceivingData((Some(username), data)) =
                     &write_lock.state
                 {

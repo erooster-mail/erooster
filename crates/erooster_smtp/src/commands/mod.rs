@@ -217,7 +217,9 @@ impl Data {
                         return Ok(Response::Exit);
                     }
                     Commands::MAILFROM => {
-                        Mail { data: self }.exec(lines, &command_data).await?;
+                        Mail { data: self }
+                            .exec(&config.mail.hostname, lines, &command_data)
+                            .await?;
                     }
                     Commands::RCPTTO => {
                         Rcpt { data: self }

@@ -76,6 +76,7 @@ where
 {
     let count = storage.count_cur(&mailbox_path) + storage.count_new(&mailbox_path);
     lines.feed(format!("* {count} EXISTS")).await?;
+    // FIXME: This is fundamentaly invalid and instead should refer to the timestamp a mailbox was created
     let current_time = SystemTime::now();
     let unix_timestamp = current_time.duration_since(UNIX_EPOCH)?;
     #[allow(clippy::cast_possible_truncation)]

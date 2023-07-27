@@ -18,7 +18,7 @@ use erooster_core::backend::storage::{
 use futures::{Sink, SinkExt};
 use nom::{error::convert_error, Finish};
 use std::sync::Arc;
-use tracing::{debug, error, instrument};
+use tracing::{debug, error, instrument, log::warn};
 
 pub struct Fetch<'a> {
     pub data: &'a Data,
@@ -238,6 +238,7 @@ fn generate_response_for_attributes(
             }
         }
         FetchAttributes::Flags => {
+            warn!("Flags contained are: {}", mail.flags());
             let mut flags = String::new();
             if mail
                 .path()
@@ -285,6 +286,7 @@ fn generate_response_for_attributes(
                     flags.push_str(" \\Deleted");
                 }
             }
+            warn!("Flags sent are: {flags}");
 
             Ok(Some(format!("FLAGS ({flags})")))
         }

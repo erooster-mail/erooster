@@ -2,7 +2,6 @@ use bytes::{Buf, BufMut, BytesMut};
 use simdutf8::compat::from_utf8;
 use std::{cmp, fmt, io, str, usize};
 use tokio_util::codec::{Decoder, Encoder};
-use tracing::debug;
 
 /// A simple [`Decoder`] and [`Encoder`] implementation that splits up data into lines.
 ///

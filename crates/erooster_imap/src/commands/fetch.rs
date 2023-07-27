@@ -126,22 +126,20 @@ impl Fetch<'_> {
                         Ok((_, args)) => {
                             debug!("Parsed Fetch args: {:?}", args);
                             for mut mail in filtered_mails {
-                                let uid = mail.uid();
+                                let uid: i64 = mail.uid();
                                 let sequence =
                                     mail.sequence_number().context("Sequence number missing")?;
                                 if let Some(resp) = generate_response(args.clone(), &mut mail)? {
                                     if is_uid {
-                                        if resp.contains("UID") {
-                                            lines
-                                                .feed(format!("* {sequence} FETCH ({resp})"))
-                                                .await?;
-                                        } else {
-                                            lines
-                                                .feed(format!(
-                                                    "* {sequence} FETCH (UID {uid} {resp})"
-                                                ))
-                                                .await?;
-                                        }
+                                        // if resp.contains("UID") {
+                                        //     lines
+                                        //         .feed(format!("* {sequence} FETCH ({resp})"))
+                                        //         .await?;
+                                        // } else {
+                                        lines
+                                            .feed(format!("* {sequence} FETCH (UID {uid} {resp})"))
+                                            .await?;
+                                        // }
                                     } else {
                                         lines.feed(format!("* {sequence} FETCH ({resp})")).await?;
                                     }
@@ -300,11 +298,9 @@ fn generate_response_for_attributes(
         }
         FetchAttributes::Uid => Ok(Some(format!("UID {}", mail.uid()))),
         FetchAttributes::BodySection(section_text, range) => {
-            Ok(Some(body(section_text, range, mail, true)))
+            Ok(Some(body(section_text, range, mail)))
         }
-        FetchAttributes::BodyPeek(section_text, range) => {
-            Ok(Some(body(section_text, range, mail, false)))
-        }
+        FetchAttributes::BodyPeek(section_text, range) => Ok(Some(body(section_text, range, mail))),
         _ => Ok(None),
     }
 }
@@ -315,7 +311,6 @@ fn body(
     section_text: Option<SectionText>,
     range: Option<(u64, u64)>,
     mail: &mut MailEntryType,
-    seen: bool,
 ) -> String {
     if let Some(section_text) = section_text {
         match section_text {

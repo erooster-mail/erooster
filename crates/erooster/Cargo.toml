@@ -32,14 +32,6 @@ opentelemetry = { version = "0.19.0", features = ["metrics", "rt-tokio"] }
 opentelemetry-jaeger = { version = "0.18.0", features = [
     "rt-tokio",
 ], optional = true }
-sentry = { version = "0.31.5", default-features = false, features = [
-    "tracing",
-    "backtrace",
-    "contexts",
-    "panic",
-    "ureq",
-    "profiling",
-] }
 serde = { version = "1.0.152", features = ["derive"] }
 tokio = { version = "1.25.0", features = ["rt", "rt-multi-thread", "signal"] }
 tracing = "0.1.37"

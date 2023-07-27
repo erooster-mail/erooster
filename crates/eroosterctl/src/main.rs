@@ -44,12 +44,9 @@ use owo_colors::{
 };
 use secrecy::SecretString;
 use std::io::Write;
-use std::{borrow::Cow, time::Duration};
+use std::time::Duration;
 use std::{io, process::exit, sync::Arc};
-use tracing::{error, info, warn};
-use tracing_error::ErrorLayer;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-
+use tracing::{error, warn};
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None, propagate_version = true)]
 struct Cli {
@@ -95,37 +92,7 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
     let config = erooster_core::get_config(cli.config).await?;
 
-    let mut _guard;
-    if config.sentry {
-        let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
-            .or_else(|_| tracing_subscriber::EnvFilter::try_new("info"))?;
-        tracing_subscriber::Registry::default()
-            .with(sentry::integrations::tracing::layer())
-            .with(filter_layer)
-            .with(tracing_subscriber::fmt::Layer::default())
-            .with(ErrorLayer::default())
-            .init();
-        info!("Sentry logging is enabled. Change the config to disable it.");
-
-        _guard = sentry::init((
-            "https://49e511ff807e45ffa19be1c63cfda26c@o105177.ingest.sentry.io/6458648",
-            sentry::ClientOptions {
-                release: Some(Cow::Owned(format!(
-                    "{}@{}:{}",
-                    env!("CARGO_PKG_NAME"),
-                    env!("CARGO_PKG_VERSION"),
-                    env!("VERGEN_GIT_SHA_SHORT")
-                ))),
-                traces_sample_rate: 1.0,
-                enable_profiling: true,
-                profiles_sample_rate: 1.0,
-                ..Default::default()
-            },
-        ));
-    } else {
-        info!("Sentry logging is disabled. Change the config to enable it.");
-        tracing_subscriber::fmt::init();
-    }
+    tracing_subscriber::fmt::init();
 
     let next = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |panic_info| {

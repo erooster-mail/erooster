@@ -35,11 +35,11 @@ pub enum MailState {
 #[async_trait::async_trait]
 pub trait MailEntry {
     /// The uid of the mail entry
-    fn uid(&self) -> i64;
+    fn uid(&self) -> u32;
     /// The state (new or read) of the mail entry
     fn mail_state(&self) -> MailState;
     /// The sequence number of the mail entry
-    fn sequence_number(&self) -> Option<i64>;
+    fn sequence_number(&self) -> Option<u32>;
     /// The id of the email
     fn id(&self) -> &str;
     /// The parsed form of the email

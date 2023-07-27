@@ -293,14 +293,14 @@ pub fn fetch_arguments(input: &str) -> Res<FetchArguments> {
 
 #[derive(Debug)]
 pub enum RangeEnd {
-    End(i64),
+    End(u32),
     All,
 }
 
 #[derive(Debug)]
 pub enum Range {
-    Single(i64),
-    Range(i64, RangeEnd),
+    Single(u32),
+    Range(u32, RangeEnd),
 }
 
 #[instrument(skip(input))]
@@ -316,15 +316,15 @@ pub fn parse_selected_range(input: &str) -> Res<Vec<Range>> {
                         char(':'),
                         map(alt((tag_no_case("*"), digit1)), |x: &str| match x {
                             "*" => RangeEnd::All,
-                            _ => RangeEnd::End(x.parse::<i64>().expect("range end is a number")),
+                            _ => RangeEnd::End(x.parse::<u32>().expect("range end is a number")),
                         }),
                     ),
                     |(x, y): (&str, RangeEnd)| {
-                        Range::Range(x.parse::<i64>().expect("range start is a number"), y)
+                        Range::Range(x.parse::<u32>().expect("range start is a number"), y)
                     },
                 ),
                 map(digit1, |x: &str| {
-                    Range::Single(x.parse::<i64>().expect("single range is a number"))
+                    Range::Single(x.parse::<u32>().expect("single range is a number"))
                 }),
             )),
         ),

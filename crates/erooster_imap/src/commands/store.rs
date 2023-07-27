@@ -47,9 +47,9 @@ impl Store<'_> {
                         let range = command_data.arguments[offset]
                             .split(':')
                             .collect::<Vec<_>>();
-                        let start = range[0].parse::<i64>().unwrap_or(1);
+                        let start = range[0].parse::<u32>().unwrap_or(1);
                         let end = range[1];
-                        let end_int = end.parse::<i64>().unwrap_or(i64::max_value());
+                        let end_int = end.parse::<u32>().unwrap_or(u32::max_value());
                         if end == "*" {
                             mails
                                 .into_iter()
@@ -62,7 +62,7 @@ impl Store<'_> {
                                 .collect()
                         }
                     } else {
-                        let wanted_id = command_data.arguments[offset].parse::<i64>().unwrap_or(1);
+                        let wanted_id = command_data.arguments[offset].parse::<u32>().unwrap_or(1);
                         mails
                             .into_iter()
                             .filter(|mail| mail.uid() == wanted_id)

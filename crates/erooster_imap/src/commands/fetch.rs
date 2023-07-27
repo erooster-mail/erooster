@@ -77,9 +77,9 @@ impl Fetch<'_> {
                                 match range {
                                     Range::Single(id) => {
                                         if is_uid && &mail.uid() == id
-                                            || !is_uid && &(index as i64 + 1) == id
+                                            || !is_uid && &(index as u32 + 1) == id
                                         {
-                                            mail.sequence_number = Some(index as i64 + 1);
+                                            mail.sequence_number = Some(index as u32 + 1);
                                             return Some(mail);
                                         }
                                     }
@@ -89,18 +89,18 @@ impl Fetch<'_> {
                                                 && &mail.uid() >= start
                                                 && &mail.uid() <= end_int)
                                                 || (!is_uid
-                                                    && &(index as i64) >= start
-                                                    && &(index as i64) <= end_int)
+                                                    && &(index as u32) >= start
+                                                    && &(index as u32) <= end_int)
                                             {
-                                                mail.sequence_number = Some(index as i64 + 1);
+                                                mail.sequence_number = Some(index as u32 + 1);
                                                 return Some(mail);
                                             }
                                         }
                                         RangeEnd::All => {
                                             if (is_uid && &mail.uid() >= start)
-                                                || (!is_uid && &(index as i64) >= start)
+                                                || (!is_uid && &(index as u32) >= start)
                                             {
-                                                mail.sequence_number = Some(index as i64 + 1);
+                                                mail.sequence_number = Some(index as u32 + 1);
                                                 return Some(mail);
                                             }
                                         }
@@ -126,21 +126,24 @@ impl Fetch<'_> {
                         Ok((_, args)) => {
                             debug!("Parsed Fetch args: {:?}", args);
                             for mut mail in filtered_mails {
-                                let uid: i64 = mail.uid();
+                                let uid = mail.uid();
                                 let sequence =
                                     mail.sequence_number().context("Sequence number missing")?;
                                 warn!("Sequence: {sequence}; UID: {uid}; is_uid: {is_uid}");
                                 if let Some(resp) = generate_response(args.clone(), &mut mail)? {
                                     if is_uid {
-                                        // if resp.contains("UID") {
-                                        //     lines
-                                        //         .feed(format!("* {sequence} FETCH ({resp})"))
-                                        //         .await?;
-                                        // } else {
-                                        lines
-                                            .feed(format!("* {sequence} FETCH (UID {uid} {resp})"))
-                                            .await?;
-                                        // }
+                                        // This deduplicates the UID command if needed
+                                        if resp.contains("UID") {
+                                            lines
+                                                .feed(format!("* {sequence} FETCH ({resp})"))
+                                                .await?;
+                                        } else {
+                                            lines
+                                                .feed(format!(
+                                                    "* {sequence} FETCH (UID {uid} {resp})"
+                                                ))
+                                                .await?;
+                                        }
                                     } else {
                                         lines.feed(format!("* {sequence} FETCH ({resp})")).await?;
                                     }

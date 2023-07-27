@@ -61,7 +61,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                 MailState::New
             };
             MaildirMailEntry {
-                uid,
+                uid: uid.try_into().expect("Invalid UID"),
                 entry,
                 mail_state,
                 sequence_number: None,
@@ -210,7 +210,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                         .find(|y| y.maildir_id == maildir_id)
                         .map_or(0, |y| y.id);
                     Some(MaildirMailEntry {
-                        uid,
+                        uid: uid.try_into().expect("Invalid UID"),
                         entry: x,
                         mail_state: MailState::Read,
                         sequence_number: None,
@@ -241,7 +241,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                         .find(|y| y.maildir_id == maildir_id)
                         .map_or(0, |y| y.id);
                     Some(MaildirMailEntry {
-                        uid,
+                        uid: uid.try_into().expect("Invalid UID"),
                         entry: x,
                         mail_state: MailState::New,
                         sequence_number: None,
@@ -279,7 +279,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                         MailState::New
                     };
                     Some(MaildirMailEntry {
-                        uid,
+                        uid: uid.try_into().expect("Invalid UID"),
                         entry: x,
                         mail_state: state,
                         sequence_number: None,
@@ -439,7 +439,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
 
 #[derive(sqlx::FromRow)]
 struct DbMails {
-    id: i64,
+    id: i32,
     #[allow(dead_code)]
     maildir_id: String,
 }
@@ -447,9 +447,9 @@ struct DbMails {
 /// Wrapper for the mailentries from the Maildir crate
 pub struct MaildirMailEntry {
     entry: maildir::MailEntry,
-    uid: i64,
+    uid: u32,
     /// The sequence number. It is None until used
-    pub sequence_number: Option<i64>,
+    pub sequence_number: Option<u32>,
     date: Option<i64>,
     mail_state: MailState,
 }
@@ -468,7 +468,7 @@ impl MaildirMailEntry {
 #[async_trait::async_trait]
 impl MailEntry for MaildirMailEntry {
     #[instrument(skip(self))]
-    fn uid(&self) -> i64 {
+    fn uid(&self) -> u32 {
         self.uid
     }
 
@@ -478,7 +478,7 @@ impl MailEntry for MaildirMailEntry {
     }
 
     #[instrument(skip(self))]
-    fn sequence_number(&self) -> Option<i64> {
+    fn sequence_number(&self) -> Option<u32> {
         self.sequence_number
     }
 

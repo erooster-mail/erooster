@@ -78,7 +78,7 @@ async fn receive_message() {
 
     // Send data and terminate with a <CRLF>.<CRLF>
     let email = include_str!("example_mail.txt");
-    sender.send(format!("{}\r\n.", email)).await.unwrap();
+    sender.send(format!("{email}\r\n.")).await.unwrap();
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("250 2.6.0 Message accepted"));
 
@@ -133,10 +133,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     erooster_smtp::servers::unencrypted::Unencrypted::run(config, database, storage)
                         .await
                 {
-                    panic!("Unable to start server: {:?}", e);
+                    panic!("Unable to start server: {e:?}");
                 }
             }
-            Err(e) => panic!("Unable to connect to database server: {:?}", e),
+            Err(e) => panic!("Unable to connect to database server: {e:?}"),
         }
     });
     thread::sleep(Duration::from_millis(5000));

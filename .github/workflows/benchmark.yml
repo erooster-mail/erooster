@@ -38,6 +38,7 @@ jobs:
 
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
       - run: rustup default nightly
+      - run: rustup update nightly
       - uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b
       - name: Install opendkim
         run: apt update && apt install -y opendkim-tools

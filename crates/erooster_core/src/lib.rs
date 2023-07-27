@@ -77,5 +77,6 @@ pub const BASE64_DECODER_CONFIG: GeneralPurposeConfig = GeneralPurposeConfig::ne
     .with_encode_padding(true)
     .with_decode_padding_mode(DecodePaddingMode::Indifferent);
 
+/// A Base64 Decoder config that doesn't care about padding
 pub const BASE64_DECODER: GeneralPurpose =
     GeneralPurpose::new(&alphabet::STANDARD, BASE64_DECODER_CONFIG);

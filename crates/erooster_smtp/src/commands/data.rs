@@ -2,6 +2,7 @@ use crate::{
     commands::Data,
     servers::{
         sending::{send_email_job, EmailPayload},
+        state::Data as StateData,
         state::State,
     },
     utils::rspamd::Response,
@@ -15,6 +16,7 @@ use erooster_core::{
     config::{Config, Rspamd},
 };
 use futures::{Sink, SinkExt};
+use mail_auth::{AuthenticatedMessage, DkimResult, DmarcResult, Resolver};
 use simdutf8::compat::from_utf8;
 use std::io::Write;
 use std::{collections::BTreeMap, path::Path, sync::Arc, time::Duration};
@@ -41,7 +43,7 @@ impl DataCommand<'_> {
             } else {
                 None
             };
-            write_lock.state = State::ReceivingData((username, Vec::new()));
+            write_lock.state = State::ReceivingData((username, StateData(Vec::new())));
         };
         lines
             .send(String::from("354 Start mail input; end with <CRLF>.<CRLF>"))
@@ -81,7 +83,7 @@ impl DataCommand<'_> {
                     debug!("Authenticated user: {}", username);
 
                     let mut inner_data = data.clone();
-                    inner_data.truncate(inner_data.len() - 2);
+                    inner_data.0.truncate(inner_data.0.len() - 2);
                     for address in receipts {
                         let mut to: BTreeMap<String, Vec<String>> = BTreeMap::new();
                         let domain = address.split('@').collect::<Vec<&str>>()[1];
@@ -98,7 +100,7 @@ impl DataCommand<'_> {
                             address,
                             OffsetDateTime::now_utc().format(&date_format)?
                         );
-                        let temp_data = [received_header.as_bytes(), &inner_data].concat();
+                        let temp_data = [received_header.as_bytes(), &inner_data.0].concat();
                         let data = from_utf8(&temp_data)?;
 
                         let data = if let Some(rspamd_config) = &config.rspamd {
@@ -162,7 +164,7 @@ impl DataCommand<'_> {
                             receipt,
                             OffsetDateTime::now_utc().format(&date_format)?,
                         );
-                        let temp_data = [received_header.as_bytes(), data].concat();
+                        let temp_data = [received_header.as_bytes(), &data.0].concat();
                         let data = from_utf8(&temp_data)?;
 
                         let data = if let Some(rspamd_config) = &config.rspamd {
@@ -180,10 +182,82 @@ impl DataCommand<'_> {
                             data
                         };
 
+                        // Create a resolver using Quad9 DNS
+                        let resolver = Resolver::new_quad9_tls()?;
+                        // Parse message
+                        let authenticated_message = AuthenticatedMessage::parse(data.as_bytes())
+                            .context("Failed to parse email")?;
+
+                        // Validate signature
+                        let dkim_result = resolver.verify_dkim(&authenticated_message).await;
+
+                        // Handle fail
+                        // TODO: generate reports
+                        if !dkim_result
+                            .iter()
+                            .any(|s| matches!(s.result(), &DkimResult::Pass))
+                        {
+                            // 'Strict' mode violates the advice of Section 6.1 of RFC6376
+                            if dkim_result
+                                .iter()
+                                .any(|d| matches!(d.result(), DkimResult::TempError(_)))
+                            {
+                                lines
+                                    .send(String::from(
+                                        "451 4.7.20 No passing DKIM signatures found.\r\n",
+                                    ))
+                                    .await?;
+                            } else {
+                                lines
+                                    .send(String::from(
+                                        "550 5.7.20 No passing DKIM signatures found.\r\n",
+                                    ))
+                                    .await?;
+                            };
+                            return Ok(());
+                        }
+
+                        // Verify DMARC
+                        let dmarc_result = resolver
+                            .verify_dmarc(
+                                &authenticated_message,
+                                &dkim_result,
+                                write_lock
+                                    .sender
+                                    .as_ref()
+                                    .context("Missing a MAIL-FROM sender")?,
+                                write_lock
+                                    .spf_result
+                                    .as_ref()
+                                    .context("Missing an SPF result")?,
+                            )
+                            .await;
+
+                        // These should pass at this point
+                        if matches!(dmarc_result.dkim_result(), &DmarcResult::Fail(_))
+                            || matches!(dmarc_result.spf_result(), &DmarcResult::Fail(_))
+                        {
+                            lines
+                                .send(String::from(
+                                    "550 5.7.1 Email rejected per DMARC policy.\r\n",
+                                ))
+                                .await?;
+                            return Ok(());
+                        } else if matches!(dmarc_result.dkim_result(), &DmarcResult::TempError(_))
+                            || matches!(dmarc_result.spf_result(), &DmarcResult::TempError(_))
+                        {
+                            lines
+                                .send(String::from(
+                                    "451 4.7.1 Email temporarily rejected per DMARC policy.\r\n",
+                                ))
+                                .await?;
+                            return Ok(());
+                        }
+
                         let message_id = storage.store_new(&mailbox_path, data.as_bytes()).await?;
                         debug!("Stored message: {}", message_id);
                     }
-                    // TODO cleanup after we are done
+                    // TODO: cleanup after we are done
                     lines
                         .send(String::from("250 2.6.0 Message accepted"))
                         .await?;
@@ -196,7 +270,7 @@ impl DataCommand<'_> {
                     color_eyre::eyre::bail!("Invalid state");
                 };
             } else if let State::ReceivingData((_, data)) = &mut write_lock.state {
-                write!(data, "{line}\r\n")?;
+                write!(data.0, "{line}\r\n")?;
             }
         };
         Ok(())

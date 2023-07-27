@@ -62,7 +62,7 @@ impl Fetch<'_> {
                     mail
                 })
                 .collect();
-            mails.sort_by_cached_key(MaildirMailEntry::date);
+            mails.sort_by_cached_key(MaildirMailEntry::uid);
 
             let arguments_borrow = command_data.arguments[offset];
             let range = parse_selected_range(arguments_borrow).finish();

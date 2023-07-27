@@ -210,7 +210,7 @@ pub fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Resul
                     }
                 }
             }
-            debug!("[Fetch] List Response: {}", resp);
+            //debug!("[Fetch] List Response: {}", resp);
             Ok(Some(resp))
         }
         _ => Ok(None),

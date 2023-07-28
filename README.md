@@ -81,24 +81,17 @@ _Note: The status subcommand at this time doesn't actually check the server stat
 - MySQL/MariaDB support
 - Support for IMAP LOGIN command (It is per rev2 spec)
 - Support for POP3
-- Support for Exchange
+- Support for Exchange (this is subject to change)
 
 ## Error Reporting
 
 Erooster by default does not auto report any panics or errors.
 It provides however a GitHub reporting link on panics.
 
-Additionally, it is able to let you auto report to a sentry.
-This will also record performance using tracing.
-Due to how sentry works, this is not public.
-It is disabled by default due to GDPR rules.
-
-To enable sentry, please set `sentry: true` in your config file.
-
 ## Comparisons
 
 As I made a Reddit post, some comparisons were made in the commands.
-You can check them out at https://www.reddit.com/r/rust/comments/uyxxrg/comment/ia7qwcg/?utm_source=share&utm_medium=web2x&context=3
+You can check them out at <https://www.reddit.com/r/rust/comments/uyxxrg/comment/ia7qwcg/?utm_source=share&utm_medium=web2x&context=3>
 
 ## Support
 
@@ -106,4 +99,4 @@ Due to personal constraints, I currently do not prove enterprise support for thi
 
 ## Contact
 
-To contact the erooster team you can find us at https://matrix.to/#/#erooster:midnightthoughts.space or if an email is absolutely needed please write to [support@nordgedanken.dev](mailto:support@nordgedanken.dev). As written in the Support section, there is no enterprise support at this time. So please don't ask for it. It will just fill up the mailbox. :)
+To contact the erooster team you can find us at <https://matrix.to/#/#erooster:midnightthoughts.space> or if an email is absolutely needed please write to [support@nordgedanken.dev](mailto:support@nordgedanken.dev). As written in the Support section, there is no enterprise support at this time. So please don't ask for it. It will just fill up the mailbox. :)

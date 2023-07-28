@@ -78,12 +78,9 @@ impl Fetch<'_> {
                         })
                         .collect::<Vec<_>>();
 
-                    debug!("command_data.arguments: {:?}", command_data.arguments);
-                    let fetch_args: String =
-                        command_data.arguments[1 + offset..].to_vec().join(" ");
-                    debug!("fetch_args: {:?}", fetch_args);
-                    let fetch_args_str = &fetch_args[1..fetch_args.len() - 1];
-                    debug!("fetch_args_str: {:?}", fetch_args_str);
+                    let fetch_args: &str = &command_data.arguments
+                        [2 + offset..command_data.arguments.len() - 1]
+                        .join(" ");
 
                     filtered_mails.sort_by_cached_key(|x| {
                         if let Some(number) = x.sequence_number() {
@@ -92,7 +89,7 @@ impl Fetch<'_> {
                             0
                         }
                     });
-                    match fetch_arguments(fetch_args_str).finish() {
+                    match fetch_arguments(fetch_args).finish() {
                         Ok((_, args)) => {
                             for mail in filtered_mails {
                                 let uid = mail.uid();
@@ -132,7 +129,7 @@ impl Fetch<'_> {
                         Err(e) => {
                             error!(
                                 "Failed to parse fetch arguments: {}",
-                                convert_error(fetch_args_str, e)
+                                convert_error(fetch_args, e)
                             );
                             lines
                                 .send(format!("{} BAD Unable to parse", command_data.tag))

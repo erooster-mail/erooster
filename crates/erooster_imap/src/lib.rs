@@ -38,7 +38,7 @@
     clippy::panic_in_result_fn
 )]
 
-use crate::commands::capability::get_capabilities;
+use crate::commands::capability::{get_capabilities, get_unencrypted_capabilities};
 use async_trait::async_trait;
 use const_format::formatcp;
 use erooster_core::{
@@ -55,6 +55,12 @@ pub(crate) mod servers;
 pub const CAPABILITY_HELLO: &str = formatcp!(
     "* OK [{}] IMAP4rev1/IMAP4rev2 Service Ready",
     get_capabilities()
+);
+
+/// A const variant of the Capabilities we welcome clients with
+pub const CAPABILITY_UNENCRYPTED_HELLO: &str = formatcp!(
+    "* OK [{}] IMAP4rev1/IMAP4rev2 Service Ready",
+    get_unencrypted_capabilities()
 );
 
 /// An implementation of a imap server

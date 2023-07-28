@@ -29,6 +29,10 @@ pub const fn get_capabilities() -> &'static str {
     "CAPABILITY AUTH=PLAIN LOGINDISABLED UTF8=ONLY ENABLE IMAP4rev2 IMAP4rev1"
 }
 
+pub const fn get_unencrypted_capabilities() -> &'static str {
+    "CAPABILITY AUTH=PLAIN LOGINDISABLED UTF8=ONLY ENABLE IMAP4rev2 IMAP4rev1 STARTTLS"
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

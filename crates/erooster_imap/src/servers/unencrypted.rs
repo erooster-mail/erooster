@@ -4,7 +4,7 @@ use crate::{
         encrypted::{get_tls_acceptor, listen_tls},
         state::Connection,
     },
-    Server, CAPABILITY_HELLO,
+    Server, CAPABILITY_UNENCRYPTED_HELLO,
 };
 use async_trait::async_trait;
 use color_eyre::Result;
@@ -81,7 +81,10 @@ async fn listen(
         let connection: JoinHandle<Result<()>> = tokio::spawn(async move {
             let lines = Framed::new(tcp_stream, LinesCodec::new_with_max_length(LINE_LIMIT));
             let (mut lines_sender, mut lines_reader) = lines.split();
-            if let Err(e) = lines_sender.send(CAPABILITY_HELLO.to_string()).await {
+            if let Err(e) = lines_sender
+                .send(CAPABILITY_UNENCRYPTED_HELLO.to_string())
+                .await
+            {
                 error!(
                     "Unable to send greeting to client. Closing connection. Error: {}",
                     e

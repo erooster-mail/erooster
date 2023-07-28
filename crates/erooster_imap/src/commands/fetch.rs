@@ -65,23 +65,22 @@ impl Fetch<'_> {
             mails.sort_by_cached_key(MaildirMailEntry::uid);
 
             let arguments_borrow = command_data.arguments[offset];
-            let range = parse_selected_range(arguments_borrow).finish();
-            debug!("Range: {:?}; Mails: {}", range, mails.len());
+            let ranges = parse_selected_range(arguments_borrow).finish();
+            debug!("Range: {:?}; Mails: {}", ranges, mails.len());
 
-            match range {
-                Ok((_, range)) => {
+            match ranges {
+                Ok((_, ranges)) => {
                     let mut filtered_mails: Vec<MailEntryType> = mails
                         .into_iter()
                         .enumerate()
                         .filter_map(|(index, mut mail)| {
-                            for range in &range {
-                                match range {
+                            if ranges.iter().any(|x| {
+                                match x {
                                     Range::Single(id) => {
                                         if is_uid && &mail.uid() == id
                                             || !is_uid && &(index as u32 + 1) == id
                                         {
-                                            mail.sequence_number = Some(index as u32 + 1);
-                                            return Some(mail);
+                                            return true;
                                         }
                                     }
                                     Range::Range(start, end) => match end {
@@ -93,20 +92,22 @@ impl Fetch<'_> {
                                                     && &(index as u32) >= start
                                                     && &(index as u32) <= end_int)
                                             {
-                                                mail.sequence_number = Some(index as u32 + 1);
-                                                return Some(mail);
+                                                return true;
                                             }
                                         }
                                         RangeEnd::All => {
                                             if (is_uid && &mail.uid() >= start)
                                                 || (!is_uid && &(index as u32) >= start)
                                             {
-                                                mail.sequence_number = Some(index as u32 + 1);
-                                                return Some(mail);
+                                                return true;
                                             }
                                         }
                                     },
-                                }
+                                };
+                                false
+                            }) {
+                                mail.sequence_number = Some(index as u32 + 1);
+                                return Some(mail);
                             }
                             None
                         })

@@ -1,5 +1,13 @@
-use crate::{commands::Data, servers::state::Connection, Server, CAPABILITY_HELLO};
+use crate::{
+    commands::{Data, Response},
+    servers::{
+        encrypted::{get_tls_acceptor, listen_tls},
+        state::Connection,
+    },
+    Server, CAPABILITY_HELLO,
+};
 use async_trait::async_trait;
+use color_eyre::Result;
 use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
@@ -8,7 +16,7 @@ use erooster_core::{
 };
 use futures::{SinkExt, StreamExt};
 use std::{net::SocketAddr, sync::Arc};
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, task::JoinHandle};
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, info, instrument};
@@ -70,7 +78,7 @@ async fn listen(
         let config = Arc::clone(&config);
         let database = Arc::clone(&database);
         let storage = Arc::clone(&storage);
-        tokio::spawn(async move {
+        let connection: JoinHandle<Result<()>> = tokio::spawn(async move {
             let lines = Framed::new(tcp_stream, LinesCodec::new_with_max_length(LINE_LIMIT));
             let (mut lines_sender, mut lines_reader) = lines.split();
             if let Err(e) = lines_sender.send(CAPABILITY_HELLO.to_string()).await {
@@ -78,15 +86,15 @@ async fn listen(
                     "Unable to send greeting to client. Closing connection. Error: {}",
                     e
                 );
-                return;
+                return Ok(());
             }
             let state = Connection::new(false);
 
+            let data = Data {
+                con_state: Arc::clone(&state),
+            };
+            let mut do_starttls = false;
             while let Some(Ok(line)) = lines_reader.next().await {
-                let data = Data {
-                    con_state: Arc::clone(&state),
-                };
-
                 debug!("[IMAP] [{}] Got Command: {}", peer, line);
 
                 // TODO make sure to handle IDLE different as it needs us to stream lines
@@ -104,10 +112,21 @@ async fn listen(
                 match response {
                     Ok(response) => {
                         // Cleanup timeout managers
-                        if response {
-                            // Used for later session timer management
-                            debug!("[IMAP] Closing connection");
-                            break;
+                        match response {
+                            Response::Exit => {
+                                // Used for later session timer management
+                                debug!("[IMAP] Closing connection");
+                                break;
+                            }
+                            Response::STARTTLS(tag) => {
+                                debug!("[IMAP] Switching context");
+                                do_starttls = true;
+                                lines_sender
+                                    .send(format!("{tag} OK Begin TLS negotiation now"))
+                                    .await?;
+                                break;
+                            }
+                            Response::Continue => {}
                         }
                     }
                     // We try a last time to do a graceful shutdown before closing
@@ -124,6 +143,32 @@ async fn listen(
                     }
                 }
             }
+            if do_starttls {
+                debug!("[IMAP] Starting to reunite");
+                let framed_stream = lines_sender.reunite(lines_reader)?;
+                let stream = framed_stream.into_inner();
+                debug!("[IMAP] Finished to reunite");
+                let acceptor = get_tls_acceptor(&config)?;
+                debug!("[IMAP] Starting to listen using tls");
+                if let Err(e) = listen_tls(
+                    stream,
+                    config,
+                    database,
+                    storage,
+                    acceptor,
+                    Some(data),
+                    true,
+                )
+                .await
+                {
+                    error!("[SMTP] Error while upgrading to tls: {}", e);
+                }
+            }
+            Ok(())
         });
+        let resp = connection.await;
+        if let Ok(Err(e)) = resp {
+            error!("[IMAP] Error: {:?}", e);
+        }
     }
 }

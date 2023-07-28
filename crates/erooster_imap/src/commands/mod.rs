@@ -68,7 +68,7 @@ mod subscribe;
 mod uid;
 mod unsubscribe;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Data {
     pub con_state: Arc<RwLock<Connection>>,
 }
@@ -112,6 +112,7 @@ pub enum Commands {
     Search,
     Select,
     Status,
+    Starttls,
     Store,
     Subscribe,
     Unsubscribe,
@@ -147,6 +148,7 @@ impl TryFrom<&str> for Commands {
             "enable" => Ok(Commands::Enable),
             "status" => Ok(Commands::Status),
             "search" => Ok(Commands::Search),
+            "starttls" => Ok(Commands::Starttls),
             _ => {
                 warn!("[IMAP] Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
@@ -203,6 +205,13 @@ fn arguments(input: &str) -> Res<Vec<&str>> {
     .map(|(x, y)| (x, y))
 }
 
+#[allow(clippy::upper_case_acronyms)]
+pub enum Response {
+    Exit,
+    Continue,
+    STARTTLS(String),
+}
+
 impl Data {
     #[instrument(skip(line))]
     fn parse_internal(line: &str) -> Res<(&str, Result<Commands, String>, Vec<&str>)> {
@@ -218,7 +227,7 @@ impl Data {
         database: DB,
         storage: Arc<Storage>,
         line: String,
-    ) -> color_eyre::eyre::Result<bool>
+    ) -> color_eyre::eyre::Result<Response>
     where
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
@@ -242,18 +251,18 @@ impl Data {
             .plain(lines, database, &command_data)
             .await?;
             // We are done here
-            return Ok(false);
+            return Ok(Response::Continue);
         } else if let State::Appending(state) = state {
             Append { data: self }
                 .append(lines, storage, &line, config, state.tag)
                 .await?;
             // We are done here
-            return Ok(false);
+            return Ok(Response::Continue);
         } else if let State::GotAppendData = state {
             if line == ")" {
                 con_clone.write().await.state = State::Authenticated;
                 // We are done here
-                return Ok(false);
+                return Ok(Response::Continue);
             }
         }
         debug!("Starting to parse");
@@ -271,11 +280,14 @@ impl Data {
                         lines
                             .send(String::from("* BAD [SERVERBUG] unable to parse command"))
                             .await?;
-                        return Ok(false);
+                        return Ok(Response::Continue);
                     }
                 };
                 debug!("Command data: {:?}", command_data);
                 match command_data.command {
+                    Commands::Starttls => {
+                        return Ok(Response::STARTTLS(tag.to_string()));
+                    }
                     Commands::Enable => {
                         Enable { data: self }.exec(lines, &command_data).await?;
                     }
@@ -288,7 +300,7 @@ impl Data {
                     Commands::Logout => {
                         Logout.exec(lines, &command_data).await?;
                         // We return true here early as we want to make sure that this closes the connection
-                        return Ok(true);
+                        return Ok(Response::Exit);
                     }
                     Commands::Authenticate => {
                         let auth_data = command_data.arguments[command_data.arguments.len() - 1];
@@ -399,11 +411,11 @@ impl Data {
                 lines
                     .send(String::from("* BAD [SERVERBUG] unable to parse command"))
                     .await?;
-                return Ok(false);
+                return Ok(Response::Continue);
             }
         }
 
-        Ok(false)
+        Ok(Response::Continue)
     }
 }
 

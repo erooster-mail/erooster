@@ -60,8 +60,8 @@ impl Fetch<'_> {
 
             match ranges {
                 Ok((_, ranges)) => {
-                    let mut filtered_mails: Vec<MailEntryType> = mails
-                        .into_iter()
+                    let mut filtered_mails: Vec<_> = mails
+                        .iter_mut()
                         .enumerate()
                         .filter_map(|(index, mut mail)| {
                             if ranges.iter().any(|range| {
@@ -76,7 +76,7 @@ impl Fetch<'_> {
                             }
                             None
                         })
-                        .collect::<Vec<MailEntryType>>();
+                        .collect::<Vec<_>>();
 
                     let fetch_args = command_data.arguments[1 + offset..].to_vec().join(" ");
                     let fetch_args_str = &fetch_args[1..fetch_args.len() - 1];
@@ -98,7 +98,7 @@ impl Fetch<'_> {
                                 let sequence =
                                     mail.sequence_number().context("Sequence number missing")?;
                                 warn!("Sequence: {sequence}; UID: {uid}; is_uid: {is_uid}");
-                                if let Some(resp) = generate_response(args.clone(), &mut mail)? {
+                                if let Some(resp) = generate_response(args.clone(), mail)? {
                                     if is_uid {
                                         // This deduplicates the UID command if needed
                                         if resp.contains("UID") {

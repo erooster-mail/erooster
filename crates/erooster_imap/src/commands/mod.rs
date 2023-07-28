@@ -235,7 +235,8 @@ impl Data {
         debug!("Current state: {:?}", self.con_state.read().await.state);
 
         let con_clone = Arc::clone(&self.con_state);
-        let state = { con_clone.read().await.state.clone() };
+        let reader = con_clone.read().await;
+        let state = { reader.state.clone() };
         if let State::Authenticating(AuthenticationMethod::Plain, tag) = state {
             debug!("Second auth stage");
             let command_data = CommandData {
@@ -292,7 +293,7 @@ impl Data {
                         Enable { data: self }.exec(lines, &command_data).await?;
                     }
                     Commands::Capability => {
-                        Capability.exec(lines, &command_data).await?;
+                        Capability.exec(lines, &command_data, reader.secure).await?;
                     }
                     Commands::Login => {
                         Login.exec(lines, &command_data).await?;

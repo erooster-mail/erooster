@@ -10,12 +10,17 @@ impl Capability {
         &self,
         lines: &mut S,
         command_data: &CommandData<'_>,
+        secure: bool,
     ) -> color_eyre::eyre::Result<()>
     where
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        let capabilities = get_capabilities();
+        let capabilities = if secure {
+            get_capabilities()
+        } else {
+            get_unencrypted_capabilities()
+        };
         lines.feed(format!("* {capabilities}")).await?;
         lines
             .feed(format!("{} OK CAPABILITY completed", command_data.tag))
@@ -48,7 +53,7 @@ mod tests {
             arguments: &[],
         };
         let (mut tx, mut rx) = mpsc::unbounded();
-        let res = caps.exec(&mut tx, &cmd_data).await;
+        let res = caps.exec(&mut tx, &cmd_data, true).await;
         assert!(res.is_ok());
         assert_eq!(
             rx.next().await,

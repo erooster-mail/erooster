@@ -74,37 +74,12 @@ impl Fetch<'_> {
                         .into_iter()
                         .enumerate()
                         .filter_map(|(index, mut mail)| {
-                            if ranges.iter().any(|x| {
-                                match x {
-                                    Range::Single(id) => {
-                                        if is_uid && &mail.uid() == id
-                                            || !is_uid && &(index as u32 + 1) == id
-                                        {
-                                            return true;
-                                        }
-                                    }
-                                    Range::Range(start, end) => match end {
-                                        RangeEnd::End(end_int) => {
-                                            if (is_uid
-                                                && &mail.uid() >= start
-                                                && &mail.uid() <= end_int)
-                                                || (!is_uid
-                                                    && &(index as u32) >= start
-                                                    && &(index as u32) <= end_int)
-                                            {
-                                                return true;
-                                            }
-                                        }
-                                        RangeEnd::All => {
-                                            if (is_uid && &mail.uid() >= start)
-                                                || (!is_uid && &(index as u32) >= start)
-                                            {
-                                                return true;
-                                            }
-                                        }
-                                    },
-                                };
-                                false
+                            if ranges.iter().any(|range| {
+                                if is_uid {
+                                    range.contains(&mail.uid())
+                                } else {
+                                    range.contains(&(index as u32 + 1))
+                                }
                             }) {
                                 mail.sequence_number = Some(index as u32 + 1);
                                 return Some(mail);

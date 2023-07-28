@@ -1,3 +1,5 @@
+use std::ops::Bound;
+
 use nom::{
     branch::alt,
     bytes::complete::{tag_no_case, take_while1},
@@ -301,6 +303,31 @@ pub enum RangeEnd {
 pub enum Range {
     Single(u32),
     Range(u32, RangeEnd),
+}
+
+impl std::ops::RangeBounds<u32> for Range {
+    fn start_bound(&self) -> Bound<&u32> {
+        match self {
+            Range::Range(x, _) | Range::Single(x) => Bound::Included(x),
+        }
+    }
+
+    fn end_bound(&self) -> Bound<&u32> {
+        match self {
+            Range::Range(_, RangeEnd::All) => Bound::Unbounded,
+            Range::Range(_, RangeEnd::End(x)) | Range::Single(x) => Bound::Included(x),
+        }
+    }
+}
+
+impl Range {
+    pub fn contains<U>(&self, item: &U) -> bool
+    where
+        u32: PartialOrd<U>,
+        U: ?Sized + PartialOrd<u32>,
+    {
+        <Self as std::ops::RangeBounds<u32>>::contains(self, item)
+    }
 }
 
 #[instrument(skip(input))]

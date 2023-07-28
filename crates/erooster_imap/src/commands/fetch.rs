@@ -1,8 +1,7 @@
 use crate::{
     commands::{
         parsers::{
-            fetch_arguments, parse_selected_range, FetchArguments, FetchAttributes, Range,
-            RangeEnd, SectionText,
+            fetch_arguments, parse_selected_range, FetchArguments, FetchAttributes, SectionText,
         },
         CommandData, Data,
     },
@@ -52,17 +51,8 @@ impl Fetch<'_> {
                     .clone()
                     .context("Username missing in internal State")?,
             )?;
-            let mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
-            // Possibly slower or faster than before?
-            // This loads stuff in memory essentially
-            let mut mails: Vec<MailEntryType> = mails
-                .into_iter()
-                .map(|mut mail| {
-                    mail.load();
-                    mail
-                })
-                .collect();
-            mails.sort_by_cached_key(MaildirMailEntry::uid);
+            let mut mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
+            mails.sort_by_key(MaildirMailEntry::uid);
 
             let arguments_borrow = command_data.arguments[offset];
             let ranges = parse_selected_range(arguments_borrow).finish();

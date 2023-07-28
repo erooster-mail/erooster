@@ -236,7 +236,7 @@ impl Data {
 
         let con_clone = Arc::clone(&self.con_state);
         let state = { con_clone.read().await.state.clone() };
-        let secure = { con_clone.read().await.secure.clone() };
+        let secure = { con_clone.read().await.secure };
         if let State::Authenticating(AuthenticationMethod::Plain, tag) = state {
             debug!("Second auth stage");
             let command_data = CommandData {

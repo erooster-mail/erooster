@@ -516,7 +516,7 @@ mod tests {
     async fn test_section() {
         let input = "[HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type Reply-To x-spamd-result x-spam-score x-rspamd-score x-spam-status x-mailscanner-spamcheck X-Spam-Flag x-spam-level)]";
         let args = section(input);
-        println!("{:?}", args);
+        println!("{args:?}");
         assert!(args.is_ok());
         let (unparsed, _) = args.unwrap();
         assert_eq!(unparsed, "");
@@ -526,7 +526,7 @@ mod tests {
     async fn test_section_text() {
         let input = "HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type Reply-To x-spamd-result x-spam-score x-rspamd-score x-spam-status x-mailscanner-spamcheck X-Spam-Flag x-spam-level)";
         let args = section_text(input);
-        println!("{:?}", args);
+        println!("{args:?}");
         assert!(args.is_ok());
         let (unparsed, _) = args.unwrap();
         assert_eq!(unparsed, "");
@@ -536,7 +536,7 @@ mod tests {
     async fn test_fetch_attributes() {
         let input = "BODY.PEEK[HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type Reply-To x-spamd-result x-spam-score x-rspamd-score x-spam-status x-mailscanner-spamcheck X-Spam-Flag x-spam-level)]";
         let args = fetch_attributes(input);
-        println!("{:?}", args);
+        println!("{args:?}");
         assert!(args.is_ok());
         let (unparsed, _) = args.unwrap();
         assert_eq!(unparsed, "");
@@ -546,7 +546,7 @@ mod tests {
     async fn test_inner_fetch_arguments() {
         let input = "(UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type Reply-To x-spamd-result x-spam-score x-rspamd-score x-spam-status x-mailscanner-spamcheck X-Spam-Flag x-spam-level)])";
         let args = inner_fetch_arguments(input);
-        println!("{:?}", args);
+        println!("{args:?}");
         assert!(args.is_ok());
         let (unparsed, _) = args.unwrap();
         assert_eq!(unparsed, "");
@@ -556,7 +556,7 @@ mod tests {
     async fn test_fetch_arguments() {
         let input = "UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type Reply-To x-spamd-result x-spam-score x-rspamd-score x-spam-status x-mailscanner-spamcheck X-Spam-Flag x-spam-level)]";
         let args = fetch_arguments(input);
-        println!("{:?}", args);
+        println!("{args:?}");
         assert!(args.is_ok());
         let (unparsed, _) = args.unwrap();
         assert_eq!(unparsed, "");

@@ -78,9 +78,12 @@ impl Fetch<'_> {
                         })
                         .collect::<Vec<_>>();
 
-                    let fetch_args = command_data.arguments[1 + offset..].to_vec().join(" ");
+                    debug!("command_data.arguments: {:?}", command_data.arguments);
+                    let fetch_args: String =
+                        command_data.arguments[1 + offset..].to_vec().join(" ");
+                    debug!("fetch_args: {:?}", fetch_args);
                     let fetch_args_str = &fetch_args[1..fetch_args.len() - 1];
-                    debug!("Fetch args: {}", fetch_args_str);
+                    debug!("fetch_args_str: {:?}", fetch_args_str);
 
                     filtered_mails.sort_by_cached_key(|x| {
                         if let Some(number) = x.sequence_number() {
@@ -91,13 +94,10 @@ impl Fetch<'_> {
                     });
                     match fetch_arguments(fetch_args_str).finish() {
                         Ok((_, args)) => {
-                            debug!("Parsed Fetch args: {:?}", args);
-                            warn!("filtered_mails: {}", filtered_mails.len());
-                            for mut mail in filtered_mails {
+                            for mail in filtered_mails {
                                 let uid = mail.uid();
                                 let sequence =
                                     mail.sequence_number().context("Sequence number missing")?;
-                                warn!("Sequence: {sequence}; UID: {uid}; is_uid: {is_uid}");
                                 if let Some(resp) = generate_response(args.clone(), mail)? {
                                     if is_uid {
                                         // This deduplicates the UID command if needed

@@ -30,7 +30,6 @@ impl Append<'_> {
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         let mut write_lock = self.data.con_state.write().await;
-        debug!("Append command start");
         if matches!(write_lock.state, State::Authenticated)
             || matches!(write_lock.state, State::Selected(_, _))
         {

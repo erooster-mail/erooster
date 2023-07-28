@@ -293,7 +293,7 @@ impl Data {
                         Enable { data: self }.exec(lines, &command_data).await?;
                     }
                     Commands::Capability => {
-                        Capability.exec(lines, &command_data, reader.secure).await?;
+                        Capability.exec(lines, &command_data, secure).await?;
                     }
                     Commands::Login => {
                         Login.exec(lines, &command_data).await?;

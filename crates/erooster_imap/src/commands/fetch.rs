@@ -78,11 +78,14 @@ impl Fetch<'_> {
                         })
                         .collect::<Vec<_>>();
 
-                    let fetch_args: &str = &command_data.arguments
-                        [2 + offset..command_data.arguments.len() - 1]
-                        .join(" ");
+                    let mut fetch_args: String = command_data.arguments[1 + offset..].join(" ");
+                    fetch_args.pop(); // remove last
+                    if !fetch_args.is_empty() {
+                        fetch_args.remove(0); // remove first
+                    }
+                    let fetch_args = fetch_args.as_str();
 
-                    filtered_mails.sort_by_cached_key(|x| {
+                    filtered_mails.sort_by_key(|x| {
                         if let Some(number) = x.sequence_number() {
                             number
                         } else {

@@ -208,7 +208,6 @@ fn generate_response_for_attributes(
             }
         }
         FetchAttributes::Flags => {
-            warn!("Flags contained are: {}", mail.flags());
             let mut flags = String::new();
             if mail
                 .path()
@@ -256,7 +255,6 @@ fn generate_response_for_attributes(
                     flags.push_str(" \\Deleted");
                 }
             }
-            warn!("Flags sent are: {flags}");
 
             Ok(Some(format!("FLAGS ({flags})")))
         }

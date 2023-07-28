@@ -38,12 +38,9 @@ impl Noop<'_> {
                     .clone()
                     .context("Username missing in internal State")?,
             )?;
-            let mails: Vec<MailEntryType> = storage.list_new(&mailbox_path).await;
-            let got_new = !mails.is_empty();
-            if got_new {
-                let mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
-                lines.send(format!("* {} EXISTS", mails.len())).await?;
-            }
+
+            let mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
+            lines.send(format!("* {} EXISTS", mails.len())).await?;
         }
         lines
             .send(format!("{} OK NOOP completed", command_data.tag))

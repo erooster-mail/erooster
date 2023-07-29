@@ -25,7 +25,7 @@ impl Noop<'_> {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        // TODO return status as suggested in https://www.rfc-editor.org/rfc/rfc9051.html#name-noop-command
+        // TODO: return status as suggested in https://www.rfc-editor.org/rfc/rfc9051.html#name-noop-command
         if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
             let folder = folder.replace('/', ".");
             let mailbox_path = storage.to_ondisk_path(
@@ -39,8 +39,8 @@ impl Noop<'_> {
                     .context("Username missing in internal State")?,
             )?;
 
-            let mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
-            lines.send(format!("* {} EXISTS", mails.len())).await?;
+            let mails = storage.count_cur(&mailbox_path) + storage.count_new(&mailbox_path);
+            lines.send(format!("* {mails} EXISTS")).await?;
         }
         lines
             .send(format!("{} OK NOOP completed", command_data.tag))

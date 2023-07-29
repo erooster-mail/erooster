@@ -144,7 +144,7 @@ where
                 .await?;
         }
         for sub_folder in sub_folders {
-            // TODO calc flags
+            // TODO: calc flags
             let flags_raw = storage.get_flags(&sub_folder).await;
             let flags = if let Ok(flags_raw) = flags_raw {
                 flags_raw
@@ -186,8 +186,8 @@ where
         }
         folder = folder.join(mailbox_patterns_folder.clone());
 
-        // TODO check for folder existence
-        // TODO calc flags
+        // TODO: check for folder existence
+        // TODO: calc flags
         let flags_raw = storage.get_flags(&folder).await;
         let mut flags = if let Ok(flags_raw) = flags_raw {
             if folder.exists() {
@@ -247,7 +247,7 @@ impl List<'_> {
         } else {
             let arguments = &command_data.arguments;
             if arguments[0].starts_with('(') && arguments[0].ends_with(')') {
-                // TODO handle selection options
+                // TODO: handle selection options
             } else {
                 // Cleanup args
                 let reference_name = arguments[0];

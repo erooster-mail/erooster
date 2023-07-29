@@ -52,13 +52,6 @@ impl Append<'_> {
             debug!("Appending to folder: {:?}", mailbox_path);
             // Spec violation but thunderbird would prompt a user error otherwise :/
             if !mailbox_path.exists() {
-                /*lines
-                    .send(format!(
-                        "{} NO [TRYCREATE] folder is not yet created",
-                        command_data.tag
-                    ))
-                    .await?;
-                return Ok(());*/
                 storage.create_dirs(&mailbox_path)?;
                 if folder.to_lowercase() == ".sent" {
                     storage.add_flag(&mailbox_path, "\\Sent").await?;

@@ -154,9 +154,13 @@ impl Fetch<'_> {
             lines
                 .feed(format!(
                     "{} NO [TRYCREATE] No mailbox selected",
-                    command_data.tag
+                    command_data.tag,
                 ))
                 .await?;
+            error!(
+                "State was {:#?} instead of selected",
+                self.data.con_state.read().await.state
+            );
             lines.flush().await?;
         }
         Ok(())

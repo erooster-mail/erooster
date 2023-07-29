@@ -44,6 +44,16 @@ impl Status<'_> {
             let count = storage.count_cur(&mailbox_path) + storage.count_new(&mailbox_path);
             values.push_str(&format!("MESSAGES {count}"));
         }
+        if responses.contains(&"UNSEEN") {
+            let count = storage
+                .list_cur(&mailbox_path)
+                .await
+                .iter()
+                .filter(|mail| !mail.is_seen())
+                .count()
+                + storage.count_new(&mailbox_path);
+            values.push_str(&format!("UNSEEN {count}"));
+        }
         if responses.contains(&"UIDNEXT") {
             let current_uid = storage.get_uid_for_folder(&mailbox_path)?;
             values.push_str(&format!("UIDNEXT {}", current_uid + 1));

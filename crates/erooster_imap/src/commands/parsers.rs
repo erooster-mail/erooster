@@ -368,10 +368,46 @@ enum ProgramWithOrWithoutCharset {
 fn inner_search_arguments(input: &str) -> Res<SearchArguments> {
     context(
         "inner_search_arguments",
-        map(
-            separated_pair(
-                opt(search_return_opts),
-                space1,
+        alt((
+            map(
+                separated_pair(
+                    search_return_opts,
+                    space1,
+                    alt((
+                        map(
+                            separated_pair(
+                                separated_pair(
+                                    tag_no_case("CHARSET"),
+                                    space1,
+                                    terminated(
+                                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                                        space1,
+                                    ),
+                                ),
+                                space1,
+                                search_program,
+                            ),
+                            |((_, x), y)| ProgramWithOrWithoutCharset::With(x.to_string(), y),
+                        ),
+                        map(search_program, |program| {
+                            ProgramWithOrWithoutCharset::Without(program)
+                        }),
+                    )),
+                ),
+                |(return_opts, program)| match program {
+                    ProgramWithOrWithoutCharset::With(charset, program) => SearchArguments {
+                        return_opts: Some(return_opts),
+                        program,
+                        charset: Some(charset),
+                    },
+                    ProgramWithOrWithoutCharset::Without(program) => SearchArguments {
+                        return_opts: Some(return_opts),
+                        program,
+                        charset: None,
+                    },
+                },
+            ),
+            map(
                 alt((
                     map(
                         separated_pair(
@@ -392,20 +428,20 @@ fn inner_search_arguments(input: &str) -> Res<SearchArguments> {
                         ProgramWithOrWithoutCharset::Without(program)
                     }),
                 )),
+                |program| match program {
+                    ProgramWithOrWithoutCharset::With(charset, program) => SearchArguments {
+                        return_opts: None,
+                        program,
+                        charset: Some(charset),
+                    },
+                    ProgramWithOrWithoutCharset::Without(program) => SearchArguments {
+                        return_opts: None,
+                        program,
+                        charset: None,
+                    },
+                },
             ),
-            |(return_opts, program)| match program {
-                ProgramWithOrWithoutCharset::With(charset, program) => SearchArguments {
-                    return_opts,
-                    program,
-                    charset: Some(charset),
-                },
-                ProgramWithOrWithoutCharset::Without(program) => SearchArguments {
-                    return_opts,
-                    program,
-                    charset: None,
-                },
-            },
-        ),
+        )),
     )(input)
 }
 

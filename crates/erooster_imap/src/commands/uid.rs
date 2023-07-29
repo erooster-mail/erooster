@@ -4,6 +4,8 @@ use futures::{Sink, SinkExt};
 use std::sync::Arc;
 use tracing::instrument;
 
+use super::search::Search;
+
 pub struct Uid<'a> {
     pub data: &'a Data,
 }
@@ -38,8 +40,8 @@ impl Uid<'_> {
                 .send(format!("{} BAD Not supported", command_data.tag))
                 .await?;
         } else if command_data.arguments[0].to_lowercase() == "search" {
-            lines
-                .send(format!("{} BAD Not supported", command_data.tag))
+            Search { data: self.data }
+                .exec(lines, storage, command_data, true)
                 .await?;
         } else if command_data.arguments[0].to_lowercase() == "store" {
             Store { data: self.data }

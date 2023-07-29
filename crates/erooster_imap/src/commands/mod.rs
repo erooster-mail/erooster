@@ -399,7 +399,7 @@ impl Data {
                     }
                     Commands::Search => {
                         Search { data: self }
-                            .exec(lines, storage, &command_data)
+                            .exec(lines, storage, &command_data, false)
                             .await?;
                     }
                 }

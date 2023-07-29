@@ -19,13 +19,15 @@ impl Search<'_> {
         lines: &mut S,
         storage: Arc<Storage>,
         command_data: &CommandData<'_>,
-        uid: bool,
+        is_uid: bool,
     ) -> color_eyre::eyre::Result<()>
     where
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        debug!("Search command_data: {:#?}", command_data);
+        let offset = usize::from(is_uid);
+        let arguments = &command_data.arguments[offset..];
+        debug!("Search arguments: {:#?}", arguments);
         lines
             .send(format!("{} BAD Not supported", command_data.tag))
             .await?;

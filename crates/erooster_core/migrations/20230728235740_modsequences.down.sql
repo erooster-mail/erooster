@@ -1,0 +1,2 @@
+ALTER TABLE mails
+DROP COLUMN modseq;

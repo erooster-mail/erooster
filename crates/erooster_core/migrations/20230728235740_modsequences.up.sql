@@ -1,0 +1,2 @@
+ALTER TABLE mails
+ADD COLUMN modseq BIGSERIAL constraint NOT NULL;

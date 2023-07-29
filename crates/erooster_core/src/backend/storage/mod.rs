@@ -36,6 +36,8 @@ pub enum MailState {
 pub trait MailEntry {
     /// The uid of the mail entry
     fn uid(&self) -> u32;
+    /// The metadata modification sequence of the mail entry
+    fn modseq(&self) -> u64;
     /// The state (new or read) of the mail entry
     fn mail_state(&self) -> MailState;
     /// The sequence number of the mail entry
@@ -48,8 +50,6 @@ pub trait MailEntry {
     fn headers(&mut self) -> color_eyre::eyre::Result<Vec<MailHeader>>;
     /// The received time of the email
     fn received(&mut self) -> color_eyre::eyre::Result<i64>;
-    /// The date of the email
-    fn date(&self) -> Option<i64>;
     /// The flags of the email
     fn flags(&self) -> &str;
     /// Whether the email is a draft

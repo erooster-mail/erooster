@@ -76,6 +76,7 @@ where
 {
     let count = storage.count_cur(&mailbox_path) + storage.count_new(&mailbox_path);
     lines.feed(format!("* {count} EXISTS")).await?;
+    // TODO: Also send UNSEEN
     // FIXME: This is fundamentaly invalid and instead should refer to the timestamp a mailbox was created
     let current_time = SystemTime::now();
     let unix_timestamp = current_time.duration_since(UNIX_EPOCH)?;
@@ -101,7 +102,7 @@ where
             "* OK [PERMANENTFLAGS (\\Deleted \\Seen \\*)] Limited",
         ))
         .await?;
-    // TODO generate proper list command
+    // TODO: generate proper list command
     lines.feed(format!("* LIST () \".\" \"{folder}\"")).await?;
     let sub_folders = storage.list_subdirs(&mailbox_path)?;
     for sub_folder in sub_folders {

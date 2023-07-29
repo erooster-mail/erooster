@@ -51,10 +51,10 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .collect()
             .await;
         maildir.find(id).map(|entry| {
-            let uid = mail_rows
-                .iter()
-                .find(|x| x.maildir_id == id)
-                .map_or(0, |x| x.id);
+            let db_item = mail_rows.iter().find(|y: &&DbMails| y.maildir_id == id);
+            let uid: i32 = db_item.map_or(0, |y| y.id);
+            let modseq = db_item.map_or(0, |y| y.modseq);
+
             let mail_state = if entry.is_seen() {
                 MailState::Read
             } else {
@@ -62,10 +62,10 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             };
             MaildirMailEntry {
                 uid: uid.try_into().expect("Invalid UID"),
+                modseq: modseq.try_into().expect("Invalid UID"),
                 entry,
                 mail_state,
                 sequence_number: None,
-                date: None,
             }
         })
     }
@@ -150,8 +150,9 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .collect::<Vec<_>>()
             .join("");
         let maildir_id = maildir.store_cur_with_flags(data, &maildir_flags)?;
-        sqlx::query("INSERT INTO mails (maildir_id) VALUES ($1)")
+        sqlx::query("INSERT INTO mails (maildir_id, modseq) VALUES ($1, $2)")
             .bind(maildir_id.clone())
+            .bind(1i64)
             .execute(self.db.get_pool())
             .await?;
         Ok(maildir_id)
@@ -161,8 +162,9 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     async fn store_new(&self, path: &Path, data: &[u8]) -> color_eyre::eyre::Result<String> {
         let maildir = Maildir::from(path.to_path_buf());
         let maildir_id = maildir.store_new(data)?;
-        sqlx::query("INSERT INTO mails (maildir_id) VALUES ($1)")
+        sqlx::query("INSERT INTO mails (maildir_id, modseq) VALUES ($1, $2)")
             .bind(maildir_id.clone())
+            .bind(1i64)
             .execute(self.db.get_pool())
             .await?;
         Ok(maildir_id)
@@ -205,16 +207,17 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .filter_map(|x| match x {
                 Ok(x) => {
                     let maildir_id = x.id();
-                    let uid = mail_rows
-                        .iter()
-                        .find(|y| y.maildir_id == maildir_id)
-                        .map_or(0, |y| y.id);
+
+                    let db_item = mail_rows.iter().find(|y| y.maildir_id == maildir_id);
+                    let uid: i32 = db_item.map_or(0, |y| y.id);
+                    let modseq = db_item.map_or(0, |y| y.modseq);
+
                     Some(MaildirMailEntry {
                         uid: uid.try_into().expect("Invalid UID"),
+                        modseq: modseq.try_into().expect("Invalid UID"),
                         entry: x,
                         mail_state: MailState::Read,
                         sequence_number: None,
-                        date: None,
                     })
                 }
                 Err(_) => None,
@@ -236,16 +239,17 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .filter_map(|x| match x {
                 Ok(x) => {
                     let maildir_id = x.id();
-                    let uid = mail_rows
-                        .iter()
-                        .find(|y| y.maildir_id == maildir_id)
-                        .map_or(0, |y| y.id);
+
+                    let db_item = mail_rows.iter().find(|y| y.maildir_id == maildir_id);
+                    let uid: i32 = db_item.map_or(0, |y| y.id);
+                    let modseq = db_item.map_or(0, |y| y.modseq);
+
                     Some(MaildirMailEntry {
                         uid: uid.try_into().expect("Invalid UID"),
+                        modseq: modseq.try_into().expect("Invalid UID"),
                         entry: x,
                         mail_state: MailState::New,
                         sequence_number: None,
-                        date: None,
                     })
                 }
                 Err(_) => None,
@@ -269,10 +273,9 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .filter_map(|x| match x {
                 Ok(x) => {
                     let maildir_id = x.id();
-                    let uid = mail_rows
-                        .iter()
-                        .find(|y| y.maildir_id == maildir_id)
-                        .map_or(0, |y| y.id);
+                    let db_item = mail_rows.iter().find(|y| y.maildir_id == maildir_id);
+                    let uid: i32 = db_item.map_or(0, |y| y.id);
+                    let modseq = db_item.map_or(0, |y| y.modseq);
                     let state = if x.is_seen() {
                         MailState::Read
                     } else {
@@ -280,10 +283,10 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                     };
                     Some(MaildirMailEntry {
                         uid: uid.try_into().expect("Invalid UID"),
+                        modseq: modseq.try_into().expect("Invalid Modseq"),
                         entry: x,
                         mail_state: state,
                         sequence_number: None,
-                        date: None,
                     })
                 }
                 Err(_) => None,
@@ -440,29 +443,18 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
 #[derive(sqlx::FromRow)]
 struct DbMails {
     id: i32,
-    #[allow(dead_code)]
     maildir_id: String,
+    modseq: i64,
 }
 
 /// Wrapper for the mailentries from the Maildir crate
 pub struct MaildirMailEntry {
     entry: maildir::MailEntry,
     uid: u32,
+    modseq: u64,
     /// The sequence number. It is None until used
     pub sequence_number: Option<u32>,
-    date: Option<i64>,
     mail_state: MailState,
-}
-
-impl MaildirMailEntry {
-    /// Loads async data in memory for non mut usage
-    /// FIXME: This should probably return the error somewhere
-    pub fn load(&mut self) {
-        self.date = match self.entry.date() {
-            Ok(date) => Some(date),
-            Err(_) => None,
-        };
-    }
 }
 
 #[async_trait::async_trait]
@@ -470,6 +462,11 @@ impl MailEntry for MaildirMailEntry {
     #[instrument(skip(self))]
     fn uid(&self) -> u32 {
         self.uid
+    }
+
+    #[instrument(skip(self))]
+    fn modseq(&self) -> u64 {
+        self.modseq
     }
 
     #[instrument(skip(self))]
@@ -500,11 +497,6 @@ impl MailEntry for MaildirMailEntry {
     #[instrument(skip(self))]
     fn received(&mut self) -> color_eyre::eyre::Result<i64> {
         self.entry.received().map_err(Into::into)
-    }
-
-    #[instrument(skip(self))]
-    fn date(&self) -> Option<i64> {
-        self.date
     }
 
     #[instrument(skip(self))]

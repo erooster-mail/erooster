@@ -6,7 +6,7 @@ use nom::{
     character::complete::{char, digit1, space1},
     combinator::{map, opt},
     error::{context, VerboseError},
-    multi::{many0, many1, separated_list0},
+    multi::{many0, separated_list0, separated_list1},
     sequence::{delimited, pair, separated_pair, terminated, tuple},
     IResult,
 };
@@ -449,7 +449,7 @@ fn inner_search_arguments(input: &str) -> Res<SearchArguments> {
 fn search_program(input: &str) -> Res<SearchProgram> {
     context(
         "search_program",
-        map(many1(search_key), |a| {
+        map(separated_list1(space1, search_key), |a| {
             let first_element = a.first().expect("Invalid search program");
             if a.len() > 1 {
                 SearchProgram::AND(a)
@@ -697,7 +697,7 @@ fn search_key(input: &str) -> Res<SearchProgram> {
                 }),
                 // 35
                 map(
-                    delimited(char('('), many1(search_key), char(')')),
+                    delimited(char('('), separated_list1(space1, search_key), char(')')),
                     SearchProgram::AND,
                 ),
             )),

@@ -31,11 +31,11 @@ impl Capability {
 }
 
 pub const fn get_capabilities() -> &'static str {
-    "CAPABILITY AUTH=PLAIN LOGINDISABLED UTF8=ONLY ENABLE IMAP4rev2 IMAP4rev1"
+    "CAPABILITY AUTH=PLAIN LOGINDISABLED UTF8=ONLY ENABLE IMAP4rev2 IMAP4rev1 ESEARCH"
 }
 
 pub const fn get_unencrypted_capabilities() -> &'static str {
-    "CAPABILITY AUTH=PLAIN LOGINDISABLED UTF8=ONLY ENABLE IMAP4rev2 IMAP4rev1 STARTTLS"
+    "CAPABILITY LOGINDISABLED UTF8=ONLY ENABLE IMAP4rev2 IMAP4rev1 STARTTLS"
 }
 
 #[cfg(test)]

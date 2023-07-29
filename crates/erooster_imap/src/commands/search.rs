@@ -1,7 +1,4 @@
-use crate::commands::{
-    parsers::{parse_selected_range, search_arguments},
-    CommandData, Data,
-};
+use crate::commands::{parsers::search_arguments, CommandData, Data};
 use erooster_core::backend::storage::Storage;
 use futures::{Sink, SinkExt};
 use nom::{error::convert_error, Finish};
@@ -30,11 +27,6 @@ impl Search<'_> {
         let search_args: String = arguments.join(" ");
         let search_args = search_args.as_str();
         debug!("Search arguments: {:?}", search_args);
-
-        let arguments_borrow = command_data.arguments[offset];
-        //TODO: This is temp and will NOT work for all search commands. This MUST be part of the full parser
-        let ranges = parse_selected_range(arguments_borrow).finish();
-        debug!("Search Range: {:?}", ranges);
 
         match search_arguments(search_args).finish() {
             Ok((_, args)) => {

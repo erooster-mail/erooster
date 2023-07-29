@@ -16,7 +16,7 @@ impl Rcpt<'_> {
     pub async fn exec<S, E>(
         &self,
         lines: &mut S,
-        database: DB,
+        database: &DB,
         hostname: &str,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>

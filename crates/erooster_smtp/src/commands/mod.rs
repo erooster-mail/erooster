@@ -146,7 +146,7 @@ impl Data {
         &self,
         lines: &mut S,
         config: Arc<Config>,
-        database: DB,
+        database: &DB,
         storage: Arc<Storage>,
         line: String,
     ) -> color_eyre::eyre::Result<Response>

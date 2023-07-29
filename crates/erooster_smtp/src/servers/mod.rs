@@ -42,16 +42,16 @@ where
 #[instrument(skip(config, database, storage))]
 pub async fn start(
     config: Arc<Config>,
-    database: DB,
+    database: &DB,
     storage: Arc<Storage>,
 ) -> color_eyre::eyre::Result<JobRunnerHandle> {
     let config_clone = Arc::clone(&config);
-    let db_clone = Arc::clone(&database);
+    let db_clone = database.clone();
     let storage_clone = Arc::clone(&storage);
     tokio::spawn(async move {
         if let Err(e) = unencrypted::Unencrypted::run(
             Arc::clone(&config_clone),
-            Arc::clone(&db_clone),
+            &db_clone,
             Arc::clone(&storage_clone),
         )
         .await
@@ -59,14 +59,10 @@ pub async fn start(
             panic!("Unable to start server: {e:?}");
         }
     });
-    let db_clone = Arc::clone(&database);
+    let db_clone = database.clone();
     tokio::spawn(async move {
-        if let Err(e) = encrypted::Encrypted::run(
-            Arc::clone(&config),
-            Arc::clone(&db_clone),
-            Arc::clone(&storage),
-        )
-        .await
+        if let Err(e) =
+            encrypted::Encrypted::run(Arc::clone(&config), &db_clone, Arc::clone(&storage)).await
         {
             panic!("Unable to start TLS server: {e:?}");
         }

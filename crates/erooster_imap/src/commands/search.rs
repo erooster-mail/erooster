@@ -6,7 +6,7 @@ use std::{
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
-use tracing::instrument;
+use tracing::{debug, instrument};
 
 pub struct Search<'a> {
     pub data: &'a Data,
@@ -24,6 +24,7 @@ impl Search<'_> {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
+        debug!("Search command_data: {:#?}", command_data);
         lines.flush().await?;
         Ok(())
     }

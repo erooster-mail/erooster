@@ -90,17 +90,13 @@ async fn main() -> Result<()> {
     }));
 
     // Continue loading database and storage
-    let database = Arc::new(get_database(Arc::clone(&config)).await?);
-    let storage = Arc::new(get_storage(Arc::clone(&database), Arc::clone(&config)));
+    let database = get_database(Arc::clone(&config)).await?;
+    let storage = Arc::new(get_storage(database.clone(), Arc::clone(&config)));
 
     // Startup servers
-    erooster_imap::start(
-        Arc::clone(&config),
-        Arc::clone(&database),
-        Arc::clone(&storage),
-    )?;
+    erooster_imap::start(Arc::clone(&config), &database, Arc::clone(&storage))?;
     // We do need the let here to make sure that the runner is bound to the lifetime of main.
-    let _runner = erooster_smtp::servers::start(Arc::clone(&config), database, storage).await?;
+    let _runner = erooster_smtp::servers::start(Arc::clone(&config), &database, storage).await?;
 
     erooster_web::start(Arc::clone(&config)).await?;
 

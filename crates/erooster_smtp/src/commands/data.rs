@@ -57,7 +57,7 @@ impl DataCommand<'_> {
         config: Arc<Config>,
         lines: &mut S,
         line: &str,
-        database: DB,
+        database: &DB,
         storage: Arc<Storage>,
     ) -> color_eyre::eyre::Result<()>
     where

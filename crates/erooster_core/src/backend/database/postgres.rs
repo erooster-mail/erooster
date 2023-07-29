@@ -9,6 +9,7 @@ use tracing::{debug, debug_span, error, instrument};
 
 /// Postgres specific database implementation
 /// Holds data to connect to the database
+#[derive(Debug, Clone)]
 pub struct Postgres {
     pool: PgPool,
 }

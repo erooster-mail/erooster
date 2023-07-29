@@ -84,11 +84,9 @@ mod tests {
         let config = erooster_core::get_config(String::from("./config.yml"))
             .await
             .unwrap();
-        let database = Arc::new(
-            erooster_core::backend::database::get_database(Arc::clone(&config))
-                .await
-                .unwrap(),
-        );
+        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+            .await
+            .unwrap();
         let storage = Arc::new(erooster_core::backend::storage::get_storage(
             database,
             Arc::clone(&config),
@@ -119,11 +117,9 @@ mod tests {
         let config = erooster_core::get_config(String::from("./config.yml"))
             .await
             .unwrap();
-        let database = Arc::new(
-            erooster_core::backend::database::get_database(Arc::clone(&config))
-                .await
-                .unwrap(),
-        );
+        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+            .await
+            .unwrap();
         let storage = Arc::new(erooster_core::backend::storage::get_storage(
             database,
             Arc::clone(&config),

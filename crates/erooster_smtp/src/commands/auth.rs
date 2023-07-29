@@ -22,7 +22,7 @@ impl Auth<'_> {
     pub async fn exec<S, E>(
         &self,
         lines: &mut S,
-        database: DB,
+        database: &DB,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -100,7 +100,7 @@ impl Auth<'_> {
     pub async fn plain<S, E>(
         &self,
         lines: &mut S,
-        database: DB,
+        database: &DB,
         line: &str,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -193,7 +193,7 @@ impl Auth<'_> {
     pub async fn password<S, E>(
         &self,
         lines: &mut S,
-        database: DB,
+        database: &DB,
         line: &str,
     ) -> color_eyre::eyre::Result<()>
     where

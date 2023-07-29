@@ -19,7 +19,9 @@ use tokio_stream::wrappers::LinesStream;
 use tracing::{debug, instrument};
 
 /// The Storage handler for the maildir format
+#[derive(Debug, Clone)]
 pub struct MaildirStorage {
+    // This has an Arc deep down
     db: DB,
     config: Arc<Config>,
 }

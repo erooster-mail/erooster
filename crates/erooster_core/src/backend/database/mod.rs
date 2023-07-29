@@ -9,7 +9,7 @@ use tracing::instrument;
 pub mod postgres;
 
 /// Wrapper to simplify the Database types
-pub type DB = Arc<postgres::Postgres>;
+pub type DB = postgres::Postgres;
 
 /// A uniform interface for database access
 #[async_trait::async_trait]

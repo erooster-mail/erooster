@@ -5,7 +5,7 @@ use crate::{
     servers::state::State,
 };
 use color_eyre::eyre::ContextCompat;
-use erooster_core::backend::storage::{MailEntryType, MailStorage, Storage};
+use erooster_core::backend::storage::{MailStorage, Storage};
 use futures::{Sink, SinkExt};
 use tracing::instrument;
 

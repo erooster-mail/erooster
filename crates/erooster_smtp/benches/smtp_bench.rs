@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use erooster_core::backend::database::{get_database, Database, DB};
+use erooster_core::backend::database::{get_database, Database};
 use erooster_core::backend::storage::get_storage;
 use erooster_core::{config::Config, line_codec::LinesCodec};
 use futures::{SinkExt, StreamExt};
@@ -114,9 +114,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             .await
             .unwrap();
         match get_database(Arc::clone(&config)).await {
-            Ok(db) => {
+            Ok(database) => {
                 info!("Connected to database");
-                let database: DB = Arc::new(db);
                 info!("Adding user");
                 database.add_user("test@localhost").await.unwrap();
                 info!("Setting user password");
@@ -126,12 +125,13 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     .unwrap();
                 info!("Created users");
 
-                let storage = Arc::new(get_storage(Arc::clone(&database), Arc::clone(&config)));
+                let storage = Arc::new(get_storage(database.clone(), Arc::clone(&config)));
 
                 info!("Starting SMTP Server");
-                if let Err(e) =
-                    erooster_smtp::servers::unencrypted::Unencrypted::run(config, database, storage)
-                        .await
+                if let Err(e) = erooster_smtp::servers::unencrypted::Unencrypted::run(
+                    config, &database, storage,
+                )
+                .await
                 {
                     panic!("Unable to start server: {e:?}");
                 }

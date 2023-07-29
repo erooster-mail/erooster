@@ -30,7 +30,7 @@ impl Unencrypted {
     #[instrument(skip(config, database, storage))]
     pub async fn run(
         config: Arc<Config>,
-        database: DB,
+        database: &DB,
         storage: Arc<Storage>,
     ) -> color_eyre::eyre::Result<()> {
         let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
@@ -50,16 +50,10 @@ impl Unencrypted {
             let stream = TcpListenerStream::new(listener);
 
             let config = Arc::clone(&config);
-            let database = Arc::clone(&database);
+            let database = database.clone();
             let storage = Arc::clone(&storage);
             tokio::spawn(async move {
-                listen(
-                    stream,
-                    Arc::clone(&config),
-                    Arc::clone(&database),
-                    Arc::clone(&storage),
-                )
-                .await;
+                listen(stream, Arc::clone(&config), &database, Arc::clone(&storage)).await;
             });
         }
 
@@ -71,7 +65,7 @@ impl Unencrypted {
 async fn listen(
     mut stream: TcpListenerStream,
     config: Arc<Config>,
-    database: DB,
+    database: &DB,
     storage: Arc<Storage>,
 ) {
     while let Some(Ok(tcp_stream)) = stream.next().await {
@@ -79,7 +73,7 @@ async fn listen(
         debug!("[SMTP] Got new peer: {}", peer);
 
         let config = Arc::clone(&config);
-        let database = Arc::clone(&database);
+        let database = database.clone();
         let storage = Arc::clone(&storage);
         let connection: JoinHandle<Result<()>> = tokio::spawn(async move {
             let lines = Framed::new(tcp_stream, LinesCodec::new_with_max_length(LINE_LIMIT));
@@ -106,7 +100,7 @@ async fn listen(
                     .parse(
                         &mut lines_sender,
                         Arc::clone(&config),
-                        Arc::clone(&database),
+                        &database,
                         Arc::clone(&storage),
                         line,
                     )
@@ -154,7 +148,7 @@ async fn listen(
                 if let Err(e) = listen_tls(
                     stream,
                     config,
-                    database,
+                    &database,
                     storage,
                     acceptor,
                     Some(data),

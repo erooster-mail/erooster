@@ -1,0 +1,4 @@
+ALTER TABLE mails
+ALTER modseq SET DATA TYPE BIGINT;
+UPDATE mails
+SET modseq = 1;

@@ -6,8 +6,8 @@ use nom::{
     character::complete::{char, digit1, space1},
     combinator::{map, opt},
     error::{context, VerboseError},
-    multi::separated_list0,
-    sequence::{delimited, pair, separated_pair, tuple},
+    multi::{many0, many1, separated_list0},
+    sequence::{delimited, pair, separated_pair, terminated, tuple},
     IResult,
 };
 use tracing::instrument;
@@ -293,13 +293,415 @@ pub fn fetch_arguments(input: &str) -> Res<FetchArguments> {
     context("fetch_arguments", inner_fetch_arguments)(input)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+#[allow(clippy::upper_case_acronyms)]
+pub enum SearchReturnOption {
+    MIN,
+    MAX,
+    ALL,
+    COUNT,
+    SAVE,
+}
+
+pub type EmailDate = String;
+pub type EmailHeader = String;
+
+#[derive(Debug, Clone)]
+#[allow(clippy::upper_case_acronyms)]
+pub enum SearchProgram {
+    ALL,
+    ANSWERED,
+    DELETED,
+    FLAGGED,
+    SEEN,
+    UNANSWERED,
+    UNDELETED,
+    UNFLAGGED,
+    UNSEEN,
+    DRAFT,
+    UNDRAFT,
+    BCC(String),
+    BEFORE(EmailDate),
+    BODY(String),
+    CC(String),
+    FROM(String),
+    KEYWORD(String),
+    ON(EmailDate),
+    SINCE(EmailDate),
+    SUBJECT(String),
+    TEXT(String),
+    TO(String),
+    UNKEYWORD(String),
+    HEADER(EmailHeader, String),
+    LARGER(u64),
+    NOT(Box<SearchProgram>),
+    OR(Box<SearchProgram>, Box<SearchProgram>),
+    SENTBEFORE(EmailDate),
+    SENTON(EmailDate),
+    SENTSINCE(EmailDate),
+    SMALLER(u64),
+    UID(Range),
+    // These are actually untagged in the ABNF but since we are an enum we need a tag here
+    Range(Range),
+    AND(Vec<SearchProgram>),
+}
+
+#[derive(Debug, Clone)]
+pub struct SearchArguments {
+    return_opts: Option<Vec<SearchReturnOption>>,
+    // TODO: Consider using an enum with supported values plus unknown
+    charset: Option<String>,
+    program: SearchProgram,
+}
+
+#[instrument(skip(input))]
+pub fn search_arguments(input: &str) -> Res<SearchArguments> {
+    context("search_arguments", inner_search_arguments)(input)
+}
+
+enum ProgramWithOrWithoutCharset {
+    With(String, SearchProgram),
+    Without(SearchProgram),
+}
+
+#[instrument(skip(input))]
+fn inner_search_arguments(input: &str) -> Res<SearchArguments> {
+    context(
+        "inner_search_arguments",
+        map(
+            separated_pair(
+                opt(search_return_opts),
+                space1,
+                alt((
+                    map(
+                        separated_pair(
+                            separated_pair(
+                                tag_no_case("CHARSET"),
+                                space1,
+                                terminated(
+                                    take_while1(|x: char| x.is_ascii_alphanumeric()),
+                                    space1,
+                                ),
+                            ),
+                            space1,
+                            search_program,
+                        ),
+                        |((_, x), y)| ProgramWithOrWithoutCharset::With(x.to_string(), y),
+                    ),
+                    map(search_program, |program| {
+                        ProgramWithOrWithoutCharset::Without(program)
+                    }),
+                )),
+            ),
+            |(return_opts, program)| match program {
+                ProgramWithOrWithoutCharset::With(charset, program) => SearchArguments {
+                    return_opts,
+                    program,
+                    charset: Some(charset),
+                },
+                ProgramWithOrWithoutCharset::Without(program) => SearchArguments {
+                    return_opts,
+                    program,
+                    charset: None,
+                },
+            },
+        ),
+    )(input)
+}
+
+#[instrument(skip(input))]
+fn search_program(input: &str) -> Res<SearchProgram> {
+    context(
+        "search_program",
+        map(many1(search_key), |a| {
+            let first_element = a.first().expect("Invalid search program");
+            if a.len() > 1 {
+                SearchProgram::AND(a)
+            } else {
+                first_element.clone()
+            }
+        }),
+    )(input)
+}
+
+#[instrument(skip(input))]
+fn search_key(input: &str) -> Res<SearchProgram> {
+    context(
+        "search_key",
+        alt((
+            alt((
+                // 1
+                map(tag_no_case("ALL"), |_| SearchProgram::ALL),
+                // 2
+                map(tag_no_case("ANSWERED"), |_| SearchProgram::ANSWERED),
+                // 3
+                map(tag_no_case("DELETED"), |_| SearchProgram::DELETED),
+                // 4
+                map(tag_no_case("FLAGGED"), |_| SearchProgram::FLAGGED),
+                // 5
+                map(tag_no_case("SEEN"), |_| SearchProgram::SEEN),
+                // 6
+                map(tag_no_case("UNANSWERED"), |_| SearchProgram::UNANSWERED),
+                // 7
+                map(tag_no_case("UNDELETED"), |_| SearchProgram::UNDELETED),
+                // 8
+                map(tag_no_case("UNFLAGGED"), |_| SearchProgram::UNFLAGGED),
+                // 9
+                map(tag_no_case("UNSEEN"), |_| SearchProgram::UNSEEN),
+                // 10
+                map(tag_no_case("DRAFT"), |_| SearchProgram::DRAFT),
+                // 11
+                map(tag_no_case("UNDRAFT"), |_| SearchProgram::UNDRAFT),
+                // 12
+                map(parse_selected_range_inner, |range| {
+                    SearchProgram::Range(range)
+                }),
+                // 13
+                map(
+                    separated_pair(
+                        tag_no_case("BCC"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| SearchProgram::BCC(query.to_string()),
+                ),
+                // 14
+                map(
+                    separated_pair(
+                        tag_no_case("BEFORE"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| SearchProgram::BEFORE(query.to_string()),
+                ),
+                // 15
+                map(
+                    separated_pair(
+                        tag_no_case("BODY"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| SearchProgram::BODY(query.to_string()),
+                ),
+                // 16
+                map(
+                    separated_pair(
+                        tag_no_case("CC"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| SearchProgram::CC(query.to_string()),
+                ),
+                // 17
+                map(
+                    separated_pair(
+                        tag_no_case("FROM"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| SearchProgram::FROM(query.to_string()),
+                ),
+                // 18
+                map(
+                    separated_pair(
+                        tag_no_case("KEYWORD"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| SearchProgram::KEYWORD(query.to_string()),
+                ),
+                // 19
+                map(
+                    separated_pair(
+                        tag_no_case("ON"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| SearchProgram::ON(query.to_string()),
+                ),
+                // 20
+                map(
+                    separated_pair(
+                        tag_no_case("SINCE"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| SearchProgram::SINCE(query.to_string()),
+                ),
+            )),
+            alt((
+                // 21
+                map(
+                    separated_pair(
+                        tag_no_case("SUBJECT"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| SearchProgram::SUBJECT(query.to_string()),
+                ),
+                // 22
+                map(
+                    separated_pair(
+                        tag_no_case("TEXT"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| SearchProgram::TEXT(query.to_string()),
+                ),
+                // 23
+                map(
+                    separated_pair(
+                        tag_no_case("TO"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| SearchProgram::TO(query.to_string()),
+                ),
+                // 24
+                map(
+                    separated_pair(
+                        tag_no_case("UNKEYWORD"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| SearchProgram::UNKEYWORD(query.to_string()),
+                ),
+                // 25
+                map(
+                    separated_pair(
+                        tag_no_case("HEADER"),
+                        space1,
+                        separated_pair(
+                            take_while1(|x: char| x.is_ascii_alphanumeric()),
+                            space1,
+                            take_while1(|x: char| x.is_ascii_alphanumeric()),
+                        ),
+                    ),
+                    |(_, (header_name, header_value)): (&str, (&str, &str))| {
+                        SearchProgram::HEADER(header_name.to_string(), header_value.to_string())
+                    },
+                ),
+                // 26
+                map(
+                    separated_pair(
+                        tag_no_case("LARGER"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_digit()),
+                    ),
+                    |(_, query): (&str, &str)| {
+                        SearchProgram::LARGER(
+                            query.parse::<u64>().expect("LARGER query is not u64"),
+                        )
+                    },
+                ),
+                // 27
+                map(
+                    separated_pair(tag_no_case("NOT"), space1, search_key),
+                    |(_, query): (&str, SearchProgram)| SearchProgram::NOT(Box::new(query)),
+                ),
+                // 28
+                map(
+                    separated_pair(
+                        tag_no_case("OR"),
+                        space1,
+                        separated_pair(search_key, space1, search_key),
+                    ),
+                    |(_, (a, b)): (&str, (SearchProgram, SearchProgram))| {
+                        SearchProgram::OR(Box::new(a), Box::new(b))
+                    },
+                ),
+                // 29
+                map(
+                    separated_pair(
+                        tag_no_case("SENTBEFORE"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| SearchProgram::SENTBEFORE(query.to_string()),
+                ),
+                // 30
+                map(
+                    separated_pair(
+                        tag_no_case("SENTON"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| SearchProgram::SENTON(query.to_string()),
+                ),
+                // 31
+                map(
+                    separated_pair(
+                        tag_no_case("SENTSINCE"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| SearchProgram::SENTSINCE(query.to_string()),
+                ),
+                // 32
+                map(
+                    separated_pair(
+                        tag_no_case("SMALLER"),
+                        space1,
+                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                    ),
+                    |(_, query): (&str, &str)| {
+                        SearchProgram::SMALLER(
+                            query.parse::<u64>().expect("LARGER query is not u64"),
+                        )
+                    },
+                ),
+                // 33
+                map(
+                    separated_pair(tag_no_case("UID"), space1, parse_selected_range_inner),
+                    |(_, query): (&str, Range)| SearchProgram::UID(query),
+                ),
+                // 34
+                map(parse_selected_range_inner, |query: Range| {
+                    SearchProgram::Range(query)
+                }),
+                // 35
+                map(
+                    delimited(char('('), many1(search_key), char(')')),
+                    SearchProgram::AND,
+                ),
+            )),
+        )),
+    )(input)
+}
+
+#[instrument(skip(input))]
+fn search_return_opts(input: &str) -> Res<Vec<SearchReturnOption>> {
+    context(
+        "search_return_opts",
+        map(
+            tuple((
+                space1,
+                tag_no_case("RETURN"),
+                space1,
+                delimited(
+                    char('('),
+                    many0(alt((
+                        map(tag_no_case("MIN"), |_| SearchReturnOption::MIN),
+                        map(tag_no_case("MAX"), |_| SearchReturnOption::MAX),
+                        map(tag_no_case("ALL"), |_| SearchReturnOption::ALL),
+                        map(tag_no_case("COUNT"), |_| SearchReturnOption::COUNT),
+                        map(tag_no_case("SAVE"), |_| SearchReturnOption::SAVE),
+                    ))),
+                    char(')'),
+                ),
+            )),
+            |(_, _, _, list)| list,
+        ),
+    )(input)
+}
+
+#[derive(Debug, Clone)]
 pub enum RangeEnd {
     End(u32),
     All,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Range {
     Single(u32),
     Range(u32, RangeEnd),
@@ -331,30 +733,35 @@ impl Range {
 }
 
 #[instrument(skip(input))]
+pub fn parse_selected_range_inner(input: &str) -> Res<Range> {
+    context(
+        "parse_selected_range_inner",
+        alt((
+            map(
+                separated_pair(
+                    digit1,
+                    char(':'),
+                    map(alt((tag_no_case("*"), digit1)), |x: &str| match x {
+                        "*" => RangeEnd::All,
+                        _ => RangeEnd::End(x.parse::<u32>().expect("range end is a number")),
+                    }),
+                ),
+                |(x, y): (&str, RangeEnd)| {
+                    Range::Range(x.parse::<u32>().expect("range start is a number"), y)
+                },
+            ),
+            map(digit1, |x: &str| {
+                Range::Single(x.parse::<u32>().expect("single range is a number"))
+            }),
+        )),
+    )(input)
+}
+
+#[instrument(skip(input))]
 pub fn parse_selected_range(input: &str) -> Res<Vec<Range>> {
     context(
         "parse_selected_range",
-        separated_list0(
-            char(','),
-            alt((
-                map(
-                    separated_pair(
-                        digit1,
-                        char(':'),
-                        map(alt((tag_no_case("*"), digit1)), |x: &str| match x {
-                            "*" => RangeEnd::All,
-                            _ => RangeEnd::End(x.parse::<u32>().expect("range end is a number")),
-                        }),
-                    ),
-                    |(x, y): (&str, RangeEnd)| {
-                        Range::Range(x.parse::<u32>().expect("range start is a number"), y)
-                    },
-                ),
-                map(digit1, |x: &str| {
-                    Range::Single(x.parse::<u32>().expect("single range is a number"))
-                }),
-            )),
-        ),
+        separated_list0(char(','), parse_selected_range_inner),
     )(input)
 }
 

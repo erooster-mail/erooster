@@ -1,12 +1,12 @@
-use crate::commands::{CommandData, Data};
-use color_eyre::eyre::ContextCompat;
-use erooster_core::backend::storage::{MailEntry, MailStorage, Storage};
-use futures::{Sink, SinkExt};
-use std::{
-    sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
+use crate::commands::{
+    parsers::{parse_selected_range, search_arguments},
+    CommandData, Data,
 };
-use tracing::{debug, instrument};
+use erooster_core::backend::storage::Storage;
+use futures::{Sink, SinkExt};
+use nom::{error::convert_error, Finish};
+use std::sync::Arc;
+use tracing::{debug, error, instrument};
 
 pub struct Search<'a> {
     pub data: &'a Data,
@@ -27,7 +27,33 @@ impl Search<'_> {
     {
         let offset = usize::from(is_uid);
         let arguments = &command_data.arguments[offset..];
-        debug!("Search arguments: {:#?}", arguments);
+        let search_args: String = arguments.join(" ");
+        let search_args = search_args.as_str();
+        debug!("Search arguments: {:?}", search_args);
+
+        let arguments_borrow = command_data.arguments[offset];
+        //TODO: This is temp and will NOT work for all search commands. This MUST be part of the full parser
+        let ranges = parse_selected_range(arguments_borrow).finish();
+        debug!("Search Range: {:?}", ranges);
+
+        match search_arguments(search_args).finish() {
+            Ok((_, args)) => {
+                debug!(
+                    "Resulting parsed arguments of the search query: {:#?}",
+                    args
+                );
+            }
+            Err(e) => {
+                error!(
+                    "Failed to parse search arguments: {}",
+                    convert_error(search_args, e)
+                );
+                lines
+                    .send(format!("{} BAD Unable to parse", command_data.tag))
+                    .await?;
+            }
+        }
+
         lines
             .send(format!("{} BAD Not supported", command_data.tag))
             .await?;

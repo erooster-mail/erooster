@@ -57,7 +57,7 @@ impl Search<'_> {
                     let mails = storage.list_all(&mailbox_path).await;
                     let mut results = parse_search_program(mails, &args.program, is_uid);
 
-                    let return_string = if results.is_empty() {
+                    let esearch_return_string = if results.is_empty() {
                         if is_uid {
                             format!("* ESEARCH (TAG \"{}\") UID", command_data.tag)
                         } else {
@@ -199,10 +199,22 @@ impl Search<'_> {
                             }
                         }
                     };
+                    if !results.is_empty() {
+                        lines
+                            .feed(format!(
+                                "* SEARCH {}",
+                                results
+                                    .iter()
+                                    .map(ToString::to_string)
+                                    .collect::<Vec<String>>()
+                                    .join(" ")
+                            ))
+                            .await?;
+                    }
 
-                    debug!("return_string: {:#?}", return_string);
+                    debug!("return_string: {:#?}", esearch_return_string);
 
-                    lines.feed(return_string).await?;
+                    lines.feed(esearch_return_string).await?;
                     lines
                         .feed(format!("{} OK SEARCH completed", command_data.tag,))
                         .await?;

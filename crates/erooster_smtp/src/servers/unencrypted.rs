@@ -31,7 +31,7 @@ impl Unencrypted {
     pub async fn run(
         config: Arc<Config>,
         database: &DB,
-        storage: Arc<Storage>,
+        storage: &Storage,
     ) -> color_eyre::eyre::Result<()> {
         let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
@@ -51,9 +51,9 @@ impl Unencrypted {
 
             let config = Arc::clone(&config);
             let database = database.clone();
-            let storage = Arc::clone(&storage);
+            let storage = storage.clone();
             tokio::spawn(async move {
-                listen(stream, Arc::clone(&config), &database, Arc::clone(&storage)).await;
+                listen(stream, Arc::clone(&config), &database, &storage).await;
             });
         }
 
@@ -66,7 +66,7 @@ async fn listen(
     mut stream: TcpListenerStream,
     config: Arc<Config>,
     database: &DB,
-    storage: Arc<Storage>,
+    storage: &Storage,
 ) {
     while let Some(Ok(tcp_stream)) = stream.next().await {
         let peer = tcp_stream.peer_addr().expect("[SMTP] peer addr to exist");
@@ -74,7 +74,7 @@ async fn listen(
 
         let config = Arc::clone(&config);
         let database = database.clone();
-        let storage = Arc::clone(&storage);
+        let storage = storage.clone();
         let connection: JoinHandle<Result<()>> = tokio::spawn(async move {
             let lines = Framed::new(tcp_stream, LinesCodec::new_with_max_length(LINE_LIMIT));
             let (mut lines_sender, mut lines_reader) = lines.split();
@@ -101,7 +101,7 @@ async fn listen(
                         &mut lines_sender,
                         Arc::clone(&config),
                         &database,
-                        Arc::clone(&storage),
+                        &storage,
                         line,
                     )
                     .await;
@@ -149,7 +149,7 @@ async fn listen(
                     stream,
                     config,
                     &database,
-                    storage,
+                    &storage,
                     acceptor,
                     Some(data),
                     true,

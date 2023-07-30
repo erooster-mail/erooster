@@ -2,10 +2,7 @@ use crate::commands::{CommandData, Data};
 use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailEntry, MailStorage, Storage};
 use futures::{Sink, SinkExt};
-use std::{
-    sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::instrument;
 
 pub struct Status<'a> {
@@ -17,7 +14,7 @@ impl Status<'_> {
     pub async fn exec<S, E>(
         &self,
         lines: &mut S,
-        storage: Arc<Storage>,
+        storage: &Storage,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where

@@ -86,7 +86,7 @@ impl Encrypted {
     pub(crate) async fn run(
         config: Arc<Config>,
         database: &DB,
-        storage: Arc<Storage>,
+        storage: &Storage,
     ) -> color_eyre::eyre::Result<()> {
         let acceptor = get_tls_acceptor(&config)?;
         // Opens the listener
@@ -106,14 +106,14 @@ impl Encrypted {
             let stream = TcpListenerStream::new(listener);
             let config = Arc::clone(&config);
             let database = database.clone();
-            let storage = Arc::clone(&storage);
+            let storage = storage.clone();
             let acceptor = acceptor.clone();
             tokio::spawn(async move {
                 listen(
                     stream,
                     Arc::clone(&config),
                     &database,
-                    Arc::clone(&storage),
+                    &storage,
                     acceptor.clone(),
                 )
                 .await;
@@ -129,7 +129,7 @@ async fn listen(
     mut stream: TcpListenerStream,
     config: Arc<Config>,
     database: &DB,
-    storage: Arc<Storage>,
+    storage: &Storage,
     acceptor: TlsAcceptor,
 ) {
     // Looks for new peers
@@ -138,7 +138,7 @@ async fn listen(
             tcp_stream,
             Arc::clone(&config),
             database,
-            Arc::clone(&storage),
+            storage,
             acceptor.clone(),
             None,
             false,
@@ -154,7 +154,7 @@ pub async fn listen_tls(
     tcp_stream: TcpStream,
     config: Arc<Config>,
     database: &DB,
-    storage: Arc<Storage>,
+    storage: &Storage,
     acceptor: TlsAcceptor,
     upper_data: Option<Data>,
     starttls: bool,
@@ -167,7 +167,7 @@ pub async fn listen_tls(
     // We need to clone these as we move into a new thread
     let config = Arc::clone(&config);
     let database = database.clone();
-    let storage = Arc::clone(&storage);
+    let storage = storage.clone();
 
     // Start talking with new peer on new thread
     tokio::spawn(async move {
@@ -218,7 +218,7 @@ pub async fn listen_tls(
                                 &mut lines_sender,
                                 Arc::clone(&config),
                                 &database,
-                                Arc::clone(&storage),
+                                &storage,
                                 line,
                             )
                             .await;

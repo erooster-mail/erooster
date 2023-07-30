@@ -1,7 +1,6 @@
 use crate::commands::{fetch::Fetch, store::Store, CommandData, Data};
 use erooster_core::backend::storage::Storage;
 use futures::{Sink, SinkExt};
-use std::sync::Arc;
 use tracing::instrument;
 
 use super::search::Search;
@@ -16,7 +15,7 @@ impl Uid<'_> {
         &self,
         lines: &mut S,
         command_data: &CommandData<'_>,
-        storage: Arc<Storage>,
+        storage: &Storage,
     ) -> color_eyre::eyre::Result<()>
     where
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,

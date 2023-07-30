@@ -17,7 +17,7 @@ pub async fn basic<S, E>(
     data: &Data,
     lines: &mut S,
     config: Arc<Config>,
-    storage: Arc<Storage>,
+    storage: &Storage,
     command_data: &CommandData<'_>,
 ) -> color_eyre::eyre::Result<()>
 where
@@ -269,7 +269,7 @@ impl List<'_> {
         &self,
         lines: &mut S,
         config: Arc<Config>,
-        storage: Arc<Storage>,
+        storage: &Storage,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -304,7 +304,7 @@ impl LSub<'_> {
         &self,
         lines: &mut S,
         config: Arc<Config>,
-        storage: Arc<Storage>,
+        storage: &Storage,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where

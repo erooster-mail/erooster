@@ -5,7 +5,6 @@ use crate::{
 use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailEntry, MailStorage, Storage};
 use futures::{Sink, SinkExt};
-use std::sync::Arc;
 use tokio::fs;
 use tracing::{debug, instrument};
 
@@ -18,7 +17,7 @@ impl Close<'_> {
     pub async fn exec<S, E>(
         &self,
         lines: &mut S,
-        storage: Arc<Storage>,
+        storage: &Storage,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -106,12 +105,9 @@ mod tests {
         let database = erooster_core::backend::database::get_database(Arc::clone(&config))
             .await
             .unwrap();
-        let storage = Arc::new(erooster_core::backend::storage::get_storage(
-            database,
-            Arc::clone(&config),
-        ));
+        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
         let (mut tx, mut rx) = mpsc::unbounded();
-        let res = caps.exec(&mut tx, storage, &cmd_data).await;
+        let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok());
         assert_eq!(rx.next().await, Some(String::from("1 OK CLOSE completed")));
     }
@@ -140,11 +136,8 @@ mod tests {
         let database = erooster_core::backend::database::get_database(Arc::clone(&config))
             .await
             .unwrap();
-        let storage = Arc::new(erooster_core::backend::storage::get_storage(
-            database,
-            Arc::clone(&config),
-        ));
-        let res = caps.exec(&mut tx, storage, &cmd_data).await;
+        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok());
         assert_eq!(
             rx.next().await,
@@ -176,11 +169,8 @@ mod tests {
         let database = erooster_core::backend::database::get_database(Arc::clone(&config))
             .await
             .unwrap();
-        let storage = Arc::new(erooster_core::backend::storage::get_storage(
-            database,
-            Arc::clone(&config),
-        ));
-        let res = caps.exec(&mut tx, storage, &cmd_data).await;
+        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok());
         assert_eq!(rx.next().await, Some(String::from("1 NO invalid state")));
     }

@@ -7,7 +7,6 @@ use erooster_core::backend::storage::{MailStorage, Storage};
 use futures::{Sink, SinkExt};
 use std::{
     path::PathBuf,
-    sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
 use tracing::instrument;
@@ -20,7 +19,7 @@ pub struct Select<'a> {
 async fn select<S, E>(
     data: &Data,
     lines: &mut S,
-    storage: Arc<Storage>,
+    storage: &Storage,
     rw: bool,
     command_data: &CommandData<'_>,
 ) -> color_eyre::eyre::Result<()>
@@ -65,7 +64,7 @@ where
 async fn send_success<S, E>(
     lines: &mut S,
     folder: String,
-    storage: Arc<Storage>,
+    storage: &Storage,
     mailbox_path: PathBuf,
     rw: bool,
     command_data: &CommandData<'_>,
@@ -140,7 +139,7 @@ impl Select<'_> {
     pub async fn exec<S, E>(
         &self,
         lines: &mut S,
-        storage: Arc<Storage>,
+        storage: &Storage,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -172,7 +171,7 @@ impl Examine<'_> {
     pub async fn exec<S, E>(
         &self,
         lines: &mut S,
-        storage: Arc<Storage>,
+        storage: &Storage,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where

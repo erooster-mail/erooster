@@ -5,7 +5,6 @@ use crate::{
 use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailEntry, MailEntryType, MailStorage, Storage};
 use futures::{Sink, SinkExt};
-use std::sync::Arc;
 use tracing::{debug, error, instrument};
 
 pub struct Store<'a> {
@@ -16,7 +15,7 @@ impl Store<'_> {
     pub async fn exec<S, E>(
         &self,
         lines: &mut S,
-        storage: Arc<Storage>,
+        storage: &Storage,
         command_data: &CommandData<'_>,
         uid: bool,
     ) -> color_eyre::eyre::Result<()>

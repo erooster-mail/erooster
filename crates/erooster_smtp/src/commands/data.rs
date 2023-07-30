@@ -58,7 +58,7 @@ impl DataCommand<'_> {
         lines: &mut S,
         line: &str,
         database: &DB,
-        storage: Arc<Storage>,
+        storage: &Storage,
     ) -> color_eyre::eyre::Result<()>
     where
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,

@@ -2,7 +2,6 @@ use crate::commands::{CommandData, Data};
 use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailStorage, Storage};
 use futures::{Sink, SinkExt};
-use std::sync::Arc;
 use tracing::{error, instrument};
 
 pub struct Create<'a> {
@@ -13,7 +12,7 @@ impl Create<'_> {
     pub async fn exec<S, E>(
         &self,
         lines: &mut S,
-        storage: Arc<Storage>,
+        storage: &Storage,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where

@@ -348,10 +348,10 @@ pub enum SearchProgram {
 
 #[derive(Debug, Clone)]
 pub struct SearchArguments {
-    return_opts: Option<Vec<SearchReturnOption>>,
+    pub return_opts: Option<Vec<SearchReturnOption>>,
     // TODO: Consider using an enum with supported values plus unknown
-    charset: Option<String>,
-    program: SearchProgram,
+    pub charset: Option<String>,
+    pub program: SearchProgram,
 }
 
 #[instrument(skip(input))]

@@ -125,11 +125,11 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     .unwrap();
                 info!("Created users");
 
-                let storage = Arc::new(get_storage(database.clone(), Arc::clone(&config)));
+                let storage = get_storage(database.clone(), Arc::clone(&config));
 
                 info!("Starting SMTP Server");
                 if let Err(e) = erooster_smtp::servers::unencrypted::Unencrypted::run(
-                    config, &database, storage,
+                    config, &database, &storage,
                 )
                 .await
                 {

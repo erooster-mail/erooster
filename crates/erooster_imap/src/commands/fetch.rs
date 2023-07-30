@@ -16,7 +16,6 @@ use erooster_core::backend::storage::{
 };
 use futures::{Sink, SinkExt};
 use nom::{error::convert_error, Finish};
-use std::sync::Arc;
 use tracing::{debug, error, instrument, log::warn};
 
 pub struct Fetch<'a> {
@@ -30,7 +29,7 @@ impl Fetch<'_> {
         &self,
         lines: &mut S,
         command_data: &CommandData<'_>,
-        storage: Arc<Storage>,
+        storage: &Storage,
         is_uid: bool,
     ) -> color_eyre::eyre::Result<()>
     where

@@ -22,7 +22,7 @@ impl Append<'_> {
     pub async fn exec<S, E>(
         &self,
         lines: &mut S,
-        storage: Arc<Storage>,
+        storage: &Storage,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -114,7 +114,7 @@ impl Append<'_> {
     pub async fn append<S, E>(
         &self,
         lines: &mut S,
-        storage: Arc<Storage>,
+        storage: &Storage,
         append_data: &str,
         config: Arc<Config>,
         tag: String,

@@ -70,7 +70,7 @@ pub trait Server {
     async fn run(
         config: Arc<Config>,
         database: &DB,
-        storage: Arc<Storage>,
+        storage: &Storage,
     ) -> color_eyre::eyre::Result<()>;
 }
 
@@ -83,18 +83,18 @@ pub trait Server {
 pub fn start(
     config: Arc<Config>,
     database: &DB,
-    storage: Arc<Storage>,
+    storage: &Storage,
 ) -> color_eyre::eyre::Result<()> {
     std::fs::create_dir_all(&config.mail.maildir_folders)?;
 
     let config_clone = Arc::clone(&config);
     let db_clone = database.clone();
-    let storage_clone = Arc::clone(&storage);
+    let storage_clone = storage.clone();
     tokio::spawn(async move {
         if let Err(e) = servers::unencrypted::Unencrypted::run(
             Arc::clone(&config_clone),
             &db_clone,
-            Arc::clone(&storage_clone),
+            &storage_clone,
         )
         .await
         {
@@ -102,10 +102,10 @@ pub fn start(
         }
     });
     let db_clone = database.clone();
+    let storage_clone = storage.clone();
     tokio::spawn(async move {
         if let Err(e) =
-            servers::encrypted::Encrypted::run(Arc::clone(&config), &db_clone, Arc::clone(&storage))
-                .await
+            servers::encrypted::Encrypted::run(Arc::clone(&config), &db_clone, &storage_clone).await
         {
             panic!("Unable to start TLS server: {e:?}");
         }

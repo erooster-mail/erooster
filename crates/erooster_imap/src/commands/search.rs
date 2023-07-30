@@ -2,8 +2,9 @@ use crate::commands::{parsers::search_arguments, CommandData, Data};
 use erooster_core::backend::storage::Storage;
 use futures::{Sink, SinkExt};
 use nom::{error::convert_error, Finish};
-use std::sync::Arc;
 use tracing::{debug, error, instrument};
+
+use super::parsers::SearchReturnOption;
 
 pub struct Search<'a> {
     pub data: &'a Data,
@@ -14,7 +15,7 @@ impl Search<'_> {
     pub async fn exec<S, E>(
         &self,
         lines: &mut S,
-        storage: Arc<Storage>,
+        storage: &Storage,
         command_data: &CommandData<'_>,
         is_uid: bool,
     ) -> color_eyre::eyre::Result<()>
@@ -34,6 +35,8 @@ impl Search<'_> {
                     "Resulting parsed arguments of the search query: {:#?}",
                     args
                 );
+                let mut results = vec![];
+                let results = parse_search_program(&mut results, args.return_opts, storage).await;
             }
             Err(e) => {
                 error!(
@@ -52,4 +55,12 @@ impl Search<'_> {
         lines.flush().await?;
         Ok(())
     }
+}
+
+async fn parse_search_program<'a>(
+    results: &'a mut [u32],
+    return_opts: Option<Vec<SearchReturnOption>>,
+    storage: &Storage,
+) -> &'a mut [u32] {
+    results
 }

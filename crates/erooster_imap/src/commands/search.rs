@@ -261,13 +261,13 @@ fn parse_search_program(
 
 /// Generates a string where continous numbers are represented in a string as `<start>:<end>`.
 /// Singular numbers are represented as `<number>`.
-/// If there are gaps then there should be spaces between the ranges.
+/// If there are gaps then there should be a "," between the ranges.
 /// Order is not required.
 /// There MUST be no spaces before or after the returned string.
 ///
 /// # Example
 ///
-/// `1:3 5 7:9 11 13:15`
+/// `1:3,5,7:9,11,13:15`
 fn generate_ranges(results: &mut Vec<u32>) -> String {
     results.sort_unstable();
     let mut ranges = Vec::new();
@@ -294,7 +294,7 @@ fn generate_ranges(results: &mut Vec<u32>) -> String {
             }
         })
         .collect::<Vec<_>>()
-        .join(" ")
+        .join(",")
 }
 
 fn check_search_condition(

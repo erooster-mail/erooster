@@ -207,7 +207,6 @@ impl Search<'_> {
                         .feed(format!("{} OK SEARCH completed", command_data.tag,))
                         .await?;
                     lines.flush().await?;
-                    return Ok(());
                 }
                 Err(e) => {
                     error!(
@@ -219,11 +218,6 @@ impl Search<'_> {
                         .await?;
                 }
             }
-
-            lines
-                .send(format!("{} BAD Not supported", command_data.tag))
-                .await?;
-            lines.flush().await?;
         } else {
             lines
                 .feed(format!(

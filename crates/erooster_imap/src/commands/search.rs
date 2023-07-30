@@ -263,39 +263,38 @@ fn parse_search_program(
 /// Singular numbers are represented as `<number>`.
 /// If there are gaps then there should be spaces between the ranges.
 /// Order is not required.
+/// There MUST be no spaces before or after the returned string.
 ///
 /// # Example
 ///
 /// `1:3 5 7:9 11 13:15`
 fn generate_ranges(results: &mut Vec<u32>) -> String {
     results.sort_unstable();
-    let mut ranges = vec![];
-    let mut current_range = vec![];
-    let mut last_number = 0;
-    for number in results {
-        let number = *number;
-        if number == last_number + 1 {
-            current_range.push(number);
+    let mut ranges = Vec::new();
+    let mut current_range = (0, 0);
+    for result in results {
+        if current_range.1 == 0 {
+            current_range.0 = *result;
+            current_range.1 = *result;
+        } else if current_range.1 + 1 == *result {
+            current_range.1 = *result;
         } else {
-            if !current_range.is_empty() {
-                ranges.push(current_range);
+            ranges.push(current_range);
+            current_range = (0, 0);
+        }
+    }
+    ranges.push(current_range);
+    ranges
+        .iter()
+        .map(|range| {
+            if range.0 == range.1 {
+                format!("{}", range.0)
+            } else {
+                format!("{}:{}", range.0, range.1)
             }
-            current_range = vec![number];
-        }
-        last_number = number;
-    }
-    if !current_range.is_empty() {
-        ranges.push(current_range);
-    }
-    let mut return_string = String::new();
-    for range in ranges {
-        if range.len() == 1 {
-            return_string.push_str(format!("{} ", range[0]).as_str());
-        } else {
-            return_string.push_str(format!("{}:{} ", range[0], range[range.len() - 1]).as_str());
-        }
-    }
-    return_string
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn check_search_condition(

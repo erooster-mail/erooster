@@ -56,7 +56,6 @@ impl Search<'_> {
 
                     let mails = storage.list_all(&mailbox_path).await;
                     let mut results = parse_search_program(mails, &args.program, is_uid);
-                    debug!("Results: {:#?}", results);
 
                     let return_string = if results.is_empty() {
                         if is_uid {
@@ -200,6 +199,8 @@ impl Search<'_> {
                             }
                         }
                     };
+
+                    debug!("return_string: {:#?}", return_string);
 
                     lines.feed(return_string).await?;
                     lines

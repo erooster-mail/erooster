@@ -540,6 +540,44 @@ impl MailEntry for MaildirMailEntry {
     fn path(&self) -> &PathBuf {
         self.entry.path()
     }
+
+    #[instrument(skip(self))]
+    fn body_contains(&mut self, string: &str) -> bool {
+        if let Ok(mail) = self.entry.parsed() {
+            if let Ok(body) = mail.get_body() {
+                body.contains(string)
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    #[instrument(skip(self))]
+    fn text_contains(&mut self, string: &str) -> bool {
+        let contained_in_headers = if let Ok(headers) = self.entry.headers() {
+            headers.iter().any(|header| {
+                header.get_value().contains(string) || header.get_key_ref().contains(string)
+            })
+        } else {
+            false
+        };
+        self.body_contains(string) || contained_in_headers
+    }
+
+    #[instrument(skip(self))]
+    fn body_size(&mut self) -> u64 {
+        if let Ok(mail) = self.entry.parsed() {
+            if let Ok(body) = mail.get_body_raw() {
+                body.len() as u64
+            } else {
+                0
+            }
+        } else {
+            0
+        }
+    }
 }
 
 #[instrument(skip(filename))]

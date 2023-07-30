@@ -301,6 +301,7 @@ pub enum SearchReturnOption {
     ALL,
     COUNT,
     SAVE,
+    Multiple(Vec<SearchReturnOption>),
 }
 
 pub type EmailDate = String;
@@ -348,7 +349,7 @@ pub enum SearchProgram {
 
 #[derive(Debug, Clone)]
 pub struct SearchArguments {
-    pub return_opts: Option<Vec<SearchReturnOption>>,
+    pub return_opts: SearchReturnOption,
     // TODO: Consider using an enum with supported values plus unknown
     pub charset: Option<String>,
     pub program: SearchProgram,
@@ -396,12 +397,12 @@ fn inner_search_arguments(input: &str) -> Res<SearchArguments> {
                 ),
                 |(return_opts, program)| match program {
                     ProgramWithOrWithoutCharset::With(charset, program) => SearchArguments {
-                        return_opts: Some(return_opts),
+                        return_opts,
                         program,
                         charset: Some(charset),
                     },
                     ProgramWithOrWithoutCharset::Without(program) => SearchArguments {
-                        return_opts: Some(return_opts),
+                        return_opts,
                         program,
                         charset: None,
                     },
@@ -430,12 +431,12 @@ fn inner_search_arguments(input: &str) -> Res<SearchArguments> {
                 )),
                 |program| match program {
                     ProgramWithOrWithoutCharset::With(charset, program) => SearchArguments {
-                        return_opts: None,
+                        return_opts: SearchReturnOption::ALL,
                         program,
                         charset: Some(charset),
                     },
                     ProgramWithOrWithoutCharset::Without(program) => SearchArguments {
-                        return_opts: None,
+                        return_opts: SearchReturnOption::ALL,
                         program,
                         charset: None,
                     },
@@ -706,7 +707,7 @@ fn search_key(input: &str) -> Res<SearchProgram> {
 }
 
 #[instrument(skip(input))]
-fn search_return_opts(input: &str) -> Res<Vec<SearchReturnOption>> {
+fn search_return_opts(input: &str) -> Res<SearchReturnOption> {
     context(
         "search_return_opts",
         map(
@@ -726,7 +727,15 @@ fn search_return_opts(input: &str) -> Res<Vec<SearchReturnOption>> {
                     char(')'),
                 ),
             )),
-            |(_, _, _, list)| list,
+            |(_, _, _, list)| {
+                if list.is_empty() {
+                    SearchReturnOption::ALL
+                } else if list.len() == 1 {
+                    list[0].clone()
+                } else {
+                    SearchReturnOption::Multiple(list)
+                }
+            },
         ),
     )(input)
 }

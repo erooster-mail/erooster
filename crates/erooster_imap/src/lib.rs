@@ -7,6 +7,7 @@
 //! This crate is containing the imap logic of the erooster mail server.
 //!
 #![feature(string_remove_matches)]
+#![feature(box_into_inner)]
 #![deny(unsafe_code, clippy::unwrap_used)]
 #![warn(
     clippy::cognitive_complexity,

@@ -66,6 +66,12 @@ pub trait MailEntry {
     fn is_trashed(&self) -> bool;
     /// The path of the email
     fn path(&self) -> &PathBuf;
+    /// If the whole message contains a certain string (case sensitive)
+    fn text_contains(&mut self, string: &str) -> bool;
+    /// If the body contains a certain string (case sensitive)
+    fn body_contains(&mut self, string: &str) -> bool;
+    /// The size of the raw body in octets
+    fn body_size(&mut self) -> u64;
 }
 
 /// Abstract Storage definition

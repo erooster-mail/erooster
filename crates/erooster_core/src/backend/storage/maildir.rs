@@ -376,13 +376,14 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             debug!("mail.mailbox: {:#?}", mail.mailbox);
             if mail.mailbox == "unknown" {
                 debug!("Updating email");
-                if let Err(e) = sqlx::query("UPDATE mails SET mailbox = $1 WHERE maildir_id = $2")
+                match sqlx::query("UPDATE mails SET mailbox = $1 WHERE maildir_id = $2")
                     .bind(mail.id())
                     .bind(mailbox.clone())
                     .execute(pool)
                     .await
                 {
-                    error!("Failed to update the mailbox in the database: {e}");
+                    Err(e) => error!("Failed to update the mailbox in the database: {e}"),
+                    Ok(m) => debug!("Result: {:#?}", m),
                 }
             }
         }

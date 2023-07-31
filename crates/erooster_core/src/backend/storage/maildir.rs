@@ -302,12 +302,14 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
 
     #[instrument(skip(self, path, mailbox))]
     async fn list_all(&self, mailbox: String, path: &Path) -> Vec<MaildirMailEntry> {
+        let pool = self.db.get_pool();
         let maildir = Maildir::from(path.to_path_buf());
         let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
-            .fetch(self.db.get_pool())
+            .fetch(pool)
             .filter_map(|x| async move { x.ok() })
             .collect()
             .await;
+        debug!("Mail rows: {:#?}", mail_rows);
 
         let mails: Vec<MaildirMailEntry> = maildir
             .list_new()
@@ -319,7 +321,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                     let db_item = mail_rows.iter().find(|y| y.maildir_id == maildir_id);
                     let uid: i32 = db_item.map_or(0, |y| y.uid);
                     let mailbox: String =
-                        db_item.map_or(String::from("unknown"), |y| y.mailbox.clone());
+                        db_item.map_or(String::from("unknown1"), |y| y.mailbox.clone());
                     debug!("mailbox: {mailbox}");
                     let modseq = db_item.map_or(0, |y| y.modseq);
                     let state = if entry.is_seen() {
@@ -340,14 +342,11 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             })
             .collect();
         for mail in &mails {
-            debug!("mailbox: {}", mail.mailbox);
-            debug!("mailbox new: {}", mailbox);
-            debug!("maildir_id: {}", mail.id());
             if mail.mailbox == "unknown" {
                 if let Err(e) = sqlx::query("UPDATE mails SET mailbox = $1 WHERE maildir_id = $2")
                     .bind(mail.id())
                     .bind(mailbox.clone())
-                    .execute(self.db.get_pool())
+                    .execute(pool)
                     .await
                 {
                     error!("Failed to update the mailbox in the database: {e}");
@@ -503,7 +502,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     }
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(sqlx::FromRow, Debug)]
 struct DbMails {
     id: i32,
     maildir_id: String,

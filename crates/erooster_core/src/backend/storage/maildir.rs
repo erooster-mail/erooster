@@ -260,8 +260,8 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         for mail in &mails {
             if mail.mailbox == "unknown" {
                 sqlx::query("UPDATE mails SET mailbox = $1 WHERE maildir_id = $2")
-                    .bind(mail.id())
                     .bind(mailbox.clone())
+                    .bind(mail.id())
                     .execute(self.db.get_pool())
                     .await
                     .expect("Failed to update row");
@@ -314,8 +314,8 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         for mail in &mails {
             if mail.mailbox == "unknown" {
                 sqlx::query("UPDATE mails SET mailbox = $1 WHERE maildir_id = $2")
-                    .bind(mail.id())
                     .bind(mailbox.clone())
+                    .bind(mail.id())
                     .execute(self.db.get_pool())
                     .await
                     .expect("Failed to update row");
@@ -377,8 +377,8 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             if mail.mailbox == "unknown" {
                 debug!("Updating email");
                 match sqlx::query("UPDATE mails SET mailbox = $1 WHERE maildir_id = $2")
-                    .bind(mail.id())
                     .bind(mailbox.clone())
+                    .bind(mail.id())
                     .execute(pool)
                     .await
                 {

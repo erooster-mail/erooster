@@ -16,7 +16,7 @@ use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 use tokio_stream::wrappers::LinesStream;
-use tracing::{debug, instrument};
+use tracing::{debug, error, instrument};
 
 /// The Storage handler for the maildir format
 #[derive(Debug, Clone)]
@@ -341,14 +341,17 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .collect();
         for mail in &mails {
             debug!("mailbox: {}", mail.mailbox);
+            debug!("mailbox new: {}", mailbox);
             debug!("maildir_id: {}", mail.id());
             if mail.mailbox == "unknown" {
-                sqlx::query("UPDATE mails SET mailbox = $1 WHERE maildir_id = $2")
+                if let Err(e) = sqlx::query("UPDATE mails SET mailbox = $1 WHERE maildir_id = $2")
                     .bind(mail.id())
                     .bind(mailbox.clone())
                     .execute(self.db.get_pool())
                     .await
-                    .expect("Failed to update row");
+                {
+                    error!("Failed to update the mailbox in the database: {e}");
+                }
             }
         }
         mails

@@ -309,7 +309,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .collect()
             .await;
 
-        let mails: Vec<_> = maildir
+        let mails: Vec<MaildirMailEntry> = maildir
             .list_new()
             .chain(maildir.list_cur())
             .filter(std::result::Result::is_ok)
@@ -320,6 +320,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                     let uid: i32 = db_item.map_or(0, |y| y.uid);
                     let mailbox: String =
                         db_item.map_or(String::from("unknown"), |y| y.mailbox.clone());
+                    debug!("mailbox: {mailbox}");
                     let modseq = db_item.map_or(0, |y| y.modseq);
                     let state = if entry.is_seen() {
                         MailState::Read
@@ -339,6 +340,8 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             })
             .collect();
         for mail in &mails {
+            debug!("mailbox: {}", mail.mailbox);
+            debug!("maildir_id: {}", mail.id());
             if mail.mailbox == "unknown" {
                 sqlx::query("UPDATE mails SET mailbox = $1 WHERE maildir_id = $2")
                     .bind(mail.id())
@@ -510,7 +513,8 @@ struct DbMails {
 pub struct MaildirMailEntry {
     entry: maildir::MailEntry,
     uid: u32,
-    mailbox: String,
+    /// The mailbox folder it is in
+    pub mailbox: String,
     modseq: u64,
     /// The sequence number. It is None until used
     pub sequence_number: Option<u32>,

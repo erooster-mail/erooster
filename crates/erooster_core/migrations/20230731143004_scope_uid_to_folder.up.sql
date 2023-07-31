@@ -1,15 +1,15 @@
 ALTER TABLE mails
-  ADD uid BIGINT NOT NULL DEFAULT 0;
-  ADD mailbox VARCHAR NOT NULL DEFAULT 'unknown';
+  ADD 'uid' BIGINT NOT NULL DEFAULT 0;
+  ADD 'mailbox' VARCHAR NOT NULL DEFAULT 'unknown';
 
 ALTER TABLE mails DROP CONSTRAINT mails_pkey;
 
-ALTER TABLE mails ADD PRIMARY KEY (mailbox, uid);
+ALTER TABLE mails ADD PRIMARY KEY ('mailbox', 'uid');
 
 create table IF NOT EXISTS mailbox_uid_counter 
 (
-  uid BIGINT primary key, 
-  mailbox VARCHAR not null
+  'uid' BIGINT primary key, 
+  'mailbox' VARCHAR not null
 );
 
 create function IF NOT EXISTS next_uid_for_folder(m_mailbox VARCHAR) 

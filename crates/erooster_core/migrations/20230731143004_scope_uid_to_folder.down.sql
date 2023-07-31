@@ -1,8 +1,8 @@
 ALTER TABLE mails
-    DROP COLUMN uid;
+    DROP COLUMN 'uid';
 
 ALTER TABLE mails
-    DROP COLUMN mailbox;
+    DROP COLUMN 'mailbox';
 
 DROP TABLE IF EXISTS mailbox_uid_counter;
 

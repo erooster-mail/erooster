@@ -306,7 +306,15 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let maildir = Maildir::from(path.to_path_buf());
         let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
             .fetch(pool)
-            .filter_map(|x| async move { x.ok() })
+            .filter_map(|x| async move {
+                match x {
+                    Err(e) => {
+                        error!("Failed to fetch row: {e}");
+                        None
+                    }
+                    Ok(x) => Some(x),
+                }
+            })
             .collect()
             .await;
         debug!("Mail rows: {:#?}", mail_rows);

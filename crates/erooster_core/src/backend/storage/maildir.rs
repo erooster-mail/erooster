@@ -51,7 +51,15 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             sqlx::query_as::<_, DbMails>("SELECT * FROM mails WHERE maildir_id = $1")
                 .bind(id)
                 .fetch(self.db.get_pool())
-                .filter_map(|x| async move { x.ok() })
+                .filter_map(|x| async move {
+                    match x {
+                        Err(e) => {
+                            error!("Failed to fetch row: {e}");
+                            None
+                        }
+                        Ok(x) => Some(x),
+                    }
+                })
                 .collect()
                 .await;
 
@@ -214,7 +222,15 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let maildir = Maildir::from(path.to_path_buf());
         let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
             .fetch(self.db.get_pool())
-            .filter_map(|x| async move { x.ok() })
+            .filter_map(|x| async move {
+                match x {
+                    Err(e) => {
+                        error!("Failed to fetch row: {e}");
+                        None
+                    }
+                    Ok(x) => Some(x),
+                }
+            })
             .collect()
             .await;
         let mails: Vec<_> = maildir
@@ -259,7 +275,15 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let maildir = Maildir::from(path.to_path_buf());
         let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
             .fetch(self.db.get_pool())
-            .filter_map(|x| async move { x.ok() })
+            .filter_map(|x| async move {
+                match x {
+                    Err(e) => {
+                        error!("Failed to fetch row: {e}");
+                        None
+                    }
+                    Ok(x) => Some(x),
+                }
+            })
             .collect()
             .await;
 
@@ -329,8 +353,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                     let db_item = mail_rows.iter().find(|y| y.maildir_id == maildir_id);
                     let uid: i32 = db_item.map_or(0, |y| y.uid);
                     let mailbox: String =
-                        db_item.map_or(String::from("unknown1"), |y| y.mailbox.clone());
-                    debug!("mailbox: {mailbox}");
+                        db_item.map_or(String::from("unknown"), |y| y.mailbox.clone());
                     let modseq = db_item.map_or(0, |y| y.modseq);
                     let state = if entry.is_seen() {
                         MailState::Read

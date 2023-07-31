@@ -341,7 +341,6 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             })
             .collect()
             .await;
-        debug!("Mail rows: {:#?}", mail_rows);
 
         let mails: Vec<MaildirMailEntry> = maildir
             .list_new()
@@ -373,17 +372,14 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             })
             .collect();
         for mail in &mails {
-            debug!("mail.mailbox: {:#?}", mail.mailbox);
             if mail.mailbox == "unknown" {
-                debug!("Updating email");
-                match sqlx::query("UPDATE mails SET mailbox = $1 WHERE maildir_id = $2")
+                if let Err(e) = sqlx::query("UPDATE mails SET mailbox = $1 WHERE maildir_id = $2")
                     .bind(mailbox.clone())
                     .bind(mail.id())
                     .execute(pool)
                     .await
                 {
-                    Err(e) => error!("Failed to update the mailbox in the database: {e}"),
-                    Ok(m) => debug!("Result: {:#?}", m),
+                    error!("Failed to update the mailbox in the database: {e}");
                 }
             }
         }

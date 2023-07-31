@@ -32,11 +32,15 @@ impl Check<'_> {
                     .await?;
                 return Ok(());
             };
-            let mailbox_path = storage.to_ondisk_path(folder.clone(), username)?;
-            let mails: Vec<MailEntryType> = storage.list_new(&mailbox_path).await;
+            let mailbox_path = storage.to_ondisk_path(folder.clone(), username.clone())?;
+            let mails: Vec<MailEntryType> = storage
+                .list_new(format!("{username}/{folder}"), &mailbox_path)
+                .await;
             let got_new = !mails.is_empty();
             if got_new {
-                let mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
+                let mails: Vec<MailEntryType> = storage
+                    .list_all(format!("{username}/{folder}"), &mailbox_path)
+                    .await;
                 lines.send(format!("* {} EXISTS", mails.len())).await?;
             }
 

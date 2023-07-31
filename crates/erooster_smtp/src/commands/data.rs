@@ -150,6 +150,7 @@ impl DataCommand<'_> {
                         let mailbox_path = Path::new(&config.mail.maildir_folders)
                             .join(receipt.clone())
                             .join(folder.clone());
+                        let db_foldername = format!("{}/{}", receipt, folder,);
                         if !mailbox_path.exists() {
                             storage.create_dirs(&mailbox_path)?;
                             storage.add_flag(&mailbox_path, "\\Subscribed").await?;
@@ -254,7 +255,9 @@ impl DataCommand<'_> {
                             return Ok(());
                         }
 
-                        let message_id = storage.store_new(&mailbox_path, data.as_bytes()).await?;
+                        let message_id = storage
+                            .store_new(db_foldername, &mailbox_path, data.as_bytes())
+                            .await?;
                         debug!("Stored message: {}", message_id);
                     }
                     // TODO: cleanup after we are done

@@ -40,17 +40,18 @@ impl Fetch<'_> {
         // TODO handle the various request types defined in https://www.rfc-editor.org/rfc/rfc9051.html#name-fetch-command
         if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
             let folder = folder.replace('/', ".");
-            let mailbox_path = storage.to_ondisk_path(
-                folder.clone(),
-                self.data
-                    .con_state
-                    .read()
-                    .await
-                    .username
-                    .clone()
-                    .context("Username missing in internal State")?,
-            )?;
-            let mut mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
+            let username = self
+                .data
+                .con_state
+                .read()
+                .await
+                .username
+                .clone()
+                .context("Username missing in internal State")?;
+            let mailbox_path = storage.to_ondisk_path(folder.clone(), username.clone())?;
+            let mut mails: Vec<MailEntryType> = storage
+                .list_all(format!("{username}/{folder}"), &mailbox_path)
+                .await;
             mails.sort_by_key(MaildirMailEntry::uid);
 
             let arguments_borrow = command_data.arguments[offset];
@@ -62,15 +63,22 @@ impl Fetch<'_> {
                     let mut filtered_mails: Vec<_> = mails
                         .iter_mut()
                         .enumerate()
-                        .filter_map(|(index, mut mail)| {
+                        .filter_map(|(index, mail)| {
                             if ranges.iter().any(|range| {
                                 if is_uid {
                                     range.contains(&mail.uid())
                                 } else {
-                                    range.contains(&(index as u32 + 1))
+                                    range.contains(
+                                        &(u32::try_from(index)
+                                            .expect("Unable to convert index to u32")
+                                            + 1),
+                                    )
                                 }
                             }) {
-                                mail.sequence_number = Some(index as u32 + 1);
+                                mail.sequence_number = Some(
+                                    u32::try_from(index).expect("Unable to convert index to u32")
+                                        + 1,
+                                );
                                 return Some(mail);
                             }
                             None

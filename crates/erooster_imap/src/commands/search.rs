@@ -30,16 +30,15 @@ impl Search<'_> {
     {
         if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
             let folder = folder.replace('/', ".");
-            let mailbox_path = storage.to_ondisk_path(
-                folder.clone(),
-                self.data
-                    .con_state
-                    .read()
-                    .await
-                    .username
-                    .clone()
-                    .context("Username missing in internal State")?,
-            )?;
+            let username = self
+                .data
+                .con_state
+                .read()
+                .await
+                .username
+                .clone()
+                .context("Username missing in internal State")?;
+            let mailbox_path = storage.to_ondisk_path(folder.clone(), username.clone())?;
 
             let offset = usize::from(is_uid);
             let arguments = &command_data.arguments[offset..];
@@ -54,7 +53,9 @@ impl Search<'_> {
                         args
                     );
 
-                    let mails = storage.list_all(&mailbox_path).await;
+                    let mails = storage
+                        .list_all(format!("{username}/{folder}"), &mailbox_path)
+                        .await;
                     let mut results = parse_search_program(mails, &args.program, is_uid);
 
                     let esearch_return_string = if results.is_empty() {

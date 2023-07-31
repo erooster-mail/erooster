@@ -34,20 +34,22 @@ impl Close<'_> {
                 return Ok(());
             }
 
-            let mailbox_path = storage.to_ondisk_path(
-                folder.clone(),
-                write_lock
-                    .username
-                    .clone()
-                    .context("Username missing in internal State")?,
-            )?;
+            let username = write_lock
+                .username
+                .clone()
+                .context("Username missing in internal State")?;
+            let mailbox_path = storage.to_ondisk_path(folder.clone(), username.clone())?;
 
             // We need to check all messages it seems?
             let mails = storage
-                .list_cur(&mailbox_path)
+                .list_cur(format!("{username}/{folder}"), &mailbox_path)
                 .await
                 .into_iter()
-                .chain(storage.list_new(&mailbox_path).await);
+                .chain(
+                    storage
+                        .list_new(format!("{username}/{folder}"), &mailbox_path)
+                        .await,
+                );
             for mail in mails {
                 debug!("Checking mails");
                 if mail.is_trashed() {

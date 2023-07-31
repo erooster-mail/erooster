@@ -13,5 +13,9 @@ fn main() -> std::io::Result<()> {
     *config.git_mut().sha_kind_mut() = ShaKind::Short;
     *config.git_mut().skip_if_error_mut() = true;
     vergen(config).unwrap();
+
+    // For migrations
+    println!("cargo:rerun-if-changed=migrations");
+
     Ok(())
 }

@@ -147,15 +147,13 @@ async fn listen(
                 debug!("[SMTP] Starting to listen using tls");
                 if let Err(e) = listen_tls(
                     stream,
-                    config,
+                    &config,
                     &database,
                     &storage,
                     acceptor,
                     Some(data),
                     true,
-                )
-                .await
-                {
+                ) {
                     error!("[SMTP] Error while upgrading to tls: {}", e);
                 }
             }

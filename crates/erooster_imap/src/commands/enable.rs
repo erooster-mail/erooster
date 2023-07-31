@@ -22,7 +22,7 @@ impl Enable<'_> {
     {
         let mut write_lock = self.data.con_state.write().await;
 
-        for arg in command_data.arguments.iter() {
+        for arg in command_data.arguments {
             if arg == &"UTF8=ACCEPT" {
                 write_lock.active_capabilities.push(Capabilities::UTF8);
                 lines.feed(format!("* ENABLED {arg}")).await?;

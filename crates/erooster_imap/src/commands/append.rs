@@ -137,13 +137,14 @@ impl Append<'_> {
                     debug!("[Append] Saving data");
                     let folder = &state.folder;
                     let mailbox_path = Path::new(&config.mail.maildir_folders)
-                        .join(username)
+                        .join(username.clone())
                         .join(folder.clone());
                     debug!("[Append] Mailbox path: {:?}", mailbox_path);
                     // TODO verify that we need this
                     buffer.truncate(buffer.len() - 2);
                     let message_id = storage
                         .store_cur_with_flags(
+                            format!("{username}/{folder}"),
                             &mailbox_path,
                             buffer,
                             state.flags.clone().unwrap_or_default(),

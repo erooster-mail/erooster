@@ -58,6 +58,7 @@ pub struct AppendingState {
     pub tag: String,
 }
 
+#[allow(clippy::missing_fields_in_debug)]
 impl std::fmt::Debug for AppendingState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AppendingState")

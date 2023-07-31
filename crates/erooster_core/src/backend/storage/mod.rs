@@ -91,10 +91,16 @@ pub trait MailStorage<M: MailEntry> {
     /// Creates the required folder structure
     fn create_dirs(&self, path: &Path) -> color_eyre::eyre::Result<()>;
     /// Store new message
-    async fn store_new(&self, path: &Path, data: &[u8]) -> color_eyre::eyre::Result<String>;
+    async fn store_new(
+        &self,
+        mailbox: String,
+        path: &Path,
+        data: &[u8],
+    ) -> color_eyre::eyre::Result<String>;
     /// Store a message
     async fn store_cur_with_flags(
         &self,
+        mailbox: String,
         path: &Path,
         data: &[u8],
         flags: Vec<String>,
@@ -106,11 +112,11 @@ pub trait MailStorage<M: MailEntry> {
     /// Count of new messages
     fn count_new(&self, path: &Path) -> usize;
     /// Get the current messages
-    async fn list_cur(&self, path: &Path) -> Vec<M>;
+    async fn list_cur(&self, mailbox: String, path: &Path) -> Vec<M>;
     /// Get the new messages
-    async fn list_new(&self, path: &Path) -> Vec<M>;
+    async fn list_new(&self, mailbox: String, path: &Path) -> Vec<M>;
     /// Get the all messages
-    async fn list_all(&self, path: &Path) -> Vec<M>;
+    async fn list_all(&self, mailbox: String, path: &Path) -> Vec<M>;
     /// Get message by non unique id
     async fn find(&self, path: &Path, id: &str) -> Option<M>;
     /// Move mail to current folder and set flags

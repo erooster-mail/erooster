@@ -47,14 +47,18 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
 
     async fn find(&self, path: &Path, id: &str) -> Option<MaildirMailEntry> {
         let maildir = Maildir::from(path.to_path_buf());
-        let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
-            .fetch(self.db.get_pool())
-            .filter_map(|x| async move { x.ok() })
-            .collect()
-            .await;
+        let mail: Vec<_> =
+            sqlx::query_as::<_, DbMails>("SELECT * FROM mails WHERE maildir_id = $1")
+                .bind(id)
+                .fetch(self.db.get_pool())
+                .filter_map(|x| async move { x.ok() })
+                .collect()
+                .await;
+
+        let db_item = mail.iter().find(|y: &&DbMails| y.maildir_id == id);
         maildir.find(id).map(|entry| {
-            let db_item = mail_rows.iter().find(|y: &&DbMails| y.maildir_id == id);
-            let uid: i32 = db_item.map_or(0, |y| y.id);
+            let uid: i32 = db_item.map_or(0, |y| y.uid);
+            let mailbox: String = db_item.map_or(String::from("unknown"), |y| y.mailbox.clone());
             let modseq = db_item.map_or(0, |y| y.modseq);
 
             let mail_state = if entry.is_seen() {
@@ -64,6 +68,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             };
             MaildirMailEntry {
                 uid: uid.try_into().expect("Invalid UID"),
+                mailbox,
                 modseq: modseq.try_into().expect("Invalid UID"),
                 entry,
                 mail_state,
@@ -123,9 +128,10 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         maildir.create_dirs().map_err(Into::into)
     }
 
-    #[instrument(skip(self, path, data))]
+    #[instrument(skip(self, mailbox, path, data))]
     async fn store_cur_with_flags(
         &self,
+        mailbox: String,
         path: &Path,
         data: &[u8],
         imap_flags: Vec<String>,
@@ -152,21 +158,28 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .collect::<Vec<_>>()
             .join("");
         let maildir_id = maildir.store_cur_with_flags(data, &maildir_flags)?;
-        sqlx::query("INSERT INTO mails (maildir_id, modseq) VALUES ($1, $2)")
+        sqlx::query("INSERT INTO mails (maildir_id, modseq, mailbox) VALUES ($1, $2, $3)")
             .bind(maildir_id.clone())
             .bind(1i64)
+            .bind(mailbox)
             .execute(self.db.get_pool())
             .await?;
         Ok(maildir_id)
     }
 
-    #[instrument(skip(self, path, data))]
-    async fn store_new(&self, path: &Path, data: &[u8]) -> color_eyre::eyre::Result<String> {
+    #[instrument(skip(self, mailbox, path, data))]
+    async fn store_new(
+        &self,
+        mailbox: String,
+        path: &Path,
+        data: &[u8],
+    ) -> color_eyre::eyre::Result<String> {
         let maildir = Maildir::from(path.to_path_buf());
         let maildir_id = maildir.store_new(data)?;
-        sqlx::query("INSERT INTO mails (maildir_id, modseq) VALUES ($1, $2)")
+        sqlx::query("INSERT INTO mails (maildir_id, modseq, mailbox) VALUES ($1, $2, $3)")
             .bind(maildir_id.clone())
             .bind(1i64)
+            .bind(mailbox)
             .execute(self.db.get_pool())
             .await?;
         Ok(maildir_id)
@@ -196,39 +209,53 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         maildir.count_new()
     }
 
-    #[instrument(skip(self, path))]
-    async fn list_cur(&self, path: &Path) -> Vec<MaildirMailEntry> {
+    #[instrument(skip(self, mailbox, path))]
+    async fn list_cur(&self, mailbox: String, path: &Path) -> Vec<MaildirMailEntry> {
         let maildir = Maildir::from(path.to_path_buf());
         let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
             .fetch(self.db.get_pool())
             .filter_map(|x| async move { x.ok() })
             .collect()
             .await;
-        maildir
+        let mails: Vec<_> = maildir
             .list_cur()
             .filter_map(|x| match x {
-                Ok(x) => {
-                    let maildir_id = x.id();
+                Ok(entry) => {
+                    let maildir_id = entry.id();
 
                     let db_item = mail_rows.iter().find(|y| y.maildir_id == maildir_id);
-                    let uid: i32 = db_item.map_or(0, |y| y.id);
+                    let uid: i32 = db_item.map_or(0, |y| y.uid);
+                    let mailbox: String =
+                        db_item.map_or(String::from("unknown"), |y| y.mailbox.clone());
                     let modseq = db_item.map_or(0, |y| y.modseq);
 
                     Some(MaildirMailEntry {
                         uid: uid.try_into().expect("Invalid UID"),
                         modseq: modseq.try_into().expect("Invalid UID"),
-                        entry: x,
+                        entry,
+                        mailbox,
                         mail_state: MailState::Read,
                         sequence_number: None,
                     })
                 }
                 Err(_) => None,
             })
-            .collect()
+            .collect();
+        for mail in &mails {
+            if mail.mailbox == "unknown" {
+                sqlx::query("UPDATE mails SET mailbox = $1 WHERE maildir_id = $2")
+                    .bind(mail.id())
+                    .bind(mailbox.clone())
+                    .execute(self.db.get_pool())
+                    .await
+                    .expect("Failed to update row");
+            }
+        }
+        mails
     }
 
-    #[instrument(skip(self, path))]
-    async fn list_new(&self, path: &Path) -> Vec<MaildirMailEntry> {
+    #[instrument(skip(self, mailbox, path))]
+    async fn list_new(&self, mailbox: String, path: &Path) -> Vec<MaildirMailEntry> {
         let maildir = Maildir::from(path.to_path_buf());
         let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
             .fetch(self.db.get_pool())
@@ -236,31 +263,45 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .collect()
             .await;
 
-        maildir
+        let mails: Vec<_> = maildir
             .list_new()
             .filter_map(|x| match x {
-                Ok(x) => {
-                    let maildir_id = x.id();
+                Ok(entry) => {
+                    let maildir_id = entry.id();
 
                     let db_item = mail_rows.iter().find(|y| y.maildir_id == maildir_id);
-                    let uid: i32 = db_item.map_or(0, |y| y.id);
+                    let uid: i32 = db_item.map_or(0, |y| y.uid);
+                    let mailbox: String =
+                        db_item.map_or(String::from("unknown"), |y| y.mailbox.clone());
                     let modseq = db_item.map_or(0, |y| y.modseq);
 
                     Some(MaildirMailEntry {
                         uid: uid.try_into().expect("Invalid UID"),
                         modseq: modseq.try_into().expect("Invalid UID"),
-                        entry: x,
+                        entry,
+                        mailbox,
                         mail_state: MailState::New,
                         sequence_number: None,
                     })
                 }
                 Err(_) => None,
             })
-            .collect()
+            .collect();
+        for mail in &mails {
+            if mail.mailbox == "unknown" {
+                sqlx::query("UPDATE mails SET mailbox = $1 WHERE maildir_id = $2")
+                    .bind(mail.id())
+                    .bind(mailbox.clone())
+                    .execute(self.db.get_pool())
+                    .await
+                    .expect("Failed to update row");
+            }
+        }
+        mails
     }
 
-    #[instrument(skip(self, path))]
-    async fn list_all(&self, path: &Path) -> Vec<MaildirMailEntry> {
+    #[instrument(skip(self, path, mailbox))]
+    async fn list_all(&self, mailbox: String, path: &Path) -> Vec<MaildirMailEntry> {
         let maildir = Maildir::from(path.to_path_buf());
         let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
             .fetch(self.db.get_pool())
@@ -268,17 +309,19 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .collect()
             .await;
 
-        maildir
+        let mails: Vec<_> = maildir
             .list_new()
             .chain(maildir.list_cur())
             .filter(std::result::Result::is_ok)
             .filter_map(|x| match x {
-                Ok(x) => {
-                    let maildir_id = x.id();
+                Ok(entry) => {
+                    let maildir_id = entry.id();
                     let db_item = mail_rows.iter().find(|y| y.maildir_id == maildir_id);
-                    let uid: i32 = db_item.map_or(0, |y| y.id);
+                    let uid: i32 = db_item.map_or(0, |y| y.uid);
+                    let mailbox: String =
+                        db_item.map_or(String::from("unknown"), |y| y.mailbox.clone());
                     let modseq = db_item.map_or(0, |y| y.modseq);
-                    let state = if x.is_seen() {
+                    let state = if entry.is_seen() {
                         MailState::Read
                     } else {
                         MailState::New
@@ -286,14 +329,26 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                     Some(MaildirMailEntry {
                         uid: uid.try_into().expect("Invalid UID"),
                         modseq: modseq.try_into().expect("Invalid Modseq"),
-                        entry: x,
+                        entry,
+                        mailbox,
                         mail_state: state,
                         sequence_number: None,
                     })
                 }
                 Err(_) => None,
             })
-            .collect()
+            .collect();
+        for mail in &mails {
+            if mail.mailbox == "unknown" {
+                sqlx::query("UPDATE mails SET mailbox = $1 WHERE maildir_id = $2")
+                    .bind(mail.id())
+                    .bind(mailbox.clone())
+                    .execute(self.db.get_pool())
+                    .await
+                    .expect("Failed to update row");
+            }
+        }
+        mails
     }
 
     #[instrument(skip(self, path))]
@@ -447,12 +502,15 @@ struct DbMails {
     id: i32,
     maildir_id: String,
     modseq: i64,
+    uid: i32,
+    mailbox: String,
 }
 
 /// Wrapper for the mailentries from the Maildir crate
 pub struct MaildirMailEntry {
     entry: maildir::MailEntry,
     uid: u32,
+    mailbox: String,
     modseq: u64,
     /// The sequence number. It is None until used
     pub sequence_number: Option<u32>,

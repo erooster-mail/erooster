@@ -136,23 +136,21 @@ async fn listen(
     while let Some(Ok(tcp_stream)) = stream.next().await {
         if let Err(e) = listen_tls(
             tcp_stream,
-            Arc::clone(&config),
+            &config,
             database,
             storage,
             acceptor.clone(),
             None,
             false,
-        )
-        .await
-        {
+        ) {
             error!("[SMTP][ENCRYPTED] Error while listening: {}", e);
         }
     }
 }
 
-pub async fn listen_tls(
+pub fn listen_tls(
     tcp_stream: TcpStream,
-    config: Arc<Config>,
+    config: &Arc<Config>,
     database: &DB,
     storage: &Storage,
     acceptor: TlsAcceptor,
@@ -165,7 +163,7 @@ pub async fn listen_tls(
     debug!("[SMTP] Got new TLS peer: {:?}", peer);
 
     // We need to clone these as we move into a new thread
-    let config = Arc::clone(&config);
+    let config = Arc::clone(config);
     let database = database.clone();
     let storage = storage.clone();
 

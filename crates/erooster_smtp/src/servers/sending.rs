@@ -370,7 +370,7 @@ pub async fn send_email_job(
                 }
             }
 
-            if matches!(address, None) {
+            if address.is_none() {
                 debug!("[{}] No address found for {}", current_job.id(), target);
                 continue;
             }

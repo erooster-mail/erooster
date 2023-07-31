@@ -29,17 +29,18 @@ impl Store<'_> {
         if arguments.len() >= 2 + offset {
             if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
                 let folder = folder.replace('/', ".");
-                let mailbox_path = storage.to_ondisk_path(
-                    folder.clone(),
-                    self.data
-                        .con_state
-                        .read()
-                        .await
-                        .username
-                        .clone()
-                        .context("Username missing in internal State")?,
-                )?;
-                let mails: Vec<MailEntryType> = storage.list_all(&mailbox_path).await;
+                let username = self
+                    .data
+                    .con_state
+                    .read()
+                    .await
+                    .username
+                    .clone()
+                    .context("Username missing in internal State")?;
+                let mailbox_path = storage.to_ondisk_path(folder.clone(), username.clone())?;
+                let mails: Vec<MailEntryType> = storage
+                    .list_all(format!("{username}/{folder}"), &mailbox_path)
+                    .await;
 
                 let filtered_mails: Vec<MailEntryType> =
                     if command_data.arguments[offset].contains(':') {

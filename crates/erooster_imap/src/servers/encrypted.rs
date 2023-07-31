@@ -118,14 +118,7 @@ impl Server for Encrypted {
             let storage = storage.clone();
             let acceptor = acceptor.clone();
             tokio::spawn(async move {
-                listen(
-                    stream,
-                    Arc::clone(&config),
-                    &database,
-                    &storage,
-                    acceptor.clone(),
-                )
-                .await;
+                listen(stream, &config, &database, &storage, acceptor.clone()).await;
             });
         }
 
@@ -136,7 +129,7 @@ impl Server for Encrypted {
 #[instrument(skip(stream, config, database, storage, acceptor))]
 async fn listen(
     mut stream: TcpListenerStream,
-    config: Arc<Config>,
+    config: &Arc<Config>,
     database: &DB,
     storage: &Storage,
     acceptor: TlsAcceptor,
@@ -145,23 +138,21 @@ async fn listen(
     while let Some(Ok(tcp_stream)) = stream.next().await {
         if let Err(e) = listen_tls(
             tcp_stream,
-            Arc::clone(&config),
+            config,
             database,
             storage,
             acceptor.clone(),
             None,
             false,
-        )
-        .await
-        {
+        ) {
             error!("[IMAP][ENCRYPTED] Error while listening: {}", e);
         }
     }
 }
 
-pub async fn listen_tls(
+pub fn listen_tls(
     tcp_stream: TcpStream,
-    config: Arc<Config>,
+    config: &Arc<Config>,
     database: &DB,
     storage: &Storage,
     acceptor: TlsAcceptor,
@@ -174,7 +165,7 @@ pub async fn listen_tls(
     debug!("[IMAP] Got new TLS peer: {:?}", peer);
 
     // We need to clone these as we move into a new thread
-    let config = Arc::clone(&config);
+    let config = Arc::clone(config);
     let database = database.clone();
     let storage = storage.clone();
 

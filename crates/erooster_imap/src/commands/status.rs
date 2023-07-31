@@ -25,16 +25,16 @@ impl Status<'_> {
         let responses: Vec<_> = requests.split_whitespace().collect();
 
         let folder_on_disk = command_data.arguments[0];
-        let mailbox_path = storage.to_ondisk_path(
-            (*folder_on_disk).to_string(),
-            self.data
-                .con_state
-                .read()
-                .await
-                .username
-                .clone()
-                .context("Username missing in internal State")?,
-        )?;
+        let username = self
+            .data
+            .con_state
+            .read()
+            .await
+            .username
+            .clone()
+            .context("Username missing in internal State")?;
+        let mailbox_path =
+            storage.to_ondisk_path((*folder_on_disk).to_string(), username.clone())?;
 
         let mut values = String::new();
         if responses.contains(&"MESSAGES") {
@@ -43,7 +43,7 @@ impl Status<'_> {
         }
         if responses.contains(&"UNSEEN") {
             let count = storage
-                .list_cur(&mailbox_path)
+                .list_cur(format!("{username}/{folder_on_disk}"), &mailbox_path)
                 .await
                 .iter()
                 .filter(|mail| !mail.is_seen())
@@ -64,19 +64,23 @@ impl Status<'_> {
             values.push_str(&format!("UIDVALIDITY {timestamp}"));
         }
         if responses.contains(&"UNSEEN") {
-            let mails = storage.list_cur(&mailbox_path).await;
+            let mails = storage
+                .list_cur(format!("{username}/{folder_on_disk}"), &mailbox_path)
+                .await;
             let count =
                 mails.iter().filter(|m| !m.is_seen()).count() + storage.count_new(&mailbox_path);
             values.push_str(&format!("UNSEEN {count}"));
         }
         if responses.contains(&"DELETED") {
-            let mails = storage.list_cur(&mailbox_path).await;
+            let mails = storage
+                .list_cur(format!("{username}/{folder_on_disk}"), &mailbox_path)
+                .await;
             let count = mails.iter().filter(|m| m.is_trashed()).count();
             values.push_str(&format!("DELETED {count}"));
         }
         if responses.contains(&"SIZE") {
             let size: usize = storage
-                .list_all(&mailbox_path)
+                .list_all(format!("{username}/{folder_on_disk}"), &mailbox_path)
                 .await
                 .iter_mut()
                 .map(|mail| {

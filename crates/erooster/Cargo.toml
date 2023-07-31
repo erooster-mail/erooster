@@ -51,4 +51,4 @@ clap = { version = "4.1.6", features = [
     "env",
 ] }
 clap_mangen = "0.2.8"
-vergen = "7.5.1"
+vergen = "8.2.4"

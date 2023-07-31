@@ -36,4 +36,4 @@ tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 secrecy = "0.8.0"
 
 [build-dependencies]
-vergen = "7.5.1"
+vergen = "8.2.4"

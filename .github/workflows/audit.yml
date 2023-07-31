@@ -30,6 +30,7 @@ jobs:
             github.com:443
             gitlab.com:443
             static.rust-lang.org:443
+            index.crates.io:443
 
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
       - uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b
@@ -60,6 +61,7 @@ jobs:
             gitlab.com:443
             static.crates.io:443
             static.rust-lang.org:443
+            index.crates.io:443
 
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
       - uses: EmbarkStudios/cargo-deny-action@e0a440755b184aa50374330fa75cca0f84fcb59a

@@ -14,7 +14,7 @@ as
 $$
    insert into mailbox_uid_counter (uid, mailbox) 
    values (1, m_mailbox)
-   on conflict (mailbox)
+   on conflict (mailbox) 
    do update 
       set uid = mailbox_uid_counter.uid + 1
    returning uid;

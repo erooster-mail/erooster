@@ -272,7 +272,7 @@ fn parse_search_program(
     results
 }
 
-/// Generates a string where continous numbers are represented in a string as `<start>:<end>`.
+/// Generates a string where continuous numbers are represented in a string as `<start>:<end>`.
 /// Singular numbers are represented as `<number>`.
 /// If there are gaps then there should be a "," between the ranges.
 /// Order is not required.

@@ -373,7 +373,9 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             })
             .collect();
         for mail in &mails {
+            debug!("mail.mailbox: {:#?}", mail.mailbox);
             if mail.mailbox == "unknown" {
+                debug!("Updating email");
                 if let Err(e) = sqlx::query("UPDATE mails SET mailbox = $1 WHERE maildir_id = $2")
                     .bind(mail.id())
                     .bind(mailbox.clone())

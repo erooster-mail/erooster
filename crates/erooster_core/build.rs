@@ -1,6 +1,6 @@
 use std::fs;
 
-use vergen::{vergen, Config, ShaKind};
+use vergen::EmitBuilder;
 
 fn main() -> std::io::Result<()> {
     let paths = fs::read_dir("./").unwrap();
@@ -9,10 +9,7 @@ fn main() -> std::io::Result<()> {
         println!("Name: {}", path.unwrap().path().display())
     }
 
-    let mut config = Config::default();
-    *config.git_mut().sha_kind_mut() = ShaKind::Short;
-    *config.git_mut().skip_if_error_mut() = true;
-    vergen(config).unwrap();
+    EmitBuilder::builder().git_sha(true).emit().unwrap();
 
     // For migrations
     println!("cargo:rerun-if-changed=migrations");

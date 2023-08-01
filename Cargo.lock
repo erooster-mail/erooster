@@ -1005,7 +1005,7 @@ dependencies = [
  "erooster_imap",
  "erooster_smtp",
  "erooster_web",
- "opentelemetry 0.19.0",
+ "opentelemetry 0.20.0",
  "opentelemetry-jaeger",
  "serde",
  "tokio",
@@ -2431,8 +2431,6 @@ dependencies = [
  "percent-encoding",
  "rand 0.8.5",
  "thiserror",
- "tokio",
- "tokio-stream",
 ]
 
 [[package]]
@@ -2451,6 +2449,7 @@ dependencies = [
  "ordered-float 3.7.0",
  "percent-encoding",
  "rand 0.8.5",
+ "regex",
  "thiserror",
  "tokio",
  "tokio-stream",

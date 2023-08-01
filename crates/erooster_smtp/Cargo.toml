@@ -55,6 +55,6 @@ harness = false
 [dev-dependencies]
 convert_case = "0.6.0"
 criterion = { version = "0.5.1", features = ["async_tokio"] }
-sqlx = { version = "0.6.2", features = ["postgres", "runtime-tokio-rustls"] }
+sqlx = { version = "0.7.1", features = ["postgres", "runtime-tokio-rustls"] }
 enum-iterator = "1.3.0"
 enum-display-derive = "0.1.1"

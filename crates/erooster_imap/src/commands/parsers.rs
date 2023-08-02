@@ -10,7 +10,7 @@ use nom::{
     sequence::{delimited, pair, separated_pair, terminated, tuple},
     IResult,
 };
-use tracing::instrument;
+use tracing::{instrument, debug};
 
 type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
 
@@ -1000,9 +1000,11 @@ pub fn parse_search_date(input: &str) -> Res<time::Date> {
                 )),
                 char('-'),
                 digit1,
+                opt(char('"')),
             )),
-            |(_, day, _, month, _, year)| {
+            |(_, day, _, month, _, year, _)| {
                 let date = format!("{}-{}-{}", day, month, year);
+                debug!("Parsed date: {date}");
                 time::Date::parse(
                     &date,
                     time::macros::format_description!(

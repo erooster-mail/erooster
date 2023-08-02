@@ -9,7 +9,7 @@ use futures::{Sink, SinkExt};
 use nom::{error::convert_error, Finish};
 use tracing::{debug, error, instrument};
 
-use super::parsers::{SearchProgram, SearchReturnOption};
+use super::parsers::{parse_search_date, SearchProgram, SearchReturnOption};
 
 pub struct Search<'a> {
     pub data: &'a Data,
@@ -310,6 +310,7 @@ fn generate_ranges(results: &mut Vec<u32>) -> String {
         .join(",")
 }
 
+#[allow(clippy::too_many_lines)]
 fn check_search_condition(
     program: &SearchProgram,
     entry: &mut impl MailEntry,
@@ -328,7 +329,13 @@ fn check_search_condition(
                 })
         }
         SearchProgram::BEFORE(ref date) => {
-            todo!();
+            let date = parse_search_date(date).finish();
+            match date {
+                Ok((_, date)) => {
+                    entry.received().expect("Failed to get date") < date.unix_timestamp()
+                }
+                Err(_) => false,
+            }
         }
         SearchProgram::BODY(ref body) => entry.body_contains(body),
         SearchProgram::CC(ref cc) => {
@@ -361,12 +368,46 @@ fn check_search_condition(
         SearchProgram::KEYWORD(ref keyword) => todo!(),
         SearchProgram::LARGER(ref size) => entry.body_size() > *size,
         SearchProgram::NOT(program) => !check_search_condition(program, entry, is_uid),
-        SearchProgram::ON(ref date) => todo!(),
+        SearchProgram::ON(ref date) => {
+            let date = parse_search_date(date).finish();
+            match date {
+                Ok((_, date)) => {
+                    entry.received().expect("Failed to get date") == date.unix_timestamp()
+                }
+                Err(_) => false,
+            }
+        }
         SearchProgram::SEEN => entry.is_seen(),
-        SearchProgram::SENTBEFORE(ref date) => todo!(),
-        SearchProgram::SENTON(ref date) => todo!(),
-        SearchProgram::SENTSINCE(ref date) => todo!(),
-        SearchProgram::SINCE(ref date) => todo!(),
+        SearchProgram::SENTBEFORE(ref date) => {
+            let date = parse_search_date(date).finish();
+            match date {
+                Ok((_, date)) => entry.sent().expect("Failed to get date") < date.unix_timestamp(),
+                Err(_) => false,
+            }
+        }
+        SearchProgram::SENTON(ref date) => {
+            let date = parse_search_date(date).finish();
+            match date {
+                Ok((_, date)) => entry.sent().expect("Failed to get date") == date.unix_timestamp(),
+                Err(_) => false,
+            }
+        }
+        SearchProgram::SENTSINCE(ref date) => {
+            let date = parse_search_date(date).finish();
+            match date {
+                Ok((_, date)) => entry.sent().expect("Failed to get date") > date.unix_timestamp(),
+                Err(_) => false,
+            }
+        }
+        SearchProgram::SINCE(ref date) => {
+            let date = parse_search_date(date).finish();
+            match date {
+                Ok((_, date)) => {
+                    entry.received().expect("Failed to get date") > date.unix_timestamp()
+                }
+                Err(_) => false,
+            }
+        }
         SearchProgram::SMALLER(ref size) => entry.body_size() < *size,
         SearchProgram::SUBJECT(ref subject) => entry
             .headers()

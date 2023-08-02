@@ -596,6 +596,11 @@ impl MailEntry for MaildirMailEntry {
     }
 
     #[instrument(skip(self))]
+    fn sent(&mut self) -> color_eyre::eyre::Result<i64> {
+        self.entry.date().map_err(Into::into)
+    }
+
+    #[instrument(skip(self))]
     fn flags(&self) -> &str {
         self.entry.flags()
     }

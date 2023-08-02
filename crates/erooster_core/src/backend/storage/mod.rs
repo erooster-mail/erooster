@@ -50,6 +50,8 @@ pub trait MailEntry {
     fn headers(&mut self) -> color_eyre::eyre::Result<Vec<MailHeader>>;
     /// The received time of the email
     fn received(&mut self) -> color_eyre::eyre::Result<i64>;
+    /// The sent time of the email
+    fn sent(&mut self) -> color_eyre::eyre::Result<i64>;
     /// The flags of the email
     fn flags(&self) -> &str;
     /// Whether the email is a draft

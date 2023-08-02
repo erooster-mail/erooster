@@ -4,7 +4,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag_no_case, take_while1},
     character::complete::{char, digit1, space1},
-    combinator::{map, opt},
+    combinator::{map, opt, recognize},
     error::{context, VerboseError},
     multi::{many0, separated_list0, separated_list1},
     sequence::{delimited, pair, separated_pair, terminated, tuple},
@@ -956,6 +956,73 @@ pub fn append_arguments(input: &str) -> Res<AppendArgs> {
             )),
             |(flags, _, datetime, _, _, _, _, _, _, literal, _)| (flags, datetime, literal),
         ),
+    )(input)
+}
+
+// Parses this ABNF:
+//
+// date            = date-text / DQUOTE date-text DQUOTE
+//
+// date-day        = 1*2DIGIT
+//                     ; Day of month
+//
+// date-day-fixed  = (SP DIGIT) / 2DIGIT
+//                     ; Fixed-format version of date-day
+//
+// date-month      = "Jan" / "Feb" / "Mar" / "Apr" / "May" / "Jun" /
+//                   "Jul" / "Aug" / "Sep" / "Oct" / "Nov" / "Dec"
+//
+// date-text       = date-day "-" date-month "-" date-year
+//
+// date-year       = 4DIGIT
+//
+// date-time       = DQUOTE date-day-fixed "-" date-month "-" date-year
+//                   SP time SP zone DQUOTE
+#[instrument(skip(input))]
+pub fn parse_search_date(input: &str) -> Res<time::OffsetDateTime> {
+    context(
+        "parse_search_date",
+        map(
+            tuple((
+                tag_no_case("\""),
+                digit1,
+                tag_no_case("-"),
+                month,
+                tag_no_case("-"),
+                digit1,
+                tag_no_case(" "),
+                time,
+                tag_no_case(" "),
+                zone,
+                tag_no_case("\""),
+            )),
+            |(_, day, _, month, _, year, _, time, _, zone, _)| {
+                let date = format!("{}-{}-{} {} {}", day, month, year, time.0, zone);
+                time::OffsetDateTime::parse(
+                    &date,
+                    time::macros::format_description!(
+                        "[day]-[month]-[year] [hour]:[minute] [offset_hour sign:mandatory][offset_minute]"
+                    ),
+                )
+                .expect("date is in correct format")
+            },
+        ),
+    )(input)
+}
+
+// Parses this ABNF:
+//
+// ("+" / "-") 4DIGIT
+//
+// Signed four-digit value of hhmm representing hours and minutes east of
+// Greenwich (that is, the amount that the given time differs from
+// Universal Time).  Subtracting the timezone from the given time will give
+// the UT form. The Universal Time zone is "+0000".
+#[instrument(skip(input))]
+fn zone(input: &str) -> Res<&str> {
+    context(
+        "zone",
+        recognize(tuple((alt((tag_no_case("+"), tag_no_case("-"))), digit1))),
     )(input)
 }
 

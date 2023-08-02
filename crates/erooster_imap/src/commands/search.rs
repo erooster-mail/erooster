@@ -331,10 +331,10 @@ fn check_search_condition(
         SearchProgram::BEFORE(ref date) => {
             let date = parse_search_date(date).finish();
             match date {
-                Ok((_, date)) => {
-                    entry.received().expect("Failed to get date")
-                        < date.midnight().assume_utc().unix_timestamp()
-                }
+                Ok((_, date)) => match entry.received() {
+                    Ok(received) => received < date.midnight().assume_utc().unix_timestamp(),
+                    Err(_) => false,
+                },
                 Err(_) => false,
             }
         }
@@ -372,10 +372,10 @@ fn check_search_condition(
         SearchProgram::ON(ref date) => {
             let date = parse_search_date(date).finish();
             match date {
-                Ok((_, date)) => {
-                    entry.received().expect("Failed to get date")
-                        == date.midnight().assume_utc().unix_timestamp()
-                }
+                Ok((_, date)) => match entry.received() {
+                    Ok(received) => received == date.midnight().assume_utc().unix_timestamp(),
+                    Err(_) => false,
+                },
                 Err(_) => false,
             }
         }
@@ -383,40 +383,40 @@ fn check_search_condition(
         SearchProgram::SENTBEFORE(ref date) => {
             let date = parse_search_date(date).finish();
             match date {
-                Ok((_, date)) => {
-                    entry.sent().expect("Failed to get date")
-                        < date.midnight().assume_utc().unix_timestamp()
-                }
+                Ok((_, date)) => match entry.sent() {
+                    Ok(sent) => sent < date.midnight().assume_utc().unix_timestamp(),
+                    Err(_) => false,
+                },
                 Err(_) => false,
             }
         }
         SearchProgram::SENTON(ref date) => {
             let date = parse_search_date(date).finish();
             match date {
-                Ok((_, date)) => {
-                    entry.sent().expect("Failed to get date")
-                        == date.midnight().assume_utc().unix_timestamp()
-                }
+                Ok((_, date)) => match entry.sent() {
+                    Ok(sent) => sent == date.midnight().assume_utc().unix_timestamp(),
+                    Err(_) => false,
+                },
                 Err(_) => false,
             }
         }
         SearchProgram::SENTSINCE(ref date) => {
             let date = parse_search_date(date).finish();
             match date {
-                Ok((_, date)) => {
-                    entry.sent().expect("Failed to get date")
-                        > date.midnight().assume_utc().unix_timestamp()
-                }
+                Ok((_, date)) => match entry.sent() {
+                    Ok(sent) => sent > date.midnight().assume_utc().unix_timestamp(),
+                    Err(_) => false,
+                },
                 Err(_) => false,
             }
         }
         SearchProgram::SINCE(ref date) => {
             let date = parse_search_date(date).finish();
             match date {
-                Ok((_, date)) => {
-                    entry.received().expect("Failed to get date")
-                        > date.midnight().assume_utc().unix_timestamp()
-                }
+                Ok((_, date)) => match entry.received() {
+                    Ok(received) => received > date.midnight().assume_utc().unix_timestamp(),
+                    Err(_) => false,
+                },
                 Err(_) => false,
             }
         }

@@ -1004,7 +1004,6 @@ pub fn parse_search_date(input: &str) -> Res<time::Date> {
             )),
             |(_, day, _, month, _, year, _)| {
                 let date = format!("{}-{}-{}", day, month, year);
-                debug!("Parsed date: {date}");
                 time::Date::parse(
                     &date,
                     time::macros::format_description!(

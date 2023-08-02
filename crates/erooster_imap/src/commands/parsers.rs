@@ -976,7 +976,7 @@ pub fn append_arguments(input: &str) -> Res<AppendArgs> {
 //
 // date-year       = 4DIGIT
 #[instrument(skip(input))]
-pub fn parse_search_date(input: &str) -> Res<time::OffsetDateTime> {
+pub fn parse_search_date(input: &str) -> Res<time::Date> {
     context(
         "parse_search_date",
         map(
@@ -1003,7 +1003,7 @@ pub fn parse_search_date(input: &str) -> Res<time::OffsetDateTime> {
             )),
             |(_, day, _, month, _, year)| {
                 let date = format!("{}-{}-{}", day, month, year);
-                time::OffsetDateTime::parse(
+                time::Date::parse(
                     &date,
                     time::macros::format_description!(
                         "[day]-[month repr:short case_sensitive:false]-[year]"

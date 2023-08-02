@@ -975,34 +975,37 @@ pub fn append_arguments(input: &str) -> Res<AppendArgs> {
 // date-text       = date-day "-" date-month "-" date-year
 //
 // date-year       = 4DIGIT
-//
-// date-time       = DQUOTE date-day-fixed "-" date-month "-" date-year
-//                   SP time SP zone DQUOTE
 #[instrument(skip(input))]
 pub fn parse_search_date(input: &str) -> Res<time::OffsetDateTime> {
     context(
         "parse_search_date",
         map(
             tuple((
-                tag_no_case("\""),
+                opt(char('"')),
                 digit1,
-                tag_no_case("-"),
-                month,
-                tag_no_case("-"),
+                char('-'),
+                alt((
+                    tag_no_case("Jan"),
+                    tag_no_case("Feb"),
+                    tag_no_case("Mar"),
+                    tag_no_case("Apr"),
+                    tag_no_case("May"),
+                    tag_no_case("Jun"),
+                    tag_no_case("Jul"),
+                    tag_no_case("Aug"),
+                    tag_no_case("Sep"),
+                    tag_no_case("Oct"),
+                    tag_no_case("Nov"),
+                    tag_no_case("Dec"),
+                )),
+                char('-'),
                 digit1,
-                tag_no_case(" "),
-                time,
-                tag_no_case(" "),
-                zone,
-                tag_no_case("\""),
             )),
-            |(_, day, _, month, _, year, _, time, _, zone, _)| {
-                let date = format!("{}-{}-{} {} {}", day, month, year, time.0, zone);
+            |(_, day, _, month, _, year)| {
+                let date = format!("{}-{}-{}", day, month, year);
                 time::OffsetDateTime::parse(
                     &date,
-                    time::macros::format_description!(
-                        "[day]-[month]-[year] [hour]:[minute] [offset_hour sign:mandatory][offset_minute]"
-                    ),
+                    time::macros::format_description!("[day]-[month]-[year]"),
                 )
                 .expect("date is in correct format")
             },

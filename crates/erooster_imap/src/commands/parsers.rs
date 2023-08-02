@@ -507,7 +507,7 @@ fn search_key(input: &str) -> Res<SearchProgram> {
                     separated_pair(
                         tag_no_case("BEFORE"),
                         space1,
-                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                        take_while1(|x: char| x.is_ascii_alphanumeric() || x == '-'),
                     ),
                     |(_, query): (&str, &str)| SearchProgram::BEFORE(query.to_string()),
                 ),
@@ -552,7 +552,7 @@ fn search_key(input: &str) -> Res<SearchProgram> {
                     separated_pair(
                         tag_no_case("ON"),
                         space1,
-                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                        take_while1(|x: char| x.is_ascii_alphanumeric() || x == '-'),
                     ),
                     |(_, query): (&str, &str)| SearchProgram::ON(query.to_string()),
                 ),
@@ -561,7 +561,7 @@ fn search_key(input: &str) -> Res<SearchProgram> {
                     separated_pair(
                         tag_no_case("SINCE"),
                         space1,
-                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                        take_while1(|x: char| x.is_ascii_alphanumeric() || x == '-'),
                     ),
                     |(_, query): (&str, &str)| SearchProgram::SINCE(query.to_string()),
                 ),
@@ -652,7 +652,7 @@ fn search_key(input: &str) -> Res<SearchProgram> {
                     separated_pair(
                         tag_no_case("SENTBEFORE"),
                         space1,
-                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                        take_while1(|x: char| x.is_ascii_alphanumeric() || x == '-'),
                     ),
                     |(_, query): (&str, &str)| SearchProgram::SENTBEFORE(query.to_string()),
                 ),
@@ -661,7 +661,7 @@ fn search_key(input: &str) -> Res<SearchProgram> {
                     separated_pair(
                         tag_no_case("SENTON"),
                         space1,
-                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                        take_while1(|x: char| x.is_ascii_alphanumeric() || x == '-'),
                     ),
                     |(_, query): (&str, &str)| SearchProgram::SENTON(query.to_string()),
                 ),
@@ -670,7 +670,7 @@ fn search_key(input: &str) -> Res<SearchProgram> {
                     separated_pair(
                         tag_no_case("SENTSINCE"),
                         space1,
-                        take_while1(|x: char| x.is_ascii_alphanumeric()),
+                        take_while1(|x: char| x.is_ascii_alphanumeric() || x == '-'),
                     ),
                     |(_, query): (&str, &str)| SearchProgram::SENTSINCE(query.to_string()),
                 ),

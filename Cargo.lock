@@ -292,7 +292,7 @@ dependencies = [
  "http-body",
  "hyper",
  "pin-project-lite",
- "rustls 0.21.5",
+ "rustls 0.21.6",
  "rustls-pemfile",
  "tokio",
  "tokio-rustls 0.24.1",
@@ -450,11 +450,12 @@ checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
 
 [[package]]
 name = "cc"
-version = "1.0.79"
+version = "1.0.80"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50d30906286121d95be3d479533b458f87493b30a4b5f79a607db8f5d11aa91f"
+checksum = "51f1226cd9da55587234753d1245dd5b132343ea240f26b6a9003d68706141ba"
 dependencies = [
  "jobserver",
+ "libc",
 ]
 
 [[package]]
@@ -1054,7 +1055,7 @@ dependencies = [
  "opentelemetry-jaeger",
  "owo-colors",
  "rand_core 0.6.4",
- "rustls 0.21.5",
+ "rustls 0.21.6",
  "secrecy",
  "serde",
  "serde_yaml",
@@ -1086,7 +1087,7 @@ dependencies = [
  "futures",
  "nom",
  "notify",
- "rustls 0.21.5",
+ "rustls 0.21.6",
  "rustls-pemfile",
  "secrecy",
  "simdutf8",
@@ -1114,7 +1115,7 @@ dependencies = [
  "mailparse",
  "nom",
  "reqwest",
- "rustls 0.21.5",
+ "rustls 0.21.6",
  "rustls-pemfile",
  "secrecy",
  "serde",
@@ -2288,7 +2289,7 @@ dependencies = [
  "futures-util",
  "http",
  "hyper",
- "rustls 0.21.5",
+ "rustls 0.21.6",
  "tokio",
  "tokio-rustls 0.24.1",
 ]
@@ -3611,7 +3612,7 @@ dependencies = [
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
- "rustls 0.21.5",
+ "rustls 0.21.6",
  "rustls-pemfile",
  "serde",
  "serde_json",
@@ -3756,9 +3757,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.21.5"
+version = "0.21.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79ea77c539259495ce8ca47f53e66ae0330a8819f67e23ac96ca02f50e7b7d36"
+checksum = "1d1feddffcfcc0b33f5c6ce9a29e341e4cd59c3f78e7ee45f4a40c038b1d6cbb"
 dependencies = [
  "log",
  "ring",
@@ -4120,7 +4121,7 @@ dependencies = [
  "once_cell",
  "paste",
  "percent-encoding",
- "rustls 0.21.5",
+ "rustls 0.21.6",
  "rustls-pemfile",
  "serde",
  "serde_json",
@@ -4558,7 +4559,7 @@ version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c28327cf380ac148141087fbfb9de9d7bd4e84ab5d2c28fbc911d753de8a7081"
 dependencies = [
- "rustls 0.21.5",
+ "rustls 0.21.6",
  "tokio",
 ]
 

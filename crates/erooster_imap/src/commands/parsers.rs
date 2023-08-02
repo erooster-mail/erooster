@@ -1005,7 +1005,9 @@ pub fn parse_search_date(input: &str) -> Res<time::OffsetDateTime> {
                 let date = format!("{}-{}-{}", day, month, year);
                 time::OffsetDateTime::parse(
                     &date,
-                    time::macros::format_description!("[day]-[month]-[year]"),
+                    time::macros::format_description!(
+                        "[day]-[month repr:short case_sensitive:false]-[year]"
+                    ),
                 )
                 .expect("date is in correct format")
             },

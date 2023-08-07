@@ -37,6 +37,8 @@ jobs:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
+        with:
+          set-safe-directory: true
       - run: rustup default nightly
       - uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b
       - name: Install opendkim
@@ -62,6 +64,7 @@ jobs:
           echo 'webserver:' >> /etc/erooster/config.yml
           echo '  port: 80' >> /etc/erooster/config.yml
           echo '  tls: false' >> /etc/erooster/config.yml
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: boa-dev/criterion-compare-action@adfd3a94634fe2041ce5613eb7df09d247555b87
         with:
           branchName: ${{ github.ref_name }}

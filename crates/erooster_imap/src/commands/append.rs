@@ -166,3 +166,75 @@ impl Append<'_> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::commands::{CommandData, Commands};
+    use crate::servers::state::Connection;
+    use futures::{channel::mpsc, StreamExt};
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    #[allow(clippy::unwrap_used)]
+    #[tokio::test]
+    async fn test_not_authenticated_state() {
+        let caps = Append {
+            data: &Data {
+                con_state: Arc::new(RwLock::new(Connection {
+                    state: State::NotAuthenticated,
+                    secure: true,
+                    username: None,
+                    active_capabilities: vec![],
+                })),
+            },
+        };
+        let cmd_data = CommandData {
+            tag: "a1",
+            command: Commands::Append,
+            arguments: &[],
+        };
+        let config = erooster_core::get_config(String::from("./config.yml"))
+            .await
+            .unwrap();
+        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+            .await
+            .unwrap();
+        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = caps.exec(&mut tx, &storage, &cmd_data).await;
+        assert!(res.is_ok());
+        assert_eq!(rx.next().await, Some(String::from("a1 NO invalid state")));
+    }
+
+    #[allow(clippy::unwrap_used)]
+    #[tokio::test]
+    async fn test_authenticated_not_selected_state() {
+        let caps = Append {
+            data: &Data {
+                con_state: Arc::new(RwLock::new(Connection {
+                    state: State::Authenticated,
+                    secure: true,
+                    username: None,
+                    active_capabilities: vec![],
+                })),
+            },
+        };
+        let cmd_data = CommandData {
+            tag: "a1",
+            command: Commands::Append,
+            arguments: &[],
+        };
+        let config = erooster_core::get_config(String::from("./config.yml"))
+            .await
+            .unwrap();
+        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+            .await
+            .unwrap();
+        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = caps.exec(&mut tx, &storage, &cmd_data).await;
+        assert!(res.is_ok());
+        assert_eq!(rx.next().await, Some(String::from("a1 NO invalid state")));
+    }
+}

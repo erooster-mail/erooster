@@ -38,7 +38,12 @@ impl Append<'_> {
                 "[Append] User added {} arguments",
                 command_data.arguments.len()
             );
-            assert!(command_data.arguments.len() >= 3);
+            if command_data.arguments.len() < 3 {
+                lines
+                    .send(format!("{} NO invalid argument count", command_data.tag))
+                    .await?;
+                return Ok(());
+            }
             let folder = command_data.arguments[0].replace('"', "");
             debug!("[Append] User wants to append to folder: {}", folder);
             let mailbox_path = storage.to_ondisk_path(
@@ -263,9 +268,13 @@ mod tests {
             .await
             .unwrap();
         let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
-        let (mut tx, mut _rx) = mpsc::unbounded();
+        let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
-        assert!(res.is_err());
+        assert!(res.is_ok());
+        assert_eq!(
+            rx.next().await,
+            Some(String::from("a1 NO invalid argument count"))
+        );
     }
 
     #[allow(clippy::unwrap_used)]

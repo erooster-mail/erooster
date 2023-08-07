@@ -47,10 +47,15 @@ reqwest = { version = "0.11.13", default-features = false, features = [
     "trust-dns",
 ] }
 serde_json = "1.0.91"
+cfg-if = "1.0.0"
+
+[features]
+benchmarking = []
 
 [[bench]]
 name = "smtp_bench"
 harness = false
+required-features = ["benchmarking"]
 
 [dev-dependencies]
 convert_case = "0.6.0"

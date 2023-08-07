@@ -10,7 +10,7 @@ use nom::{
     sequence::{delimited, pair, separated_pair, terminated, tuple},
     IResult,
 };
-use tracing::{instrument, debug};
+use tracing::instrument;
 
 type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
 

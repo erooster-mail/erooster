@@ -3,7 +3,7 @@ name: PR Benchmark
 
 permissions:
   contents: read
-  
+
 jobs:
   runBenchmark:
     name: Run Benchmark
@@ -66,3 +66,4 @@ jobs:
         with:
           branchName: ${{ github.base_ref }}
           token: ${{ github.token }}
+          features: "benchmarking"

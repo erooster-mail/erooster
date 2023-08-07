@@ -66,3 +66,4 @@ jobs:
         with:
           branchName: ${{ github.ref_name }}
           token: ${{ github.token }}
+          features: "benchmarking"

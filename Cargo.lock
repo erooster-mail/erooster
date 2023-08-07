@@ -1104,6 +1104,7 @@ name = "erooster_smtp"
 version = "0.1.0"
 dependencies = [
  "base64 0.21.2",
+ "cfg-if",
  "color-eyre",
  "convert_case",
  "criterion",

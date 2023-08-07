@@ -58,7 +58,7 @@ mod tests {
         assert_eq!(
             rx.next().await,
             Some(String::from(
-                "* CAPABILITY AUTH=PLAIN LOGINDISABLED UTF8=ONLY ENABLE IMAP4rev2 IMAP4rev1"
+                "* CAPABILITY AUTH=PLAIN LOGINDISABLED UTF8=ONLY ENABLE IMAP4rev2 IMAP4rev1 ESEARCH"
             ))
         );
     }

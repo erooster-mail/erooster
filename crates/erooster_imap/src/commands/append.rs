@@ -418,6 +418,9 @@ mod tests {
             )
             .await;
         assert!(res.is_ok());
-        assert_eq!(rx.next().await, Some(String::from("OK APPEND completed")));
+        assert_eq!(
+            rx.next().await,
+            Some(String::from("a1 OK APPEND completed"))
+        );
     }
 }

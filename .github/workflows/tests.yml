@@ -100,7 +100,7 @@ jobs:
         run: |
           cargo +nightly llvm-cov --no-report --workspace
           cargo +nightly llvm-cov --no-report --features "jaeger" --workspace
-          cargo +nightly llvm-cov report --workspace --html
+          cargo +nightly llvm-cov report --html
       - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
         with:
           name: coverage-report
@@ -109,7 +109,7 @@ jobs:
         run: |
           cargo +nightly llvm-cov --no-report --workspace
           cargo +nightly llvm-cov --no-report --features "jaeger" --workspace
-          cargo +nightly llvm-cov report --workspace --lcov --output-path lcov.info
+          cargo +nightly llvm-cov report --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d
         with:

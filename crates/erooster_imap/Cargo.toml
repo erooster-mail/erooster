@@ -31,7 +31,7 @@ tokio-stream = { version = "0.1.12", features = ["net", "io-util"] }
 tokio-util = { version = "0.7.7", features = ["full"] }
 tracing = "0.1.37"
 secrecy = "0.8.0"
-time = { version = "0.3.24", features = ["parsing"] }
+time = { version = "0.3.25", features = ["parsing"] }
 
 [dev-dependencies]
 convert_case = "0.6.0"

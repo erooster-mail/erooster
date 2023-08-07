@@ -29,6 +29,7 @@
 )]
 #![warn(missing_docs)]
 #![allow(clippy::missing_panics_doc)]
+#![allow(clippy::items_after_statements)]
 
 use clap::Parser;
 use color_eyre::eyre::Result;
@@ -63,6 +64,9 @@ async fn main() -> Result<()> {
     // Setup the rest of our logging
     cfg_if::cfg_if! {
         if #[cfg(feature = "jaeger")] {
+            use tracing_error::ErrorLayer;
+            use tracing_subscriber::layer::SubscriberExt;
+            use tracing_subscriber::util::SubscriberInitExt;
             let tracer = opentelemetry_jaeger::new_agent_pipeline().with_service_name(env!("CARGO_PKG_NAME")).with_auto_split_batch(true).install_batch(opentelemetry::runtime::Tokio)?;
             tracing_subscriber::Registry::default()
                 .with(tracing_subscriber::fmt::Layer::default())

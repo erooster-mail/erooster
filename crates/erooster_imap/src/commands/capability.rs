@@ -48,7 +48,7 @@ mod tests {
     async fn test_get_capabilities() {
         let caps = Capability {};
         let cmd_data = CommandData {
-            tag: "",
+            tag: "a1",
             command: Commands::Capability,
             arguments: &[],
         };
@@ -60,6 +60,33 @@ mod tests {
             Some(String::from(
                 "* CAPABILITY AUTH=PLAIN LOGINDISABLED UTF8=ONLY ENABLE IMAP4rev2 IMAP4rev1 ESEARCH"
             ))
+        );
+        assert_eq!(
+            rx.next().await,
+            Some(String::from("a1 OK CAPABILITY completed"))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_unencrypted_capabilities() {
+        let caps = Capability {};
+        let cmd_data = CommandData {
+            tag: "a1",
+            command: Commands::Capability,
+            arguments: &[],
+        };
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = caps.exec(&mut tx, &cmd_data, false).await;
+        assert!(res.is_ok());
+        assert_eq!(
+            rx.next().await,
+            Some(String::from(
+                "* CAPABILITY LOGINDISABLED UTF8=ONLY ENABLE IMAP4rev2 IMAP4rev1 STARTTLS"
+            ))
+        );
+        assert_eq!(
+            rx.next().await,
+            Some(String::from("a1 OK CAPABILITY completed"))
         );
     }
 }

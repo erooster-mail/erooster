@@ -145,7 +145,7 @@ impl Append<'_> {
                         .join(username.clone())
                         .join(folder.clone());
                     debug!("[Append] Mailbox path: {:?}", mailbox_path);
-                    // TODO verify that we need this
+                    // TODO: verify that we need this
                     buffer.truncate(buffer.len() - 2);
                     let message_id = storage
                         .store_cur_with_flags(
@@ -279,5 +279,145 @@ mod tests {
             rx.next().await,
             Some(String::from("+ Ready for literal data"))
         );
+    }
+
+    #[allow(clippy::unwrap_used)]
+    #[allow(clippy::too_many_lines)]
+    #[tokio::test]
+    async fn test_append() {
+        let caps = Append {
+            data: &Data {
+                con_state: Arc::new(RwLock::new(Connection {
+                    state: State::Selected(String::from("INBOX"), Access::ReadOnly),
+                    secure: true,
+                    username: Some(String::from("meow")),
+                    active_capabilities: vec![],
+                })),
+            },
+        };
+        let cmd_data = CommandData {
+            tag: "a1",
+            command: Commands::Append,
+            arguments: &["INBOX", "(\\Seen)", "{326}"],
+        };
+
+        let config = erooster_core::get_config(String::from("./config.yml"))
+            .await
+            .unwrap();
+        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+            .await
+            .unwrap();
+        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = caps.exec(&mut tx, &storage, &cmd_data).await;
+        assert!(res.is_ok());
+        assert_eq!(
+            rx.next().await,
+            Some(String::from("+ Ready for literal data"))
+        );
+
+        // Append data
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = caps
+            .append(
+                &mut tx,
+                &storage,
+                "Date: Mon, 7 Feb 1994 21:52:25 -0800 (PST)",
+                Arc::clone(&config),
+                cmd_data.tag.to_string(),
+            )
+            .await;
+        assert!(res.is_ok());
+        let res = caps
+            .append(
+                &mut tx,
+                &storage,
+                "From: Fred Foobar <foobar@Blurdybloop.example>",
+                Arc::clone(&config),
+                cmd_data.tag.to_string(),
+            )
+            .await;
+        assert!(res.is_ok());
+        let res = caps
+            .append(
+                &mut tx,
+                &storage,
+                "Subject: afternoon meeting",
+                Arc::clone(&config),
+                cmd_data.tag.to_string(),
+            )
+            .await;
+        assert!(res.is_ok());
+        let res = caps
+            .append(
+                &mut tx,
+                &storage,
+                "To: mooch@owatagu.siam.edu.example",
+                Arc::clone(&config),
+                cmd_data.tag.to_string(),
+            )
+            .await;
+        assert!(res.is_ok());
+        let res = caps
+            .append(
+                &mut tx,
+                &storage,
+                "Message-Id: <B27397-0100000@Blurdybloop.example>",
+                Arc::clone(&config),
+                cmd_data.tag.to_string(),
+            )
+            .await;
+        assert!(res.is_ok());
+        let res = caps
+            .append(
+                &mut tx,
+                &storage,
+                "MIME-Version: 1.0",
+                Arc::clone(&config),
+                cmd_data.tag.to_string(),
+            )
+            .await;
+        assert!(res.is_ok());
+        let res = caps
+            .append(
+                &mut tx,
+                &storage,
+                "Content-Type: TEXT/PLAIN; CHARSET=US-ASCII",
+                Arc::clone(&config),
+                cmd_data.tag.to_string(),
+            )
+            .await;
+        assert!(res.is_ok());
+        let res = caps
+            .append(
+                &mut tx,
+                &storage,
+                "",
+                Arc::clone(&config),
+                cmd_data.tag.to_string(),
+            )
+            .await;
+        assert!(res.is_ok());
+        let res = caps
+            .append(
+                &mut tx,
+                &storage,
+                "Hello Joe, do you think we can meet at 3:30 tomorrow?",
+                Arc::clone(&config),
+                cmd_data.tag.to_string(),
+            )
+            .await;
+        assert!(res.is_ok());
+        let res = caps
+            .append(
+                &mut tx,
+                &storage,
+                "",
+                Arc::clone(&config),
+                cmd_data.tag.to_string(),
+            )
+            .await;
+        assert!(res.is_ok());
+        assert_eq!(rx.next().await, Some(String::from("OK APPEND completed")));
     }
 }

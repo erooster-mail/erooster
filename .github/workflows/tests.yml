@@ -95,7 +95,7 @@ jobs:
           echo '  port: 80' >> /etc/erooster/config.yml
           echo '  tls: false' >> /etc/erooster/config.yml
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@5513d407a6fd2d2875c011ea47e5c2a6bff9fbf2
+        uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
         run: |
           cargo +nightly llvm-cov --no-report  --workspace

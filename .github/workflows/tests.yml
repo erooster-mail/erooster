@@ -111,8 +111,9 @@ jobs:
           cargo +nightly llvm-cov --no-report --features "jaeger" --workspace
           cargo +nightly llvm-cov report --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d
+        uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
           fail_ci_if_error: false
 

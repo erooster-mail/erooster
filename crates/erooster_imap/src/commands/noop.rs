@@ -92,7 +92,7 @@ mod tests {
             con_state: Arc::new(RwLock::new(Connection {
                 state: State::Selected("Meow".to_string(), Access::ReadOnly),
                 secure: true,
-                username: None,
+                username: Some("MTRNord".to_string()),
                 active_capabilities: vec![],
             })),
         };

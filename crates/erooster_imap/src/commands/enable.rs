@@ -37,3 +37,75 @@ impl Enable<'_> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::commands::{CommandData, Commands};
+    use crate::servers::state::{Connection, State};
+    use futures::{channel::mpsc, StreamExt};
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    #[allow(clippy::unwrap_used)]
+    #[tokio::test]
+    async fn test_utf8() {
+        let state = &Data {
+            con_state: Arc::new(RwLock::new(Connection {
+                state: State::NotAuthenticated,
+                secure: true,
+                username: None,
+                active_capabilities: vec![],
+            })),
+        };
+        let caps = Enable { data: state };
+        let cmd_data = CommandData {
+            tag: "a1",
+            command: Commands::Append,
+            arguments: &["UTF8=ACCEPT"],
+        };
+
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = caps.exec(&mut tx, &cmd_data).await;
+        assert!(res.is_ok());
+        assert_eq!(rx.next().await, Some(String::from("a1 OK")));
+
+        assert!(state
+            .con_state
+            .read()
+            .await
+            .active_capabilities
+            .contains(&Capabilities::UTF8));
+    }
+
+    #[allow(clippy::unwrap_used)]
+    #[tokio::test]
+    async fn test_custom() {
+        let state = &Data {
+            con_state: Arc::new(RwLock::new(Connection {
+                state: State::NotAuthenticated,
+                secure: true,
+                username: None,
+                active_capabilities: vec![],
+            })),
+        };
+        let caps = Enable { data: state };
+        let cmd_data = CommandData {
+            tag: "a1",
+            command: Commands::Append,
+            arguments: &["Random"],
+        };
+
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = caps.exec(&mut tx, &cmd_data).await;
+        assert!(res.is_ok());
+        assert_eq!(rx.next().await, Some(String::from("a1 OK")));
+
+        assert!(state
+            .con_state
+            .read()
+            .await
+            .active_capabilities
+            .contains(&Capabilities::Other(String::from("Random"))));
+    }
+}

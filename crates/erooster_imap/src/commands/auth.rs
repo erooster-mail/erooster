@@ -115,9 +115,7 @@ impl Authenticate<'_> {
 
         Ok(())
     }
-}
 
-impl Authenticate<'_> {
     #[instrument(skip(self, lines, database, command_data))]
     pub async fn exec<S, E>(
         &self,

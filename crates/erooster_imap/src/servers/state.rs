@@ -22,7 +22,7 @@ impl Connection {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Capabilities {
     UTF8,
     Other(String),

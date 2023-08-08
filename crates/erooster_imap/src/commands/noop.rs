@@ -46,3 +46,75 @@ impl Noop<'_> {
         Ok(())
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::commands::{CommandData, Commands};
+    use crate::servers::state::{Access, Connection, State};
+    use futures::{channel::mpsc, StreamExt};
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    #[allow(clippy::unwrap_used)]
+    #[tokio::test]
+    async fn test_not_selected() {
+        let state = &Data {
+            con_state: Arc::new(RwLock::new(Connection {
+                state: State::NotAuthenticated,
+                secure: true,
+                username: None,
+                active_capabilities: vec![],
+            })),
+        };
+        let caps = Noop { data: state };
+        let cmd_data = CommandData {
+            tag: "a1",
+            command: Commands::Noop,
+            arguments: &[],
+        };
+        let config = erooster_core::get_config(String::from("./config.yml"))
+            .await
+            .unwrap();
+        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+            .await
+            .unwrap();
+        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = caps.exec(&mut tx, &storage, &cmd_data).await;
+        assert!(res.is_ok());
+        assert_eq!(rx.next().await, Some(String::from("a1 OK NOOP completed")));
+    }
+
+    #[allow(clippy::unwrap_used)]
+    #[tokio::test]
+    async fn test_selected_empty() {
+        let state = &Data {
+            con_state: Arc::new(RwLock::new(Connection {
+                state: State::Selected("Meow".to_string(), Access::ReadOnly),
+                secure: true,
+                username: None,
+                active_capabilities: vec![],
+            })),
+        };
+        let caps = Noop { data: state };
+        let cmd_data = CommandData {
+            tag: "a1",
+            command: Commands::Noop,
+            arguments: &[],
+        };
+        let config = erooster_core::get_config(String::from("./config.yml"))
+            .await
+            .unwrap();
+        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+            .await
+            .unwrap();
+        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = caps.exec(&mut tx, &storage, &cmd_data).await;
+        assert!(res.is_ok());
+        assert_eq!(rx.next().await, Some(String::from("* 0 EXISTS")));
+        assert_eq!(rx.next().await, Some(String::from("a1 OK NOOP completed")));
+    }
+
+    // TODO: We should test having messages in new or current. This needs setting up the DB and the folder
+}

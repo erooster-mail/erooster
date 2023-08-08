@@ -61,7 +61,7 @@ mod tests {
         let caps = Enable { data: state };
         let cmd_data = CommandData {
             tag: "a1",
-            command: Commands::Append,
+            command: Commands::Enable,
             arguments: &["UTF8=ACCEPT"],
         };
 
@@ -93,7 +93,7 @@ mod tests {
         let caps = Enable { data: state };
         let cmd_data = CommandData {
             tag: "a1",
-            command: Commands::Append,
+            command: Commands::Enable,
             arguments: &["Random"],
         };
 

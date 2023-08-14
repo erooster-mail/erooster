@@ -15,7 +15,7 @@ bench = false
 
 [dependencies]
 argon2 = { version = "0.5.1", features = ["std"] }
-async-trait = "0.1.64"
+async-trait = "0.1.73"
 base64 = "0.21.0"
 bytes = "1.4.0"
 cfg-if = "1.0.0"

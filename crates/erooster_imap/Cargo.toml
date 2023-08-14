@@ -25,7 +25,7 @@ notify = "6.0.1"
 rustls = "0.21.5"
 rustls-pemfile = "1.0.2"
 simdutf8 = { version = "0.1.4" }
-tokio = { version = "1.25.0", features = ["full"] }
+tokio = { version = "1.31.0", features = ["full"] }
 tokio-rustls = { version = "0.24.1", features = ["tls12"] }
 tokio-stream = { version = "0.1.12", features = ["net", "io-util"] }
 tokio-util = { version = "0.7.7", features = ["full"] }

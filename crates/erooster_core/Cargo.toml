@@ -29,8 +29,9 @@ opentelemetry-jaeger = { version = "0.19.0", features = [
 owo-colors = "3.5.0"
 rand_core = { version = "0.6.4", features = ["std"] }
 rustls = "0.21.5"
-serde = { version = "1.0.152", features = ["derive"] }
+serde = { version = "=1.0.171", features = ["derive"] }
 serde_yaml = "0.9.17"
+# https://github.com/serde-rs/serde/issues/2538
 simdutf8 = { version = "0.1.4" }
 sqlx = { version = "0.7.1", features = ["postgres", "runtime-tokio-rustls"] }
 sys-info = "0.9.1"

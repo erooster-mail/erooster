@@ -32,7 +32,8 @@ opentelemetry = { version = "0.20.0", features = ["metrics", "rt-tokio"] }
 opentelemetry-jaeger = { version = "0.19.0", features = [
     "rt-tokio",
 ], optional = true }
-serde = { version = "1.0.152", features = ["derive"] }
+# https://github.com/serde-rs/serde/issues/2538
+serde = { version = "=1.0.171", features = ["derive"] }
 tokio = { version = "1.25.0", features = ["rt", "rt-multi-thread", "signal"] }
 tracing = "0.1.37"
 tracing-error = "0.2.0"

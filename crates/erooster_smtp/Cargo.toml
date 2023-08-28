@@ -42,7 +42,7 @@ webpki-roots = "0.25.0"
 secrecy = "0.8.0"
 mail-auth = { version = "0.3.0", features = ["rust-crypto"] }
 time = { version = "0.3.20", features = ["formatting"] }
-reqwest = { version = "0.11.13", default-features = false, features = [
+reqwest = { version = "0.11.20", default-features = false, features = [
     "json",
     "rustls-tls",
     "trust-dns",

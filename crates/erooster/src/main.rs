@@ -66,6 +66,7 @@ async fn main() -> Result<()> {
         if #[cfg(feature = "jaeger")] {
             use tracing_subscriber::layer::SubscriberExt;
             use tracing_subscriber::util::SubscriberInitExt;
+            use tracing_subscriber::EnvFilter;
             let tracer = opentelemetry_jaeger::new_agent_pipeline()
                 .with_service_name(env!("CARGO_PKG_NAME"))
                 .with_auto_split_batch(true)
@@ -73,15 +74,18 @@ async fn main() -> Result<()> {
             tracing_subscriber::Registry::default()
                 .with(ErrorLayer::default())
                 .with(tracing_subscriber::fmt::Layer::default())
+                .with(EnvFilter::from_default_env())
                 .with(tracing_opentelemetry::layer().with_tracer(tracer))
                 .init();
         } else {
             use tracing_error::ErrorLayer;
             use tracing_subscriber::layer::SubscriberExt;
             use tracing_subscriber::util::SubscriberInitExt;
+            use tracing_subscriber::EnvFilter;
             tracing_subscriber::Registry::default()
                 .with(ErrorLayer::default())
                 .with(tracing_subscriber::fmt::Layer::default())
+                .with(EnvFilter::from_default_env())
                 .init();
         }
     }

@@ -1062,6 +1062,7 @@ dependencies = [
  "maildir",
  "mailparse",
  "nom",
+ "once_cell",
  "opentelemetry-jaeger",
  "owo-colors",
  "rand_core 0.6.4",

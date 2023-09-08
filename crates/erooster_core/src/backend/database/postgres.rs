@@ -1,9 +1,10 @@
 use crate::{backend::database::Database, config::Config};
 use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use color_eyre::Result;
+use once_cell::sync::OnceCell;
 use rand_core::OsRng;
 use secrecy::{ExposeSecret, SecretString};
-use sqlx::PgPool;
+use sqlx::{pool::PoolOptions, PgPool};
 use std::sync::Arc;
 use tracing::{debug, debug_span, error, instrument};
 
@@ -18,11 +19,25 @@ pub struct Postgres {
 impl Database<sqlx::Postgres> for Postgres {
     #[instrument(skip(config))]
     async fn new(config: Arc<Config>) -> Result<Self> {
-        let pool = PgPool::connect_lazy(&config.database.postgres_url)
-            .expect("Failed to connect to postgres");
+        static INSTANCE: OnceCell<Postgres> = OnceCell::new();
 
-        sqlx::migrate!().run(&pool).await?;
-        Ok(Self { pool })
+        let pool = INSTANCE.get();
+
+        if let Some(pool) = pool {
+            Ok(pool.clone())
+        } else {
+            let pool = PoolOptions::new()
+                .min_connections(2)
+                .max_connections(10)
+                .connect(&config.database.postgres_url)
+                .await?;
+            sqlx::migrate!().run(&pool).await?;
+            let new_self = Self { pool };
+            INSTANCE
+                .set(new_self.clone())
+                .expect("Failed to set INSTANCE");
+            Ok(new_self)
+        }
     }
 
     #[instrument(skip(self))]

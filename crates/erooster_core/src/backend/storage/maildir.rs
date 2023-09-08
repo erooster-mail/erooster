@@ -534,6 +534,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
 
 #[derive(sqlx::FromRow, Debug)]
 struct DbMails {
+    #[allow(dead_code)]
     id: i32,
     maildir_id: String,
     modseq: i64,

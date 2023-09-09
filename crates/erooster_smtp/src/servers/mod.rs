@@ -5,8 +5,8 @@ use erooster_core::{
 };
 use futures::{Sink, SinkExt};
 use std::sync::Arc;
-use tracing::instrument;
-use yaque::Receiver;
+use tracing::{error, instrument, warn};
+use yaque::{recovery::recover, Receiver, Sender};
 
 use self::sending::EmailPayload;
 
@@ -66,23 +66,44 @@ pub async fn start(
     });
 
     // Start listening for tasks
-    let mut receiver = Receiver::open(config.task_folder.clone())?;
+    let mut receiver = Receiver::open(config.task_folder.clone());
+    if let Err(e) = receiver {
+        warn!("Unable to open receiver: {:?}. Trying to recover.", e);
+        recover(&config.task_folder)?;
+        receiver = Receiver::open(config.task_folder.clone());
+    }
 
-    loop {
-        let data = receiver.recv().await;
+    match receiver {
+        Ok(mut receiver) => loop {
+            let data = receiver.recv().await;
 
-        match data {
-            Ok(data) => {
-                let email_bytes = &*data;
-                let email_json = serde_json::from_slice::<EmailPayload>(email_bytes)?;
+            match data {
+                Ok(data) => {
+                    let email_bytes = &*data;
+                    let email_json = serde_json::from_slice::<EmailPayload>(email_bytes)?;
 
-                if let Err(e) = send_email_job(data, email_json).await {
-                    tracing::error!("Error while sending email: {:?}", e);
+                    if let Err(e) = send_email_job(&email_json).await {
+                        tracing::error!(
+                            "Error while sending email: {:?}. Adding it to the queue again",
+                            e
+                        );
+                        // FIXME: This can race the lock leading to an error. We should
+                        //        probably handle this better.
+                        let mut sender = Sender::open(config.task_folder.clone())?;
+                        let json_bytes = serde_json::to_vec(&email_json)?;
+                        sender.send(json_bytes).await?;
+                    }
+                    // Mark the job as complete
+                    data.commit()?;
+                }
+                Err(e) => {
+                    tracing::error!("Error while receiving data from receiver: {:?}", e);
                 }
             }
-            Err(e) => {
-                tracing::error!("Error while receiving data from receiver: {:?}", e);
-            }
+        },
+        Err(e) => {
+            error!("Unable to open receiver: {:?}. Giving up.", e);
+            Ok(())
         }
     }
 }

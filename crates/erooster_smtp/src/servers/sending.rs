@@ -19,7 +19,6 @@ use tokio_util::codec::Framed;
 use tracing::{debug, error, instrument, warn};
 use trust_dns_resolver::TokioAsyncResolver;
 use uuid::Uuid;
-use yaque::queue::RecvGuard;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EmailPayload {
@@ -272,10 +271,9 @@ where
 
 // Note this is a hack to get max retries. Please fix this
 #[allow(clippy::too_many_lines)]
-#[instrument(skip(guard, email))]
+#[instrument(skip(email))]
 pub async fn send_email_job(
-    guard: RecvGuard<'_, Vec<u8>>,
-    email: EmailPayload,
+    email: &EmailPayload,
 ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     debug!("[{}] Starting to send email job: {}", email.id, email.id);
     // Decode a JSON payload
@@ -355,17 +353,17 @@ pub async fn send_email_job(
         }
         let Some(address) = address else { continue };
 
-        match get_secure_connection(address, &email, target, &tls_domain).await {
+        match get_secure_connection(address, email, target, &tls_domain).await {
             Ok(secure_con) => {
-                if let Err(e) = send_email(secure_con, &email, to, true).await {
+                if let Err(e) = send_email(secure_con, email, to, true).await {
                     warn!(
                         "[{}] Error sending email via tls on port 465 to {}: {}",
                         email.id, target, e
                     );
                     // TODO try starttls first
-                    match get_unsecure_connection(address, &email, target).await {
+                    match get_unsecure_connection(address, email, target).await {
                         Ok(unsecure_con) => {
-                            if let Err(e) = send_email(unsecure_con, &email, to, false).await {
+                            if let Err(e) = send_email(unsecure_con, email, to, false).await {
                                 return Err(From::from(format!(
                                     "[{}] Error sending email via tcp on port 25 to {}: {}",
                                     email.id, target, e
@@ -387,8 +385,8 @@ pub async fn send_email_job(
                     email.id, target, e
                 );
                 // TODO try starttls first
-                let unsecure_con = get_unsecure_connection(address, &email, target).await?;
-                if let Err(e) = send_email(unsecure_con, &email, to, false).await {
+                let unsecure_con = get_unsecure_connection(address, email, target).await?;
+                if let Err(e) = send_email(unsecure_con, email, to, false).await {
                     return Err(From::from(format!(
                         "[{}] Error sending email via tcp on port 25 to {}: {}",
                         email.id, target, e
@@ -398,8 +396,6 @@ pub async fn send_email_job(
         }
     }
     debug!("[{}] Finished sending email job: {}", email.id, email.id);
-    // Mark the job as complete
-    guard.commit()?;
 
     Ok(())
 }

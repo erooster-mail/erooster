@@ -1,18 +1,11 @@
 use crate::{
     commands::Data,
-    servers::{
-        sending::{send_email_job, EmailPayload},
-        state::Data as StateData,
-        state::State,
-    },
+    servers::{sending::EmailPayload, state::Data as StateData, state::State},
     utils::rspamd::Response,
 };
 use color_eyre::eyre::ContextCompat;
 use erooster_core::{
-    backend::{
-        database::{Database, DB},
-        storage::{MailStorage, Storage},
-    },
+    backend::storage::{MailStorage, Storage},
     config::{Config, Rspamd},
 };
 use futures::{Sink, SinkExt};
@@ -22,6 +15,7 @@ use std::io::Write;
 use std::{collections::BTreeMap, path::Path, sync::Arc, time::Duration};
 use time::{macros::format_description, OffsetDateTime};
 use tracing::{debug, instrument};
+use yaque::Sender;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct DataCommand<'a> {
@@ -51,13 +45,12 @@ impl DataCommand<'_> {
         Ok(())
     }
 
-    #[instrument(skip(self, config, lines, line, database, storage))]
+    #[instrument(skip(self, config, lines, line, storage))]
     pub async fn receive<S, E>(
         &self,
         config: Arc<Config>,
         lines: &mut S,
         line: &str,
-        database: &DB,
         storage: &Storage,
     ) -> color_eyre::eyre::Result<()>
     where
@@ -119,6 +112,7 @@ impl DataCommand<'_> {
                         };
 
                         let email_payload = EmailPayload {
+                            id: uuid::Uuid::new_v4(),
                             to,
                             from: write_lock
                                 .sender
@@ -129,12 +123,11 @@ impl DataCommand<'_> {
                             dkim_key_path: config.mail.dkim_key_path.clone(),
                             dkim_key_selector: config.mail.dkim_key_selector.clone(),
                         };
-                        let pool = database.get_pool();
-                        send_email_job
-                            .builder()
-                            .set_json(&email_payload)?
-                            .spawn(pool)
+                        let payload_as_json_bytes = serde_json::to_vec(&email_payload)?;
+                        Sender::open(config.task_folder.clone())?
+                            .send(&payload_as_json_bytes)
                             .await?;
+
                         debug!("Email added to queue");
                     }
 

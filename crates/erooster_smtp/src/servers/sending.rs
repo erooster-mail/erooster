@@ -10,7 +10,6 @@ use mail_auth::{
 };
 use rustls::OwnedTrustAnchor;
 use serde::{Deserialize, Serialize};
-use sqlxmq::{job, CurrentJob};
 use std::{
     collections::BTreeMap, error::Error, io, net::IpAddr, path::Path, sync::Arc, time::Duration,
 };
@@ -19,9 +18,12 @@ use tokio_rustls::TlsConnector;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, instrument, warn};
 use trust_dns_resolver::TokioAsyncResolver;
+use uuid::Uuid;
+use yaque::queue::RecvGuard;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EmailPayload {
+    pub id: Uuid,
     // Map to addresses by domain
     pub to: BTreeMap<String, Vec<String>>,
     pub from: String,
@@ -51,11 +53,10 @@ fn dkim_sign(
 }
 
 #[allow(clippy::too_many_lines)]
-#[instrument(skip(con, email, current_job, to))]
+#[instrument(skip(con, email, to))]
 async fn send_email<T>(
     con: T,
     email: &EmailPayload,
-    current_job: &CurrentJob,
     to: &Vec<String>,
     tls: bool,
 ) -> Result<(), Box<dyn Error + Send + Sync + 'static>>
@@ -65,7 +66,7 @@ where
     let (mut lines_sender, mut lines_reader) = con.split();
     debug!(
         "[{}] [{}] Fully Connected. Waiting for response",
-        current_job.id(),
+        email.id,
         if tls { "TLS" } else { "Plain" }
     );
     // TODO this is totally dumb code currently.
@@ -77,7 +78,7 @@ where
 
     debug!(
         "[{}] [{}] Got greeting: {}",
-        current_job.id(),
+        email.id,
         if tls { "TLS" } else { "Plain" },
         first
     );
@@ -86,7 +87,7 @@ where
         lines_sender.send(String::from("QUIT")).await?;
         debug!(
             "[{}] [{}] Got full {:?}",
-            current_job.id(),
+            email.id,
             if tls { "TLS" } else { "Plain" },
             lines_reader
                 .filter_map(|x| async move { x.ok() })
@@ -102,7 +103,7 @@ where
 
     debug!(
         "[{}] [{}] Sent EHLO",
-        current_job.id(),
+        email.id,
         if tls { "TLS" } else { "Plain" },
     );
     // Check if we get greeted and finished all caps
@@ -114,7 +115,7 @@ where
             .ok_or("Server did not respond")??;
         debug!(
             "[{}] [{}] Got: {}",
-            current_job.id(),
+            email.id,
             if tls { "TLS" } else { "Plain" },
             line
         );
@@ -133,7 +134,7 @@ where
         .await?;
     debug!(
         "[{}] [{}] Sent MAIL FROM",
-        current_job.id(),
+        email.id,
         if tls { "TLS" } else { "Plain" },
     );
     let line = lines_reader
@@ -142,7 +143,7 @@ where
         .ok_or("Server did not respond")??;
     debug!(
         "[{}] [{}] got {}",
-        current_job.id(),
+        email.id,
         if tls { "TLS" } else { "Plain" },
         line
     );
@@ -151,7 +152,7 @@ where
         lines_sender.send(String::from("QUIT")).await?;
         debug!(
             "[{}] [{}] Got full {:?}",
-            current_job.id(),
+            email.id,
             if tls { "TLS" } else { "Plain" },
             lines_reader
                 .filter_map(|x| async move { x.ok() })
@@ -167,7 +168,7 @@ where
         lines_sender.send(format!("RCPT TO:<{to}>")).await?;
         debug!(
             "[{}] [{}] Sent RCPT TO",
-            current_job.id(),
+            email.id,
             if tls { "TLS" } else { "Plain" },
         );
         let line = lines_reader
@@ -176,7 +177,7 @@ where
             .ok_or("Server did not respond")??;
         debug!(
             "[{}] [{}] Got {}",
-            current_job.id(),
+            email.id,
             if tls { "TLS" } else { "Plain" },
             line
         );
@@ -185,7 +186,7 @@ where
             lines_sender.send(String::from("QUIT")).await?;
             debug!(
                 "[{}] [{}] Got full {:?}",
-                current_job.id(),
+                email.id,
                 if tls { "TLS" } else { "Plain" },
                 lines_reader
                     .filter_map(|x| async move { x.ok() })
@@ -200,7 +201,7 @@ where
     lines_sender.send(String::from("DATA")).await?;
     debug!(
         "[{}] [{}] Sent DATA",
-        current_job.id(),
+        email.id,
         if tls { "TLS" } else { "Plain" },
     );
 
@@ -210,7 +211,7 @@ where
         .ok_or("Server did not respond")??;
     debug!(
         "[{}] [{}] Got {}",
-        current_job.id(),
+        email.id,
         if tls { "TLS" } else { "Plain" },
         line
     );
@@ -220,7 +221,7 @@ where
 
         debug!(
             "[{}] [{}] Got full {:?}",
-            current_job.id(),
+            email.id,
             if tls { "TLS" } else { "Plain" },
             lines_reader
                 .filter_map(|x| async move { x.ok() })
@@ -240,7 +241,7 @@ where
     lines_sender.send(String::from(".")).await?;
     debug!(
         "[{}] [{}] Sent body and ending",
-        current_job.id(),
+        email.id,
         if tls { "TLS" } else { "Plain" },
     );
 
@@ -248,13 +249,13 @@ where
         .next()
         .await
         .ok_or("Server did not respond")??;
-    debug!("[{}] Got {}", current_job.id(), line);
+    debug!("[{}] Got {}", email.id, line);
     if !line.starts_with("250") {
         lines_sender.send(String::from("RSET")).await?;
         lines_sender.send(String::from("QUIT")).await?;
         debug!(
             "[{}] [{}] Got full {:?}",
-            current_job.id(),
+            email.id,
             if tls { "TLS" } else { "Plain" },
             lines_reader
                 .filter_map(|x| async move { x.ok() })
@@ -270,187 +271,143 @@ where
 }
 
 // Note this is a hack to get max retries. Please fix this
-#[job(retries = 4294967295, backoff_secs = 1200)]
 #[allow(clippy::too_many_lines)]
-#[instrument(skip(current_job, _message))]
+#[instrument(skip(guard, email))]
 pub async fn send_email_job(
-    // The first argument should always be the current job.
-    mut current_job: CurrentJob,
-    // Additional arguments are optional, but can be used to access context
-    // provided via [`JobRegistry::set_context`].
-    _message: &'static str,
+    guard: RecvGuard<'_, Vec<u8>>,
+    email: EmailPayload,
 ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
-    debug!(
-        "[{}] Starting to send email job: {}",
-        current_job.id(),
-        current_job.id()
-    );
+    debug!("[{}] Starting to send email job: {}", email.id, email.id);
     // Decode a JSON payload
-    let email: Option<EmailPayload> = current_job.json()?;
-    if let Some(email) = email {
-        debug!("[{}] Found payload", current_job.id());
-        let resolver = TokioAsyncResolver::tokio_from_system_conf()?;
+    debug!("[{}] Found payload", email.id);
+    let resolver = TokioAsyncResolver::tokio_from_system_conf()?;
 
-        debug!("[{}] Setup for tls connection done", current_job.id());
-        for (target, to) in &email.to {
-            debug!(
-                "[{}] Looking up mx records for {}",
-                current_job.id(),
-                target
-            );
-            let mx_record_resp = resolver.mx_lookup(target.clone()).await;
+    debug!("[{}] Setup for tls connection done", email.id);
+    for (target, to) in &email.to {
+        debug!("[{}] Looking up mx records for {}", email.id, target);
+        let mx_record_resp = resolver.mx_lookup(target.clone()).await;
 
-            debug!(
-                "[{}] Looking up IP records for {}",
-                current_job.id(),
-                target
-            );
-            let mut address: Option<IpAddr> = None;
-            let mut tls_domain: String = target.to_string();
-            let response = resolver.ipv6_lookup(target.clone()).await;
+        debug!("[{}] Looking up IP records for {}", email.id, target);
+        let mut address: Option<IpAddr> = None;
+        let mut tls_domain: String = target.to_string();
+        let response = resolver.ipv6_lookup(target.clone()).await;
+        if let Ok(response) = response {
+            address = Some(IpAddr::V6(
+                *response.iter().next().ok_or("No address found")?,
+            ));
+            debug!("[{}] Got {:?} for {}", email.id, address, target);
+        } else {
+            debug!("[{}] Looking up A records for {}", email.id, target);
+            let response = resolver.ipv4_lookup(target.clone()).await;
             if let Ok(response) = response {
-                address = Some(IpAddr::V6(
+                address = Some(IpAddr::V4(
                     *response.iter().next().ok_or("No address found")?,
                 ));
-                debug!("[{}] Got {:?} for {}", current_job.id(), address, target);
-            } else {
-                debug!("[{}] Looking up A records for {}", current_job.id(), target);
-                let response = resolver.ipv4_lookup(target.clone()).await;
+                debug!("[{}] Got {:?} for {}", email.id, address, target);
+            }
+        }
+
+        debug!("[{}] Checking mx record results for {}", email.id, target);
+        if let Ok(mx_record_resp) = mx_record_resp {
+            for record in mx_record_resp {
+                debug!(
+                    "[{}] Found MX: {} {}",
+                    email.id,
+                    record.preference(),
+                    record.exchange()
+                );
+                let response = resolver.ipv6_lookup(record.exchange().clone()).await;
+                if let Ok(response) = response {
+                    address = Some(IpAddr::V6(
+                        *response.iter().next().ok_or("No address found")?,
+                    ));
+                    let exchange_record = record.exchange().to_utf8();
+                    tls_domain = if let Some(record) = exchange_record.strip_suffix('.') {
+                        record.to_string()
+                    } else {
+                        exchange_record
+                    };
+                    debug!("[{}] Got {:?} for {}", email.id, address, target);
+                    break;
+                }
+
+                debug!("[{}] Looking up A records for {}", email.id, target);
+                let response = resolver.ipv4_lookup(record.exchange().clone()).await;
                 if let Ok(response) = response {
                     address = Some(IpAddr::V4(
                         *response.iter().next().ok_or("No address found")?,
                     ));
-                    debug!("[{}] Got {:?} for {}", current_job.id(), address, target);
-                }
-            }
-
-            debug!(
-                "[{}] Checking mx record results for {}",
-                current_job.id(),
-                target
-            );
-            if let Ok(mx_record_resp) = mx_record_resp {
-                for record in mx_record_resp {
-                    debug!(
-                        "[{}] Found MX: {} {}",
-                        current_job.id(),
-                        record.preference(),
-                        record.exchange()
-                    );
-                    let response = resolver.ipv6_lookup(record.exchange().clone()).await;
-                    if let Ok(response) = response {
-                        address = Some(IpAddr::V6(
-                            *response.iter().next().ok_or("No address found")?,
-                        ));
-                        let exchange_record = record.exchange().to_utf8();
-                        tls_domain = if let Some(record) = exchange_record.strip_suffix('.') {
-                            record.to_string()
-                        } else {
-                            exchange_record
-                        };
-                        debug!("[{}] Got {:?} for {}", current_job.id(), address, target);
-                        break;
-                    }
-
-                    debug!("[{}] Looking up A records for {}", current_job.id(), target);
-                    let response = resolver.ipv4_lookup(record.exchange().clone()).await;
-                    if let Ok(response) = response {
-                        address = Some(IpAddr::V4(
-                            *response.iter().next().ok_or("No address found")?,
-                        ));
-                        let exchange_record = record.exchange().to_utf8();
-                        tls_domain = if let Some(record) = exchange_record.strip_suffix('.') {
-                            record.to_string()
-                        } else {
-                            exchange_record
-                        };
-                        debug!("[{}] Got {:?} for {}", current_job.id(), address, target);
-                        break;
-                    }
-                }
-            }
-
-            if address.is_none() {
-                debug!("[{}] No address found for {}", current_job.id(), target);
-                continue;
-            }
-            let Some(address) = address else { continue };
-
-            match get_secure_connection(address, &current_job, target, &tls_domain).await {
-                Ok(secure_con) => {
-                    if let Err(e) = send_email(secure_con, &email, &current_job, to, true).await {
-                        warn!(
-                            "[{}] Error sending email via tls on port 465 to {}: {}",
-                            current_job.id(),
-                            target,
-                            e
-                        );
-                        // TODO try starttls first
-                        match get_unsecure_connection(address, &current_job, target).await {
-                            Ok(unsecure_con) => {
-                                if let Err(e) =
-                                    send_email(unsecure_con, &email, &current_job, to, false).await
-                                {
-                                    return Err(From::from(format!(
-                                        "[{}] Error sending email via tcp on port 25 to {}: {}",
-                                        current_job.id(),
-                                        target,
-                                        e
-                                    )));
-                                }
-                            }
-                            Err(e) => {
-                                return Err(From::from(format!(
-                                    "[{}] Error sending email via tcp on port 25 to {}: {}",
-                                    current_job.id(),
-                                    target,
-                                    e
-                                )));
-                            }
-                        }
-                    }
-                }
-                Err(e) => {
-                    error!(
-                        "[{}] Error sending email via tls on port 465 to {}: {}",
-                        current_job.id(),
-                        target,
-                        e
-                    );
-                    // TODO try starttls first
-                    let unsecure_con =
-                        get_unsecure_connection(address, &current_job, target).await?;
-                    if let Err(e) = send_email(unsecure_con, &email, &current_job, to, false).await
-                    {
-                        return Err(From::from(format!(
-                            "[{}] Error sending email via tcp on port 25 to {}: {}",
-                            current_job.id(),
-                            target,
-                            e
-                        )));
-                    }
+                    let exchange_record = record.exchange().to_utf8();
+                    tls_domain = if let Some(record) = exchange_record.strip_suffix('.') {
+                        record.to_string()
+                    } else {
+                        exchange_record
+                    };
+                    debug!("[{}] Got {:?} for {}", email.id, address, target);
+                    break;
                 }
             }
         }
-        debug!(
-            "[{}] Finished sending email job: {}",
-            current_job.id(),
-            current_job.id()
-        );
-        // Mark the job as complete
-        current_job.complete().await?;
-    } else {
-        debug!("[{}] Something broken", current_job.id());
-        return Err("No email payload found".into());
+
+        if address.is_none() {
+            debug!("[{}] No address found for {}", email.id, target);
+            continue;
+        }
+        let Some(address) = address else { continue };
+
+        match get_secure_connection(address, &email, target, &tls_domain).await {
+            Ok(secure_con) => {
+                if let Err(e) = send_email(secure_con, &email, to, true).await {
+                    warn!(
+                        "[{}] Error sending email via tls on port 465 to {}: {}",
+                        email.id, target, e
+                    );
+                    // TODO try starttls first
+                    match get_unsecure_connection(address, &email, target).await {
+                        Ok(unsecure_con) => {
+                            if let Err(e) = send_email(unsecure_con, &email, to, false).await {
+                                return Err(From::from(format!(
+                                    "[{}] Error sending email via tcp on port 25 to {}: {}",
+                                    email.id, target, e
+                                )));
+                            }
+                        }
+                        Err(e) => {
+                            return Err(From::from(format!(
+                                "[{}] Error sending email via tcp on port 25 to {}: {}",
+                                email.id, target, e
+                            )));
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                error!(
+                    "[{}] Error sending email via tls on port 465 to {}: {}",
+                    email.id, target, e
+                );
+                // TODO try starttls first
+                let unsecure_con = get_unsecure_connection(address, &email, target).await?;
+                if let Err(e) = send_email(unsecure_con, &email, to, false).await {
+                    return Err(From::from(format!(
+                        "[{}] Error sending email via tcp on port 25 to {}: {}",
+                        email.id, target, e
+                    )));
+                }
+            }
+        }
     }
+    debug!("[{}] Finished sending email job: {}", email.id, email.id);
+    // Mark the job as complete
+    guard.commit()?;
 
     Ok(())
 }
 
-#[instrument(skip(addr, current_job, target))]
+#[instrument(skip(addr, email, target))]
 async fn get_unsecure_connection(
     addr: IpAddr,
-    current_job: &CurrentJob,
+    email: &EmailPayload,
     target: &String,
 ) -> Result<
     impl Stream<Item = Result<String, LinesCodecError>> + Sink<String, Error = LinesCodecError>,
@@ -460,7 +417,7 @@ async fn get_unsecure_connection(
         Ok(Ok(stream)) => {
             debug!(
                 "[{}] Connected to {} via tcp as {:?}",
-                current_job.id(),
+                email.id,
                 target,
                 stream.local_addr()?
             );
@@ -469,25 +426,21 @@ async fn get_unsecure_connection(
         }
         Ok(Err(e)) => Err(format!(
             "[{}] Error connecting to {} via tcp: {}",
-            current_job.id(),
-            target,
-            e
+            email.id, target, e
         )
         .into()),
         Err(e) => Err(format!(
             "[{}] Error connecting to {} via tcp: {}",
-            current_job.id(),
-            target,
-            e
+            email.id, target, e
         )
         .into()),
     }
 }
 
-#[instrument(skip(addr, target, current_job, tls_domain))]
+#[instrument(skip(addr, target, email, tls_domain))]
 async fn get_secure_connection(
     addr: IpAddr,
-    current_job: &CurrentJob,
+    email: &EmailPayload,
     target: &str,
     tls_domain: &str,
 ) -> Result<
@@ -507,12 +460,12 @@ async fn get_secure_connection(
         .with_root_certificates(roots)
         .with_no_client_auth();
     let connector = TlsConnector::from(Arc::new(config));
-    debug!("[{}] Trying tls", current_job.id(),);
+    debug!("[{}] Trying tls", email.id,);
     match timeout(Duration::from_secs(5), TcpStream::connect(&(addr, 465))).await {
         Ok(Ok(stream)) => {
             debug!(
                 "[{}] Connected to {} via tcp {:?} waiting for tls magic",
-                current_job.id(),
+                email.id,
                 target,
                 stream.local_addr()?
             );
@@ -521,22 +474,18 @@ async fn get_secure_connection(
                 .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid dnsname"))?;
 
             let stream = connector.connect(domain, stream).await?;
-            debug!("[{}] Connected to {} via tls", current_job.id(), target);
+            debug!("[{}] Connected to {} via tls", email.id, target);
 
             Ok(Framed::new(stream, LinesCodec::new()))
         }
         Ok(Err(e)) => Err(format!(
             "[{}] Error connecting to {} via tls: {}",
-            current_job.id(),
-            target,
-            e
+            email.id, target, e
         )
         .into()),
         Err(e) => Err(format!(
             "[{}] Error connecting to {} via tls after {}",
-            current_job.id(),
-            target,
-            e
+            email.id, target, e
         )
         .into()),
     }

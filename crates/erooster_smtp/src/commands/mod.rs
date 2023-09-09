@@ -161,7 +161,7 @@ impl Data {
         let state = { con_clone.read().await.state.clone() };
         if matches!(state, State::ReceivingData(_)) {
             DataCommand { data: self }
-                .receive(config, lines, &line, database, storage)
+                .receive(config, lines, &line, storage)
                 .await?;
             // We are done here
             return Ok(Response::Continue);

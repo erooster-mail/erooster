@@ -112,7 +112,7 @@ async fn main() -> Result<()> {
     // Startup servers
     erooster_imap::start(Arc::clone(&config), &database, &storage)?;
     // We do need the let here to make sure that the runner is bound to the lifetime of main.
-    let _runner = erooster_smtp::servers::start(Arc::clone(&config), &database, &storage).await?;
+    erooster_smtp::servers::start(Arc::clone(&config), &database, &storage).await?;
 
     erooster_web::start(Arc::clone(&config)).await?;
 

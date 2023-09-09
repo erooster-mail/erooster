@@ -19,6 +19,8 @@ pub struct Config {
     pub webserver: Webserver,
     /// The config related to the optional rspamd integration
     pub rspamd: Option<Rspamd>,
+    /// Folder where the pending tasks are stored
+    pub task_folder: String,
 }
 
 /// The config for the webserver

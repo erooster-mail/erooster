@@ -1,16 +1,14 @@
 use crate::servers::sending::send_email_job;
 use erooster_core::{
-    backend::{
-        database::{Database, DB},
-        storage::Storage,
-    },
+    backend::{database::DB, storage::Storage},
     config::Config,
 };
 use futures::{Sink, SinkExt};
-use sqlxmq::{JobRegistry, JobRunnerHandle};
-use std::error::Error;
 use std::sync::Arc;
 use tracing::instrument;
+use yaque::Receiver;
+
+use self::sending::EmailPayload;
 
 pub(crate) mod encrypted;
 pub(crate) mod sending;
@@ -44,7 +42,7 @@ pub async fn start(
     config: Arc<Config>,
     database: &DB,
     storage: &Storage,
-) -> color_eyre::eyre::Result<JobRunnerHandle> {
+) -> color_eyre::eyre::Result<()> {
     let config_clone = Arc::clone(&config);
     let db_clone = database.clone();
     let storage_clone = storage.clone();
@@ -58,34 +56,33 @@ pub async fn start(
     });
     let db_clone = database.clone();
     let storage_clone = storage.clone();
+    let config_clone = Arc::clone(&config);
     tokio::spawn(async move {
         if let Err(e) =
-            encrypted::Encrypted::run(Arc::clone(&config), &db_clone, &storage_clone).await
+            encrypted::Encrypted::run(Arc::clone(&config_clone), &db_clone, &storage_clone).await
         {
             panic!("Unable to start TLS server: {e:?}");
         }
     });
 
-    let pool = database.get_pool();
+    // Start listening for tasks
+    let mut receiver = Receiver::open(config.task_folder.clone())?;
 
-    // Construct a job registry from our job.
-    let mut registry = JobRegistry::new(&[send_email_job]);
-    // Here is where you can configure the registry
-    registry.set_error_handler(|name: &str, error: Box<dyn Error + Send + 'static>| {
-        tracing::error!("Job `{}` failed: {}", name, error);
-    });
+    loop {
+        let data = receiver.recv().await;
 
-    // And add context
-    registry.set_context("");
+        match data {
+            Ok(data) => {
+                let email_bytes = &*data;
+                let email_json = serde_json::from_slice::<EmailPayload>(email_bytes)?;
 
-    let runner = registry
-        // Create a job runner using the connection pool.
-        .runner(pool)
-        // Here is where you can configure the job runner
-        // Aim to keep 10-20 jobs running at a time.
-        .set_concurrency(10, 20)
-        // Start the job runner in the background.
-        .run()
-        .await?;
-    Ok(runner)
+                if let Err(e) = send_email_job(data, email_json).await {
+                    tracing::error!("Error while sending email: {:?}", e);
+                }
+            }
+            Err(e) => {
+                tracing::error!("Error while receiving data from receiver: {:?}", e);
+            }
+        }
+    }
 }

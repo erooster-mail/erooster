@@ -5,7 +5,7 @@ use erooster_core::{
 };
 use futures::{Sink, SinkExt};
 use std::sync::Arc;
-use tracing::{error, instrument, warn};
+use tracing::{error, instrument, warn, info};
 use yaque::{recovery::recover, Receiver, Sender};
 
 use self::sending::EmailPayload;
@@ -71,6 +71,7 @@ pub async fn start(
         warn!("Unable to open receiver: {:?}. Trying to recover.", e);
         recover(&config.task_folder)?;
         receiver = Receiver::open(config.task_folder.clone());
+        info!("Recovered queue successfully");
     }
 
     match receiver {

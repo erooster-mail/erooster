@@ -1141,7 +1141,7 @@ dependencies = [
  "tokio-util",
  "tracing",
  "tracing-subscriber",
- "trust-dns-resolver 0.22.0",
+ "trust-dns-resolver 0.23.0",
  "uuid",
  "webpki-roots 0.25.2",
  "yaque",

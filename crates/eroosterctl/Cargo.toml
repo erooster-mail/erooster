@@ -36,4 +36,4 @@ tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 secrecy = "0.8.0"
 
 [build-dependencies]
-vergen = { version = "8.2.4", features = ["git", "gitoxide"] }
+vergen = { version = "8.2.5", features = ["git", "gitoxide"] }

@@ -20,7 +20,7 @@ jobs:
       security-events: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@8ca2b8b2ece13480cda6dacd3511b49857a23c09
+        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423
         with:
           egress-policy: block
           allowed-endpoints: >
@@ -35,7 +35,7 @@ jobs:
             index.crates.io:443
 
       - name: Checkout code
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af #@v1
@@ -57,7 +57,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload analysis results to GitHub
-        uses: github/codeql-action/upload-sarif@a09933a12a80f87b87005513f0abb1494c27a716
+        uses: github/codeql-action/upload-sarif@fdcae64e1484d349b3366718cdfef3d404390e85
         with:
           sarif_file: rust-clippy-results.sarif
           wait-for-processing: true

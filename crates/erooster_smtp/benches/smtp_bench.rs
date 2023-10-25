@@ -6,7 +6,7 @@ use futures::{SinkExt, StreamExt};
 use secrecy::SecretString;
 use sqlx::migrate::MigrateDatabase;
 use std::str::FromStr;
-use std::{path::Path, sync::Arc, thread, time::Duration};
+use std::{path::Path, thread, time::Duration};
 use tokio::net::TcpStream;
 use tokio::runtime;
 use tokio_util::codec::Framed;
@@ -98,11 +98,11 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     rt.spawn(async {
         info!("Starting ERooster Server");
         let config = if Path::new("./config.yml").exists() {
-            Arc::new(Config::load("./config.yml").await.unwrap())
+            Config::load("./config.yml").await.unwrap()
         } else if Path::new("/etc/erooster/config.yml").exists() {
-            Arc::new(Config::load("/etc/erooster/config.yml").await.unwrap())
+            Config::load("/etc/erooster/config.yml").await.unwrap()
         } else if Path::new("/etc/erooster/config.yaml").exists() {
-            Arc::new(Config::load("/etc/erooster/config.yaml").await.unwrap())
+            Config::load("/etc/erooster/config.yaml").await.unwrap()
         } else {
             error!("No config file found. Please follow the readme.");
             return;
@@ -113,7 +113,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         sqlx::postgres::Postgres::create_database(&config.database.postgres_url)
             .await
             .unwrap();
-        match get_database(Arc::clone(&config)).await {
+        match get_database(&config).await {
             Ok(database) => {
                 info!("Connected to database");
                 info!("Adding user");
@@ -125,7 +125,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     .unwrap();
                 info!("Created users");
 
-                let storage = get_storage(database.clone(), Arc::clone(&config));
+                let storage = get_storage(database.clone(), config.clone());
 
                 info!("Starting SMTP Server");
                 if let Err(e) = erooster_smtp::servers::unencrypted::Unencrypted::run(

@@ -50,6 +50,8 @@ jobs:
           opendkim-genkey --domain=example.com  --subdomains --testmode
       - name: Setup Config
         run: |
+          mkdir -p /etc/erooster/tasks
+          echo 'task_folder: /etc/erooster/tasks' > /etc/erooster/config.yml
           echo 'tls:' > /etc/erooster/config.yml
           echo '  key_path: ""' >> /etc/erooster/config.yml
           echo '  cert_path: ""' >> /etc/erooster/config.yml

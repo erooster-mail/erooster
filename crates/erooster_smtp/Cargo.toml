@@ -24,8 +24,7 @@ futures = { version = "0.3.25", features = ["thread-pool"] }
 nom = "7.1.3"
 rustls = "0.21.5"
 rustls-pemfile = "1.0.1"
-# https://github.com/serde-rs/serde/issues/2538
-serde = { version = "=1.0.171", features = ["derive"] }
+serde = { version = "1.0.189", features = ["derive"] }
 simdutf8 = { version = "0.1.4" }
 mailparse = "0.14.0"
 tokio = { version = "1.24.2", features = ["full"] }
@@ -38,7 +37,7 @@ trust-dns-resolver = "0.22.0"
 webpki-roots = "0.25.0"
 secrecy = "0.8.0"
 mail-auth = { version = "0.3.0", features = ["rust-crypto"] }
-time = { version = "0.3.20", features = ["formatting", "macros"] }
+time = { version = "0.3.30", features = ["formatting", "macros"] }
 reqwest = { version = "0.11.20", default-features = false, features = [
     "json",
     "rustls-tls",

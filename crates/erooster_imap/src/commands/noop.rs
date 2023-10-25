@@ -8,13 +8,13 @@ use futures::{Sink, SinkExt};
 use tracing::instrument;
 
 pub struct Noop<'a> {
-    pub data: &'a mut Data,
+    pub data: &'a Data,
 }
 
 impl Noop<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
-        &mut self,
+        &self,
         lines: &mut S,
         storage: &Storage,
         command_data: &CommandData<'_>,
@@ -62,7 +62,7 @@ mod tests {
                 active_capabilities: vec![],
             },
         };
-        let mut caps = Noop { data: state };
+        let caps = Noop { data: state };
         let cmd_data = CommandData {
             tag: "a1",
             command: Commands::Noop,
@@ -92,7 +92,7 @@ mod tests {
                 active_capabilities: vec![],
             },
         };
-        let mut caps = Noop { data: state };
+        let caps = Noop { data: state };
         let cmd_data = CommandData {
             tag: "a1",
             command: Commands::Noop,

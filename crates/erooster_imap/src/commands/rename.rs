@@ -6,13 +6,13 @@ use tokio::fs;
 use tracing::instrument;
 
 pub struct Rename<'a> {
-    pub data: &'a mut Data,
+    pub data: &'a Data,
 }
 
 impl Rename<'_> {
     #[instrument(skip(self, lines, command_data, storage))]
     pub async fn exec<S, E>(
-        &mut self,
+        &self,
         lines: &mut S,
         command_data: &CommandData<'_>,
         storage: &Storage,

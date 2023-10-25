@@ -5,12 +5,12 @@ use futures::{Sink, SinkExt};
 use tracing::{error, instrument};
 
 pub struct Create<'a> {
-    pub data: &'a mut Data,
+    pub data: &'a Data,
 }
 impl Create<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
-        &mut self,
+        &self,
         lines: &mut S,
         storage: &Storage,
         command_data: &CommandData<'_>,

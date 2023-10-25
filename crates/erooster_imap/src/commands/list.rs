@@ -14,7 +14,7 @@ use tracing::{debug, instrument};
 #[allow(clippy::too_many_lines)]
 #[instrument(skip(data, lines, config, storage, command_data))]
 pub async fn basic<S, E>(
-    data: &mut Data,
+    data: &Data,
     lines: &mut S,
     config: &Config,
     storage: &Storage,
@@ -216,7 +216,7 @@ where
     Ok(())
 }
 pub struct List<'a> {
-    pub data: &'a mut Data,
+    pub data: &'a Data,
 }
 
 impl List<'_> {
@@ -225,7 +225,7 @@ impl List<'_> {
     // TODO setup
     #[instrument(skip(self, lines, command_data))]
     pub async fn extended<S, E>(
-        &mut self,
+        &self,
         lines: &mut S,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>

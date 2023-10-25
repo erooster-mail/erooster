@@ -15,7 +15,6 @@ use std::{
     io::{self, BufReader},
     net::SocketAddr,
     path::Path,
-    sync::Arc,
 };
 use tokio::net::{TcpListener, TcpStream};
 use tokio_rustls::{
@@ -73,7 +72,7 @@ pub fn get_tls_acceptor(config: &Config) -> color_eyre::eyre::Result<TlsAcceptor
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
 
     // Starts a TLS accepting thing.
-    Ok(TlsAcceptor::from(Arc::new(server_config)))
+    Ok(TlsAcceptor::from(std::sync::Arc::new(server_config)))
 }
 
 impl Encrypted {

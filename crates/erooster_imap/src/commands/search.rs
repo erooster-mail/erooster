@@ -12,13 +12,13 @@ use tracing::{debug, error, instrument};
 use super::parsers::{parse_search_date, SearchProgram, SearchReturnOption};
 
 pub struct Search<'a> {
-    pub data: &'a mut Data,
+    pub data: &'a Data,
 }
 
 impl Search<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
-        &mut self,
+        &self,
         lines: &mut S,
         storage: &Storage,
         command_data: &CommandData<'_>,

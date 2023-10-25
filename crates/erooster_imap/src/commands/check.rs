@@ -7,13 +7,13 @@ use futures::{Sink, SinkExt};
 use tracing::instrument;
 
 pub struct Check<'a> {
-    pub data: &'a mut Data,
+    pub data: &'a Data,
 }
 
 impl Check<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
-        &mut self,
+        &self,
         lines: &mut S,
         storage: &Storage,
         command_data: &CommandData<'_>,
@@ -66,7 +66,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_successful_check() {
-        let mut caps = Check {
+        let caps = Check {
             data: &mut Data {
                 con_state: Connection {
                     state: State::Selected("INBOX".to_string(), Access::ReadWrite),
@@ -96,7 +96,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_unsuccessful_check() {
-        let mut caps = Check {
+        let caps = Check {
             data: &mut Data {
                 con_state: Connection {
                     state: State::NotAuthenticated,

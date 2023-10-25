@@ -6,13 +6,13 @@ use tokio::fs;
 use tracing::instrument;
 
 pub struct Delete<'a> {
-    pub data: &'a mut Data,
+    pub data: &'a Data,
 }
 
 impl Delete<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
-        &mut self,
+        &self,
         lines: &mut S,
         storage: &Storage,
         command_data: &CommandData<'_>,

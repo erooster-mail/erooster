@@ -19,14 +19,14 @@ use nom::{error::convert_error, Finish};
 use tracing::{debug, error, instrument, log::warn};
 
 pub struct Fetch<'a> {
-    pub data: &'a mut Data,
+    pub data: &'a Data,
 }
 
 impl Fetch<'_> {
     #[allow(clippy::too_many_lines)]
     #[instrument(skip(self, lines, command_data, storage))]
     pub async fn exec<S, E>(
-        &mut self,
+        &self,
         lines: &mut S,
         command_data: &CommandData<'_>,
         storage: &Storage,

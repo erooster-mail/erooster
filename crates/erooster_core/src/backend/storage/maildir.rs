@@ -18,7 +18,6 @@ use tracing::{debug, error, instrument};
 /// The Storage handler for the maildir format
 #[derive(Debug, Clone)]
 pub struct MaildirStorage {
-    // This has an Arc deep down
     db: DB,
     config: Config,
 }

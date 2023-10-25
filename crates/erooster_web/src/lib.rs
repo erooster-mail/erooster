@@ -39,7 +39,7 @@ use axum::{
 };
 use axum_server::tls_rustls::RustlsConfig;
 use erooster_core::config::Config;
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info};
 
@@ -73,7 +73,7 @@ pub async fn start(config: &Config) -> color_eyre::eyre::Result<()> {
                     "/metrics",
                     get(axum_opentelemetry_middleware::metrics_endpoint),
                 )
-                .layer(Extension(Arc::new(config.clone())))
+                .layer(Extension(std::sync::Arc::new(config.clone())))
                 .layer(metrics_middleware.clone())
                 .layer(TraceLayer::new_for_http());
 
@@ -116,7 +116,7 @@ async fn handler() -> Html<&'static str> {
 }
 
 #[allow(clippy::unused_async)]
-async fn autoconfig(Extension(config): Extension<Arc<Config>>) -> impl IntoResponse {
+async fn autoconfig(Extension(config): Extension<std::sync::Arc<Config>>) -> impl IntoResponse {
     let template = AutoconfigTemplate {
         domain: config.mail.hostname.clone(),
         displayname: config.mail.displayname.clone(),

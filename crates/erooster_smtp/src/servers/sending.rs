@@ -10,9 +10,7 @@ use mail_auth::{
 };
 use rustls::OwnedTrustAnchor;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::BTreeMap, error::Error, io, net::IpAddr, path::Path, sync::Arc, time::Duration,
-};
+use std::{collections::BTreeMap, error::Error, io, net::IpAddr, path::Path, time::Duration};
 use tokio::{net::TcpStream, time::timeout};
 use tokio_rustls::TlsConnector;
 use tokio_util::codec::Framed;
@@ -455,7 +453,7 @@ async fn get_secure_connection(
         .with_safe_defaults()
         .with_root_certificates(roots)
         .with_no_client_auth();
-    let connector = TlsConnector::from(Arc::new(config));
+    let connector = TlsConnector::from(std::sync::Arc::new(config));
     debug!("[{}] Trying tls", email.id,);
     match timeout(Duration::from_secs(5), TcpStream::connect(&(addr, 465))).await {
         Ok(Ok(stream)) => {

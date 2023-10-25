@@ -5,7 +5,7 @@ use erooster_core::{
 };
 use futures::{Sink, SinkExt};
 use std::sync::Arc;
-use tracing::{error, instrument, warn, info};
+use tracing::{error, info, instrument, warn};
 use yaque::{recovery::recover, Receiver, Sender};
 
 use self::sending::EmailPayload;

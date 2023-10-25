@@ -103,6 +103,8 @@ jobs:
           cargo +nightly llvm-cov --no-report --workspace
           cargo +nightly llvm-cov --no-report --features "jaeger" --workspace
           cargo +nightly llvm-cov report --html
+        env:
+          RUST_BACKTRACE: "1"
       - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
         with:
           name: coverage-report

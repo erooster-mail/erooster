@@ -31,9 +31,8 @@ impl Database<sqlx::Postgres> for Postgres {
                 .connect(&config.database.postgres_url)
                 .await?;
             sqlx::migrate!().run(&pool).await?;
-            let new_self = Self { pool };
-            INSTANCE.get_or_init(|| new_self.clone());
-            Ok(new_self)
+            let new_self = INSTANCE.get_or_init(|| Self { pool });
+            Ok(new_self.clone())
         }
     }
 

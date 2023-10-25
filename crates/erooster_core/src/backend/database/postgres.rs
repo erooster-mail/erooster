@@ -32,9 +32,7 @@ impl Database<sqlx::Postgres> for Postgres {
                 .await?;
             sqlx::migrate!().run(&pool).await?;
             let new_self = Self { pool };
-            INSTANCE
-                .set(new_self.clone())
-                .expect("Failed to set INSTANCE");
+            INSTANCE.get_or_init(|| new_self.clone());
             Ok(new_self)
         }
     }

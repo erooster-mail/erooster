@@ -7,7 +7,6 @@ use crate::{
 };
 use mailparse::{MailHeader, ParsedMail};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use tracing::instrument;
 
 /// The maildir format
@@ -151,6 +150,6 @@ pub trait MailStorage<M: MailEntry> {
 #[cfg(feature = "maildir")]
 #[must_use]
 #[instrument(skip(db))]
-pub fn get_storage(db: DB, config: Arc<Config>) -> Storage {
+pub fn get_storage(db: DB, config: Config) -> Storage {
     MaildirStorage::new(db, config)
 }

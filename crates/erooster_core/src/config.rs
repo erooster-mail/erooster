@@ -5,7 +5,7 @@ const fn default_webserver_port() -> u16 {
 }
 
 /// The config for the mailserver
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     /// Configurations specific to the TLS part
     pub tls: Tls,
@@ -24,7 +24,7 @@ pub struct Config {
 }
 
 /// The config for the webserver
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Webserver {
     /// The port of the webserver
     #[serde(default = "default_webserver_port")]
@@ -35,14 +35,14 @@ pub struct Webserver {
 }
 
 /// Configurations specific to the Database
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Database {
     /// Connection string for the postgres database
     pub postgres_url: String,
 }
 
 /// Configurations specific to the TLS part
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Tls {
     /// Path to the key file
     pub key_path: String,
@@ -51,14 +51,14 @@ pub struct Tls {
 }
 
 /// Configuration specific to rspamd
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Rspamd {
     /// Address where the rspamd worker is at
     pub address: String,
 }
 
 /// Configurations specific to the mail concept itself
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Mail {
     /// Path where maildir style mailboxes are going to get created
     pub maildir_folders: String,

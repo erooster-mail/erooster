@@ -8,10 +8,7 @@ use crate::{
 use futures::{StreamExt, TryStreamExt};
 use maildir::Maildir;
 use mailparse::ParsedMail;
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::path::{Path, PathBuf};
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
@@ -23,14 +20,14 @@ use tracing::{debug, error, instrument};
 pub struct MaildirStorage {
     // This has an Arc deep down
     db: DB,
-    config: Arc<Config>,
+    config: Config,
 }
 
 impl MaildirStorage {
     /// Create a new maildir storage handler
     #[must_use]
     #[instrument(skip(db))]
-    pub fn new(db: DB, config: Arc<Config>) -> Self {
+    pub fn new(db: DB, config: Config) -> Self {
         MaildirStorage { db, config }
     }
 }

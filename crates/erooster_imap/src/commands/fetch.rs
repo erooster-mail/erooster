@@ -19,14 +19,14 @@ use nom::{error::convert_error, Finish};
 use tracing::{debug, error, instrument, log::warn};
 
 pub struct Fetch<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 impl Fetch<'_> {
     #[allow(clippy::too_many_lines)]
     #[instrument(skip(self, lines, command_data, storage))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         command_data: &CommandData<'_>,
         storage: &Storage,
@@ -38,13 +38,11 @@ impl Fetch<'_> {
     {
         let offset = usize::from(is_uid);
         // TODO handle the various request types defined in https://www.rfc-editor.org/rfc/rfc9051.html#name-fetch-command
-        if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
+        if let State::Selected(folder, _) = &self.data.con_state.state {
             let folder = folder.replace('/', ".");
             let username = self
                 .data
                 .con_state
-                .read()
-                .await
                 .username
                 .clone()
                 .context("Username missing in internal State")?;
@@ -166,7 +164,7 @@ impl Fetch<'_> {
                 .await?;
             error!(
                 "State was {:#?} instead of selected",
-                self.data.con_state.read().await.state
+                self.data.con_state.state
             );
             lines.flush().await?;
         }

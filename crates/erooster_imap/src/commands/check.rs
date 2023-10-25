@@ -7,13 +7,13 @@ use futures::{Sink, SinkExt};
 use tracing::instrument;
 
 pub struct Check<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 impl Check<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         storage: &Storage,
         command_data: &CommandData<'_>,
@@ -24,9 +24,9 @@ impl Check<'_> {
     {
         // This is an Imap4rev1 feature. It does the same as Noop for us as we have no memory gc.
         // It also only is allowed in selected state
-        if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
+        if let State::Selected(folder, _) = &self.data.con_state.state {
             let folder = folder.replace('/', ".");
-            let Some(username) = self.data.con_state.read().await.username.clone() else {
+            let Some(username) = self.data.con_state.username.clone() else {
                 lines
                     .send(format!("{} NO invalid state", command_data.tag))
                     .await?;
@@ -63,19 +63,17 @@ mod tests {
     use crate::commands::{CommandData, Commands};
     use crate::servers::state::{Access, Connection};
     use futures::{channel::mpsc, StreamExt};
-    use std::sync::Arc;
-    use tokio::sync::RwLock;
 
     #[tokio::test]
     async fn test_successful_check() {
-        let caps = Check {
-            data: &Data {
-                con_state: Arc::new(RwLock::new(Connection {
+        let mut caps = Check {
+            data: &mut Data {
+                con_state: Connection {
                     state: State::Selected("INBOX".to_string(), Access::ReadWrite),
                     secure: true,
                     username: Some(String::from("test")),
                     active_capabilities: vec![],
-                })),
+                },
             },
         };
         let cmd_data = CommandData {
@@ -86,10 +84,10 @@ mod tests {
         let config = erooster_core::get_config(String::from("./config.yml"))
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+        let database = erooster_core::backend::database::get_database(&config)
             .await
             .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok());
@@ -98,14 +96,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_unsuccessful_check() {
-        let caps = Check {
-            data: &Data {
-                con_state: Arc::new(RwLock::new(Connection {
+        let mut caps = Check {
+            data: &mut Data {
+                con_state: Connection {
                     state: State::NotAuthenticated,
                     secure: true,
                     username: None,
                     active_capabilities: vec![],
-                })),
+                },
             },
         };
         let cmd_data = CommandData {
@@ -116,10 +114,10 @@ mod tests {
         let config = erooster_core::get_config(String::from("./config.yml"))
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+        let database = erooster_core::backend::database::get_database(&config)
             .await
             .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok());

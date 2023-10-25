@@ -4,7 +4,6 @@ use erooster_core::{
     config::Config,
 };
 use futures::{Sink, SinkExt};
-use std::sync::Arc;
 use tracing::{error, info, instrument, warn};
 use yaque::{recovery::recover, Receiver, Sender};
 
@@ -19,7 +18,7 @@ pub(crate) mod state;
 pub mod unencrypted;
 
 pub(crate) async fn send_capabilities<S, E>(
-    config: Arc<Config>,
+    config: &Config,
     lines_sender: &mut S,
 ) -> color_eyre::eyre::Result<()>
 where
@@ -39,28 +38,24 @@ where
 /// Returns an error if the server startup fails
 #[instrument(skip(config, database, storage))]
 pub async fn start(
-    config: Arc<Config>,
+    config: Config,
     database: &DB,
     storage: &Storage,
 ) -> color_eyre::eyre::Result<()> {
-    let config_clone = Arc::clone(&config);
     let db_clone = database.clone();
     let storage_clone = storage.clone();
+    let config_clone = config.clone();
     tokio::spawn(async move {
-        if let Err(e) =
-            unencrypted::Unencrypted::run(Arc::clone(&config_clone), &db_clone, &storage_clone)
-                .await
+        if let Err(e) = unencrypted::Unencrypted::run(config_clone, &db_clone, &storage_clone).await
         {
             panic!("Unable to start server: {e:?}");
         }
     });
     let db_clone = database.clone();
     let storage_clone = storage.clone();
-    let config_clone = Arc::clone(&config);
+    let config_clone = config.clone();
     tokio::spawn(async move {
-        if let Err(e) =
-            encrypted::Encrypted::run(Arc::clone(&config_clone), &db_clone, &storage_clone).await
-        {
+        if let Err(e) = encrypted::Encrypted::run(config_clone, &db_clone, &storage_clone).await {
             panic!("Unable to start TLS server: {e:?}");
         }
     });

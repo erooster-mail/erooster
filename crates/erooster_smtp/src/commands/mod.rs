@@ -19,7 +19,6 @@ use nom::{
     sequence::{terminated, tuple},
     Finish, IResult,
 };
-use std::sync::Arc;
 use tracing::{debug, error, instrument, warn};
 
 #[cfg(test)]
@@ -144,7 +143,7 @@ impl Data {
     pub async fn parse<S, E>(
         &mut self,
         lines: &mut S,
-        config: Arc<Config>,
+        config: &Config,
         database: &DB,
         storage: &Storage,
         line: String,

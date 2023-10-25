@@ -20,14 +20,14 @@ pub enum AuthenticationMethod {
 }
 
 pub struct Authenticate<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
     pub auth_data: &'a str,
 }
 
 impl Authenticate<'_> {
     #[instrument(skip(self, lines, database, command_data))]
     pub async fn plain<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         database: &DB,
         command_data: &CommandData<'_>,
@@ -37,7 +37,6 @@ impl Authenticate<'_> {
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         let bytes = BASE64_DECODER.decode(self.auth_data.as_bytes());
-        let mut write_lock = self.data.con_state.write().await;
         match bytes {
             Ok(bytes) => {
                 let auth_data_vec: Vec<&str> = bytes
@@ -63,7 +62,7 @@ impl Authenticate<'_> {
                         debug!("[IMAP] Verify credentials");
                         if !database.verify_user(username, password).await {
                             {
-                                write_lock.state = State::NotAuthenticated;
+                                self.data.con_state.state = State::NotAuthenticated;
                             };
                             lines
                                 .send(format!("{} NO Invalid user or password", command_data.tag))
@@ -72,10 +71,10 @@ impl Authenticate<'_> {
                             return Ok(());
                         }
                         {
-                            write_lock.username = Some(username.to_string());
-                            write_lock.state = State::Authenticated;
+                            self.data.con_state.username = Some(username.to_string());
+                            self.data.con_state.state = State::Authenticated;
                         };
-                        let secure = write_lock.secure;
+                        let secure = self.data.con_state.secure;
                         if secure {
                             lines
                                 .send(format!("{} OK Success (tls protection)", command_data.tag))
@@ -87,7 +86,7 @@ impl Authenticate<'_> {
                         }
                     } else {
                         {
-                            write_lock.state = State::NotAuthenticated;
+                            self.data.con_state.state = State::NotAuthenticated;
                         };
                         lines
                             .send(format!("{} NO Invalid user or password", command_data.tag))
@@ -95,7 +94,7 @@ impl Authenticate<'_> {
                     }
                 } else {
                     {
-                        write_lock.state = State::NotAuthenticated;
+                        self.data.con_state.state = State::NotAuthenticated;
                     };
                     lines
                         .send(format!("{} BAD Invalid arguments", command_data.tag))
@@ -104,7 +103,7 @@ impl Authenticate<'_> {
             }
             Err(e) => {
                 {
-                    write_lock.state = State::NotAuthenticated;
+                    self.data.con_state.state = State::NotAuthenticated;
                 };
                 error!("Error logging in: {}", e);
                 lines
@@ -118,7 +117,7 @@ impl Authenticate<'_> {
 
     #[instrument(skip(self, lines, database, command_data))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         database: &DB,
         command_data: &CommandData<'_>,
@@ -127,7 +126,7 @@ impl Authenticate<'_> {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        if self.data.con_state.read().await.state == State::NotAuthenticated {
+        if self.data.con_state.state == State::NotAuthenticated {
             let args = &command_data.arguments;
             assert!(args.len() == 1);
             if args.len() == 1 {
@@ -135,7 +134,7 @@ impl Authenticate<'_> {
                     debug!("[IMAP] Update state to Authenticating");
                     {
                         let command_data = command_data;
-                        self.data.con_state.write().await.state = State::Authenticating(
+                        self.data.con_state.state = State::Authenticating(
                             AuthenticationMethod::Plain,
                             command_data.tag.to_string(),
                         );

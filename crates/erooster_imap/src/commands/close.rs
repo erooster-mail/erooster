@@ -9,13 +9,13 @@ use tokio::fs;
 use tracing::{debug, instrument};
 
 pub struct Close<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 impl Close<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         storage: &Storage,
         command_data: &CommandData<'_>,
@@ -24,9 +24,7 @@ impl Close<'_> {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        let mut write_lock = self.data.con_state.write().await;
-
-        if let State::Selected(folder, access) = &write_lock.state {
+        if let State::Selected(folder, access) = &self.data.con_state.state {
             if access == &Access::ReadOnly {
                 lines
                     .send(format!("{} NO in read-only mode", command_data.tag))
@@ -34,7 +32,9 @@ impl Close<'_> {
                 return Ok(());
             }
 
-            let username = write_lock
+            let username = self
+                .data
+                .con_state
                 .username
                 .clone()
                 .context("Username missing in internal State")?;
@@ -59,7 +59,7 @@ impl Close<'_> {
             }
 
             {
-                write_lock.state = State::Authenticated;
+                self.data.con_state.state = State::Authenticated;
             };
             lines
                 .send(format!("{} OK CLOSE completed", command_data.tag))
@@ -81,19 +81,17 @@ mod tests {
     use crate::commands::{CommandData, Commands};
     use crate::servers::state::{Access, Connection};
     use futures::{channel::mpsc, StreamExt};
-    use std::sync::Arc;
-    use tokio::sync::RwLock;
 
     #[tokio::test]
     async fn test_select_rw() {
-        let caps = Close {
-            data: &Data {
-                con_state: Arc::new(RwLock::new(Connection {
+        let mut caps = Close {
+            data: &mut Data {
+                con_state: Connection {
                     state: State::Selected("INBOX".to_string(), Access::ReadWrite),
                     secure: true,
                     username: Some(String::from("test")),
                     active_capabilities: vec![],
-                })),
+                },
             },
         };
         let cmd_data = CommandData {
@@ -104,10 +102,10 @@ mod tests {
         let config = erooster_core::get_config(String::from("./config.yml"))
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+        let database = erooster_core::backend::database::get_database(&config)
             .await
             .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok());
@@ -116,14 +114,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_selected_ro() {
-        let caps = Close {
-            data: &Data {
-                con_state: Arc::new(RwLock::new(Connection {
+        let mut caps = Close {
+            data: &mut Data {
+                con_state: Connection {
                     state: State::Selected("INBOX".to_string(), Access::ReadOnly),
                     secure: true,
                     username: Some(String::from("test")),
                     active_capabilities: vec![],
-                })),
+                },
             },
         };
         let cmd_data = CommandData {
@@ -135,10 +133,10 @@ mod tests {
         let config = erooster_core::get_config(String::from("./config.yml"))
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+        let database = erooster_core::backend::database::get_database(&config)
             .await
             .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let storage = erooster_core::backend::storage::get_storage(database, config);
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok());
         assert_eq!(
@@ -149,14 +147,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_no_auth() {
-        let caps = Close {
-            data: &Data {
-                con_state: Arc::new(RwLock::new(Connection {
+        let mut caps = Close {
+            data: &mut Data {
+                con_state: Connection {
                     state: State::NotAuthenticated,
                     secure: true,
                     username: None,
                     active_capabilities: vec![],
-                })),
+                },
             },
         };
         let cmd_data = CommandData {
@@ -168,10 +166,10 @@ mod tests {
         let config = erooster_core::get_config(String::from("./config.yml"))
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+        let database = erooster_core::backend::database::get_database(&config)
             .await
             .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let storage = erooster_core::backend::storage::get_storage(database, config);
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok());
         assert_eq!(rx.next().await, Some(String::from("1 NO invalid state")));

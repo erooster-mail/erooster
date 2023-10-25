@@ -28,8 +28,6 @@ impl Status<'_> {
         let username = self
             .data
             .con_state
-            .read()
-            .await
             .username
             .clone()
             .context("Username missing in internal State")?;

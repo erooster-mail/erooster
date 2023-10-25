@@ -31,7 +31,7 @@ use tracing::{debug, error, info, instrument};
 /// An encrypted imap Server
 pub struct Encrypted;
 
-pub fn get_tls_acceptor(config: &Arc<Config>) -> color_eyre::eyre::Result<TlsAcceptor> {
+pub fn get_tls_acceptor(config: &Config) -> color_eyre::eyre::Result<TlsAcceptor> {
     // Load SSL Keys
     let certs = load_certs(Path::new(&config.tls.cert_path))?;
     let key = load_key(Path::new(&config.tls.key_path))?;
@@ -89,11 +89,7 @@ impl Server for Encrypted {
     /// Returns an error if the cert setup fails
     #[allow(clippy::too_many_lines)]
     #[instrument(skip(config, database, storage))]
-    async fn run(
-        config: Arc<Config>,
-        database: &DB,
-        storage: &Storage,
-    ) -> color_eyre::eyre::Result<()> {
+    async fn run(config: Config, database: &DB, storage: &Storage) -> color_eyre::eyre::Result<()> {
         // Load SSL Keys
         let acceptor = get_tls_acceptor(&config)?;
 
@@ -113,10 +109,10 @@ impl Server for Encrypted {
             info!("[IMAP] Listening on ecrypted Port");
             let stream = TcpListenerStream::new(listener);
 
-            let config = Arc::clone(&config);
             let database = database.clone();
             let storage = storage.clone();
             let acceptor = acceptor.clone();
+            let config = config.clone();
             tokio::spawn(async move {
                 listen(stream, &config, &database, &storage, acceptor.clone()).await;
             });
@@ -129,7 +125,7 @@ impl Server for Encrypted {
 #[instrument(skip(stream, config, database, storage, acceptor))]
 async fn listen(
     mut stream: TcpListenerStream,
-    config: &Arc<Config>,
+    config: &Config,
     database: &DB,
     storage: &Storage,
     acceptor: TlsAcceptor,
@@ -152,7 +148,7 @@ async fn listen(
 
 pub fn listen_tls(
     tcp_stream: TcpStream,
-    config: &Arc<Config>,
+    config: &Config,
     database: &DB,
     storage: &Storage,
     acceptor: TlsAcceptor,
@@ -165,9 +161,9 @@ pub fn listen_tls(
     debug!("[IMAP] Got new TLS peer: {:?}", peer);
 
     // We need to clone these as we move into a new thread
-    let config = Arc::clone(config);
     let database = database.clone();
     let storage = storage.clone();
+    let config = config.clone();
 
     // Start talking with new peer on new thread
     tokio::spawn(async move {
@@ -197,30 +193,24 @@ pub fn listen_tls(
                 // Create our Connection
                 let connection = Connection::new(true);
 
+                let mut data = if let Some(mut data) = upper_data.clone() {
+                    {
+                        data.con_state.secure = true;
+                    };
+                    data
+                } else {
+                    Data {
+                        con_state: connection,
+                    }
+                };
                 // Read lines from the stream
                 while let Some(Ok(line)) = lines_reader.next().await {
-                    let data = if let Some(data) = upper_data.clone() {
-                        {
-                            data.con_state.write().await.secure = true;
-                        };
-                        data
-                    } else {
-                        Data {
-                            con_state: Arc::clone(&connection),
-                        }
-                    };
                     debug!("[IMAP] [{}] Got Command: {}", peer, line);
                     // TODO make sure to handle IDLE different as it needs us to stream lines
 
                     {
                         let response = data
-                            .parse(
-                                &mut lines_sender,
-                                Arc::clone(&config),
-                                &database,
-                                &storage,
-                                line,
-                            )
+                            .parse(&mut lines_sender, &config, &database, &storage, line)
                             .await;
                         match response {
                             Ok(response) => {

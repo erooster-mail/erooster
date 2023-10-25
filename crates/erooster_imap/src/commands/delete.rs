@@ -6,13 +6,13 @@ use tokio::fs;
 use tracing::instrument;
 
 pub struct Delete<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 impl Delete<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         storage: &Storage,
         command_data: &CommandData<'_>,
@@ -29,8 +29,6 @@ impl Delete<'_> {
                 folder.clone(),
                 self.data
                     .con_state
-                    .read()
-                    .await
                     .username
                     .clone()
                     .context("Username missing in internal State")?,

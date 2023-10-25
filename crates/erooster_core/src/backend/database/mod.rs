@@ -2,7 +2,6 @@ use crate::config::Config;
 use color_eyre::Result;
 use secrecy::SecretString;
 use sqlx::Pool;
-use std::sync::Arc;
 use tracing::instrument;
 
 /// Postgres specific database implementation
@@ -15,7 +14,7 @@ pub type DB = postgres::Postgres;
 #[async_trait::async_trait]
 pub trait Database<S: sqlx::Database> {
     /// Creates the new database connection pool
-    async fn new(config: Arc<Config>) -> Result<Self>
+    async fn new(config: &Config) -> Result<Self>
     where
         Self: Sized;
 
@@ -42,6 +41,6 @@ pub trait Database<S: sqlx::Database> {
 /// Get a postgres database connection pool and the higher level wrapper
 #[allow(clippy::module_name_repetitions)]
 #[instrument(skip(config))]
-pub async fn get_database(config: Arc<Config>) -> Result<postgres::Postgres> {
+pub async fn get_database(config: &Config) -> Result<postgres::Postgres> {
     postgres::Postgres::new(config).await
 }

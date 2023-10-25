@@ -15,7 +15,7 @@ use erooster_core::{
     LINE_LIMIT,
 };
 use futures::{SinkExt, StreamExt};
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 use tokio::{net::TcpListener, task::JoinHandle};
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
@@ -27,11 +27,7 @@ pub struct Unencrypted;
 #[async_trait]
 impl Server for Unencrypted {
     #[instrument(skip(config, database, storage))]
-    async fn run(
-        config: Arc<Config>,
-        database: &DB,
-        storage: &Storage,
-    ) -> color_eyre::eyre::Result<()> {
+    async fn run(config: Config, database: &DB, storage: &Storage) -> color_eyre::eyre::Result<()> {
         let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
                 .iter()
@@ -47,11 +43,11 @@ impl Server for Unencrypted {
             info!("[IMAP] Listening on unecrypted Port");
             let stream = TcpListenerStream::new(listener);
 
-            let config = Arc::clone(&config);
             let database = database.clone();
             let storage = storage.clone();
+            let config = config.clone();
             tokio::spawn(async move {
-                listen(stream, Arc::clone(&config), &database, &storage).await;
+                listen(stream, &config, &database, &storage).await;
             });
         }
         Ok(())
@@ -59,19 +55,14 @@ impl Server for Unencrypted {
 }
 
 #[instrument(skip(stream, config, database, storage))]
-async fn listen(
-    mut stream: TcpListenerStream,
-    config: Arc<Config>,
-    database: &DB,
-    storage: &Storage,
-) {
+async fn listen(mut stream: TcpListenerStream, config: &Config, database: &DB, storage: &Storage) {
     while let Some(Ok(tcp_stream)) = stream.next().await {
         let peer = tcp_stream.peer_addr().expect("peer addr to exist");
         debug!("[IMAP] Got new peer: {}", peer);
 
-        let config = Arc::clone(&config);
         let database = database.clone();
         let storage = storage.clone();
+        let config = config.clone();
         let connection: JoinHandle<Result<()>> = tokio::spawn(async move {
             let lines = Framed::new(tcp_stream, LinesCodec::new_with_max_length(LINE_LIMIT));
             let (mut lines_sender, mut lines_reader) = lines.split();
@@ -87,9 +78,7 @@ async fn listen(
             }
             let state = Connection::new(false);
 
-            let data = Data {
-                con_state: Arc::clone(&state),
-            };
+            let mut data = Data { con_state: state };
             let mut do_starttls = false;
             while let Some(Ok(line)) = lines_reader.next().await {
                 debug!("[IMAP] [{}] Got Command: {}", peer, line);
@@ -97,13 +86,7 @@ async fn listen(
                 // TODO make sure to handle IDLE different as it needs us to stream lines
                 // TODO pass lines and make it possible to not need new lines in responds but instead directly use `lines.send`
                 let response = data
-                    .parse(
-                        &mut lines_sender,
-                        Arc::clone(&config),
-                        &database,
-                        &storage,
-                        line,
-                    )
+                    .parse(&mut lines_sender, &config, &database, &storage, line)
                     .await;
 
                 match response {

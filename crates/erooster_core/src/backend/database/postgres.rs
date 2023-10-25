@@ -5,7 +5,6 @@ use once_cell::sync::OnceCell;
 use rand_core::OsRng;
 use secrecy::{ExposeSecret, SecretString};
 use sqlx::{pool::PoolOptions, PgPool};
-use std::sync::Arc;
 use tracing::{debug, debug_span, error, instrument};
 
 /// Postgres specific database implementation
@@ -18,7 +17,7 @@ pub struct Postgres {
 #[async_trait::async_trait]
 impl Database<sqlx::Postgres> for Postgres {
     #[instrument(skip(config))]
-    async fn new(config: Arc<Config>) -> Result<Self> {
+    async fn new(config: &Config) -> Result<Self> {
         static INSTANCE: OnceCell<Postgres> = OnceCell::new();
 
         let pool = INSTANCE.get();

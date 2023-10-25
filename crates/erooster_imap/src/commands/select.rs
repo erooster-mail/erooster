@@ -12,12 +12,12 @@ use std::{
 use tracing::instrument;
 
 pub struct Select<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 #[instrument(skip(data, lines, storage, rw, command_data))]
 async fn select<S, E>(
-    data: &Data,
+    data: &mut Data,
     lines: &mut S,
     storage: &Storage,
     rw: bool,
@@ -28,7 +28,6 @@ where
     S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
 {
     let args = &command_data.arguments;
-    let mut write_lock = data.con_state.write().await;
 
     assert!(args.len() == 1);
     let folder_arg = args.first().expect("server selects a folder");
@@ -39,13 +38,13 @@ where
         Access::ReadOnly
     };
     {
-        write_lock.state = State::Selected(folder.clone(), access);
+        data.con_state.state = State::Selected(folder.clone(), access);
     };
 
     let folder_on_disk = folder_arg;
     let mailbox_path = storage.to_ondisk_path(
         (*folder_on_disk).to_string(),
-        write_lock
+        data.con_state
             .username
             .clone()
             .context("Username missing in internal State")?,
@@ -137,7 +136,7 @@ where
 impl Select<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         storage: &Storage,
         command_data: &CommandData<'_>,
@@ -146,11 +145,8 @@ impl Select<'_> {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        if matches!(self.data.con_state.read().await.state, State::Authenticated)
-            || matches!(
-                self.data.con_state.read().await.state,
-                State::Selected(_, _)
-            )
+        if matches!(self.data.con_state.state, State::Authenticated)
+            || matches!(self.data.con_state.state, State::Selected(_, _))
         {
             select(self.data, lines, storage, true, command_data).await?;
         } else {
@@ -163,13 +159,13 @@ impl Select<'_> {
 }
 
 pub struct Examine<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 impl Examine<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         storage: &Storage,
         command_data: &CommandData<'_>,
@@ -178,11 +174,8 @@ impl Examine<'_> {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        if matches!(self.data.con_state.read().await.state, State::Authenticated)
-            || matches!(
-                self.data.con_state.read().await.state,
-                State::Selected(_, _)
-            )
+        if matches!(self.data.con_state.state, State::Authenticated)
+            || matches!(self.data.con_state.state, State::Selected(_, _))
         {
             select(self.data, lines, storage, false, command_data).await?;
         } else {

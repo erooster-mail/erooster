@@ -46,7 +46,6 @@ use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
 };
-use std::sync::Arc;
 use tracing::instrument;
 
 pub(crate) mod commands;
@@ -68,11 +67,7 @@ pub const CAPABILITY_UNENCRYPTED_HELLO: &str = formatcp!(
 #[async_trait]
 pub trait Server {
     /// Start the server
-    async fn run(
-        config: Arc<Config>,
-        database: &DB,
-        storage: &Storage,
-    ) -> color_eyre::eyre::Result<()>;
+    async fn run(config: Config, database: &DB, storage: &Storage) -> color_eyre::eyre::Result<()>;
 }
 
 /// Starts the imap server
@@ -81,32 +76,24 @@ pub trait Server {
 ///
 /// Returns an error if the server startup fails
 #[instrument(skip(config, database, storage))]
-pub fn start(
-    config: Arc<Config>,
-    database: &DB,
-    storage: &Storage,
-) -> color_eyre::eyre::Result<()> {
+pub fn start(config: Config, database: &DB, storage: &Storage) -> color_eyre::eyre::Result<()> {
     std::fs::create_dir_all(&config.mail.maildir_folders)?;
 
-    let config_clone = Arc::clone(&config);
     let db_clone = database.clone();
     let storage_clone = storage.clone();
+    let config_clone = config.clone();
     tokio::spawn(async move {
-        if let Err(e) = servers::unencrypted::Unencrypted::run(
-            Arc::clone(&config_clone),
-            &db_clone,
-            &storage_clone,
-        )
-        .await
+        if let Err(e) =
+            servers::unencrypted::Unencrypted::run(config_clone, &db_clone, &storage_clone).await
         {
             panic!("Unable to start server: {e:?}");
         }
     });
     let db_clone = database.clone();
+    let config = config.clone();
     let storage_clone = storage.clone();
     tokio::spawn(async move {
-        if let Err(e) =
-            servers::encrypted::Encrypted::run(Arc::clone(&config), &db_clone, &storage_clone).await
+        if let Err(e) = servers::encrypted::Encrypted::run(config, &db_clone, &storage_clone).await
         {
             panic!("Unable to start TLS server: {e:?}");
         }

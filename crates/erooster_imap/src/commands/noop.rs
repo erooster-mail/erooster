@@ -8,13 +8,13 @@ use futures::{Sink, SinkExt};
 use tracing::instrument;
 
 pub struct Noop<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 impl Noop<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         storage: &Storage,
         command_data: &CommandData<'_>,
@@ -24,14 +24,12 @@ impl Noop<'_> {
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         // TODO: return status as suggested in https://www.rfc-editor.org/rfc/rfc9051.html#name-noop-command
-        if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
+        if let State::Selected(folder, _) = &self.data.con_state.state {
             let folder = folder.replace('/', ".");
             let mailbox_path = storage.to_ondisk_path(
                 folder.clone(),
                 self.data
                     .con_state
-                    .read()
-                    .await
                     .username
                     .clone()
                     .context("Username missing in internal State")?,
@@ -52,21 +50,19 @@ mod tests {
     use crate::commands::{CommandData, Commands};
     use crate::servers::state::{Access, Connection, State};
     use futures::{channel::mpsc, StreamExt};
-    use std::sync::Arc;
-    use tokio::sync::RwLock;
 
     #[allow(clippy::unwrap_used)]
     #[tokio::test]
     async fn test_not_selected() {
-        let state = &Data {
-            con_state: Arc::new(RwLock::new(Connection {
+        let state = &mut Data {
+            con_state: Connection {
                 state: State::NotAuthenticated,
                 secure: true,
                 username: None,
                 active_capabilities: vec![],
-            })),
+            },
         };
-        let caps = Noop { data: state };
+        let mut caps = Noop { data: state };
         let cmd_data = CommandData {
             tag: "a1",
             command: Commands::Noop,
@@ -75,10 +71,10 @@ mod tests {
         let config = erooster_core::get_config(String::from("./config.yml"))
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+        let database = erooster_core::backend::database::get_database(&config)
             .await
             .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok());
@@ -88,15 +84,15 @@ mod tests {
     #[allow(clippy::unwrap_used)]
     #[tokio::test]
     async fn test_selected_empty() {
-        let state = &Data {
-            con_state: Arc::new(RwLock::new(Connection {
+        let state = &mut Data {
+            con_state: Connection {
                 state: State::Selected("Meow".to_string(), Access::ReadOnly),
                 secure: true,
                 username: Some("MTRNord".to_string()),
                 active_capabilities: vec![],
-            })),
+            },
         };
-        let caps = Noop { data: state };
+        let mut caps = Noop { data: state };
         let cmd_data = CommandData {
             tag: "a1",
             command: Commands::Noop,
@@ -105,10 +101,10 @@ mod tests {
         let config = erooster_core::get_config(String::from("./config.yml"))
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+        let database = erooster_core::backend::database::get_database(&config)
             .await
             .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok());

@@ -12,7 +12,7 @@ use futures::{Sink, SinkExt};
 use mail_auth::{AuthenticatedMessage, DkimResult, DmarcResult, Resolver};
 use simdutf8::compat::from_utf8;
 use std::io::Write;
-use std::{collections::BTreeMap, path::Path, sync::Arc, time::Duration};
+use std::{collections::BTreeMap, path::Path, time::Duration};
 use time::{macros::format_description, OffsetDateTime};
 use tracing::{debug, instrument};
 use yaque::Sender;
@@ -47,7 +47,7 @@ impl DataCommand<'_> {
     #[instrument(skip(self, config, lines, line, storage))]
     pub async fn receive<S, E>(
         &mut self,
-        config: Arc<Config>,
+        config: &Config,
         lines: &mut S,
         line: &str,
         storage: &Storage,

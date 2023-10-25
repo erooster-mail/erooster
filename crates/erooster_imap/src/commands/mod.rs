@@ -38,8 +38,6 @@ use nom::{
     sequence::{terminated, tuple},
     Finish, IResult,
 };
-use std::sync::Arc;
-use tokio::sync::RwLock;
 use tracing::{debug, error, instrument, warn};
 
 #[cfg(test)]
@@ -70,7 +68,7 @@ mod unsubscribe;
 
 #[derive(Debug, Clone)]
 pub struct Data {
-    pub con_state: Arc<RwLock<Connection>>,
+    pub con_state: Connection,
 }
 
 #[derive(Debug)]
@@ -221,9 +219,9 @@ impl Data {
     #[allow(clippy::too_many_lines)]
     #[instrument(skip(self, lines, config, database, storage, line))]
     pub async fn parse<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
-        config: Arc<Config>,
+        config: &Config,
         database: &DB,
         storage: &Storage,
         line: String,
@@ -232,11 +230,10 @@ impl Data {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        debug!("Current state: {:?}", self.con_state.read().await.state);
+        debug!("Current state: {:?}", self.con_state.state);
 
-        let con_clone = Arc::clone(&self.con_state);
-        let state = { con_clone.read().await.state.clone() };
-        let secure = { con_clone.read().await.secure };
+        let state = { self.con_state.state.clone() };
+        let secure = { self.con_state.secure };
         if let State::Authenticating(AuthenticationMethod::Plain, tag) = state {
             debug!("Second auth stage");
             let command_data = CommandData {
@@ -261,7 +258,7 @@ impl Data {
             return Ok(Response::Continue);
         } else if let State::GotAppendData = state {
             if line == ")" {
-                con_clone.write().await.state = State::Authenticated;
+                self.con_state.state = State::Authenticated;
                 // We are done here
                 return Ok(Response::Continue);
             }

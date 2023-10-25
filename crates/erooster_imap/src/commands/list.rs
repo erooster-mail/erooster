@@ -8,15 +8,15 @@ use erooster_core::{
     config::Config,
 };
 use futures::{Sink, SinkExt};
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 use tracing::{debug, instrument};
 
 #[allow(clippy::too_many_lines)]
 #[instrument(skip(data, lines, config, storage, command_data))]
 pub async fn basic<S, E>(
-    data: &Data,
+    data: &mut Data,
     lines: &mut S,
-    config: Arc<Config>,
+    config: &Config,
     storage: &Storage,
     command_data: &CommandData<'_>,
 ) -> color_eyre::eyre::Result<()>
@@ -24,7 +24,7 @@ where
     E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
     S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
 {
-    if matches!(data.con_state.read().await.state, State::NotAuthenticated) {
+    if matches!(data.con_state.state, State::NotAuthenticated) {
         lines
             .send(format!("{} BAD Not Authenticated", command_data.tag))
             .await?;
@@ -53,8 +53,6 @@ where
     } else if mailbox_patterns.ends_with('*') {
         let mut folder = Path::new(&config.mail.maildir_folders).join(
             data.con_state
-                .read()
-                .await
                 .username
                 .clone()
                 .context("Username missing in internal State")?,
@@ -103,8 +101,6 @@ where
     } else if mailbox_patterns.ends_with('%') {
         let mut folder = Path::new(&config.mail.maildir_folders).join(
             data.con_state
-                .read()
-                .await
                 .username
                 .clone()
                 .context("Username missing in internal State")?,
@@ -167,8 +163,6 @@ where
     } else {
         let mut folder = Path::new(&config.mail.maildir_folders).join(
             data.con_state
-                .read()
-                .await
                 .username
                 .clone()
                 .context("Username missing in internal State")?,
@@ -222,7 +216,7 @@ where
     Ok(())
 }
 pub struct List<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 impl List<'_> {
@@ -231,7 +225,7 @@ impl List<'_> {
     // TODO setup
     #[instrument(skip(self, lines, command_data))]
     pub async fn extended<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
@@ -240,7 +234,7 @@ impl List<'_> {
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         debug!("extended");
-        if self.data.con_state.read().await.state == State::NotAuthenticated {
+        if self.data.con_state.state == State::NotAuthenticated {
             lines
                 .send(format!("{} BAD Not Authenticated", command_data.tag))
                 .await?;
@@ -266,9 +260,9 @@ impl List<'_> {
 impl List<'_> {
     #[instrument(skip(self, lines, config, storage, command_data))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
-        config: Arc<Config>,
+        config: &Config,
         storage: &Storage,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
@@ -295,15 +289,15 @@ impl List<'_> {
 }
 
 pub struct LSub<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 impl LSub<'_> {
     #[instrument(skip(self, lines, config, storage, command_data))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
-        config: Arc<Config>,
+        config: &Config,
         storage: &Storage,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>

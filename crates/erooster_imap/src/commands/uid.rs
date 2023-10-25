@@ -6,13 +6,13 @@ use tracing::instrument;
 use super::search::Search;
 
 pub struct Uid<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 impl Uid<'_> {
     #[instrument(skip(self, lines, command_data, storage))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         command_data: &CommandData<'_>,
         storage: &Storage,

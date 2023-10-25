@@ -45,7 +45,7 @@ use owo_colors::{
 use secrecy::SecretString;
 use std::io::Write;
 use std::time::Duration;
-use std::{io, process::exit, sync::Arc};
+use std::{io, process::exit};
 use tracing::{error, warn};
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None, propagate_version = true)]
@@ -105,14 +105,14 @@ async fn main() -> Result<()> {
             status();
         }
         Commands::Register { email, password } => {
-            register(email, password, config).await;
+            register(email, password, &config).await;
         }
         Commands::ChangePassword {
             email,
             current_password,
             new_password,
         } => {
-            change_password(email, current_password, new_password, config).await;
+            change_password(email, current_password, new_password, &config).await;
         }
     }
     Ok(())
@@ -197,7 +197,7 @@ fn status() {
     }
 }
 
-async fn register(username: Option<String>, password: Option<SecretString>, config: Arc<Config>) {
+async fn register(username: Option<String>, password: Option<SecretString>, config: &Config) {
     let spinner_style = ProgressStyle::default_spinner()
         .template("{spinner} {wide_msg}")
         .expect("template working")
@@ -236,7 +236,7 @@ async fn register(username: Option<String>, password: Option<SecretString>, conf
         pb.enable_steady_tick(Duration::from_millis(100));
         clearscreen::clear().expect("failed to clear screen");
         pb.set_message("Adding the new user...".fg::<BrightGreen>().to_string());
-        let result = actual_register(username, password, Arc::clone(&config)).await;
+        let result = actual_register(username, password, config).await;
 
         clearscreen::clear().expect("failed to clear screen");
         if let Err(error) = result {
@@ -280,11 +280,7 @@ async fn register(username: Option<String>, password: Option<SecretString>, conf
     }
 }
 
-async fn actual_register(
-    username: String,
-    password: SecretString,
-    config: Arc<Config>,
-) -> Result<()> {
+async fn actual_register(username: String, password: SecretString, config: &Config) -> Result<()> {
     let database = get_database(config).await?;
     database.add_user(&username.to_lowercase()).await?;
     database
@@ -298,7 +294,7 @@ async fn change_password(
     username: Option<String>,
     current_password: Option<SecretString>,
     new_password: Option<SecretString>,
-    config: Arc<Config>,
+    config: &Config,
 ) {
     let spinner_style = ProgressStyle::default_spinner()
         .template("{spinner} {wide_msg}")
@@ -340,13 +336,7 @@ async fn change_password(
         );
 
         // TODO repromt as needed
-        if !verify_password(
-            username.to_lowercase(),
-            current_password,
-            Arc::clone(&config),
-        )
-        .await
-        {
+        if !verify_password(username.to_lowercase(), current_password, config).await {
             error!(
                 "{}",
                 "The password was incorrect. Please try again".fg::<BrightRed>()
@@ -370,7 +360,7 @@ async fn change_password(
                 .fg::<BrightGreen>()
                 .to_string(),
         );
-        let result = actual_change_password(username, new_password, Arc::clone(&config)).await;
+        let result = actual_change_password(username, new_password, config).await;
 
         clearscreen::clear().expect("failed to clear screen");
         if let Err(error) = result {
@@ -399,7 +389,7 @@ async fn change_password(
 
         let username = username.expect("Username is not empty");
         let current_password = current_password.expect("Password is not empty");
-        if !verify_password(username.clone(), current_password, Arc::clone(&config)).await {
+        if !verify_password(username.clone(), current_password, config).await {
             error!(
                 "{}",
                 "The password was incorrect. Please try again".fg::<BrightRed>()
@@ -429,7 +419,7 @@ async fn change_password(
 async fn verify_password(
     username: String,
     current_password: SecretString,
-    config: Arc<Config>,
+    config: &Config,
 ) -> bool {
     match get_database(config).await {
         Ok(database) => database.verify_user(&username, current_password).await,
@@ -443,7 +433,7 @@ async fn verify_password(
 async fn actual_change_password(
     username: String,
     new_password: SecretString,
-    config: Arc<Config>,
+    config: &Config,
 ) -> Result<()> {
     let database = get_database(config).await?;
     database

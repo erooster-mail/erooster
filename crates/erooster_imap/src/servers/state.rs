@@ -1,9 +1,7 @@
 use crate::commands::{auth::AuthenticationMethod, parsers::DateTime};
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
 /// State of the connection session between us and the Client
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Connection {
     pub state: State,
     pub secure: bool,
@@ -12,13 +10,13 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(secure: bool) -> Arc<RwLock<Self>> {
-        Arc::new(RwLock::new(Connection {
+    pub const fn new(secure: bool) -> Self {
+        Connection {
             state: State::NotAuthenticated,
             secure,
             username: None,
             active_capabilities: vec![],
-        }))
+        }
     }
 }
 

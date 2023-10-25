@@ -5,12 +5,12 @@ use futures::{Sink, SinkExt};
 use tracing::{error, instrument};
 
 pub struct Create<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 impl Create<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         storage: &Storage,
         command_data: &CommandData<'_>,
@@ -28,8 +28,6 @@ impl Create<'_> {
                 folder.clone(),
                 self.data
                     .con_state
-                    .read()
-                    .await
                     .username
                     .clone()
                     .context("Username missing in internal State")?,

@@ -10,17 +10,17 @@ use erooster_core::{
 use futures::{Sink, SinkExt};
 use nom::{error::convert_error, Finish};
 use std::io::Write;
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 use tracing::{debug, error, instrument};
 
 pub struct Append<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 impl Append<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         storage: &Storage,
         command_data: &CommandData<'_>,
@@ -29,9 +29,8 @@ impl Append<'_> {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        let mut write_lock = self.data.con_state.write().await;
-        if matches!(write_lock.state, State::Authenticated)
-            || matches!(write_lock.state, State::Selected(_, _))
+        if matches!(self.data.con_state.state, State::Authenticated)
+            || matches!(self.data.con_state.state, State::Selected(_, _))
         {
             debug!("[Append] User is authenticated");
             debug!(
@@ -48,7 +47,8 @@ impl Append<'_> {
             debug!("[Append] User wants to append to folder: {}", folder);
             let mailbox_path = storage.to_ondisk_path(
                 folder.clone(),
-                write_lock
+                self.data
+                    .con_state
                     .username
                     .clone()
                     .context("Username missing in internal State")?,
@@ -82,7 +82,7 @@ impl Append<'_> {
             match append_arguments(append_args_borrow).finish() {
                 Ok((left, (flags, datetime, literal))) => {
                     debug!("[Append] leftover: {}", left);
-                    write_lock.state = State::Appending(AppendingState {
+                    self.data.con_state.state = State::Appending(AppendingState {
                         folder: folder.to_string(),
                         flags: flags.map(|x| x.iter().map(ToString::to_string).collect::<Vec<_>>()),
                         datetime,
@@ -117,23 +117,24 @@ impl Append<'_> {
 
     #[instrument(skip(self, lines, storage, config, append_data))]
     pub async fn append<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         storage: &Storage,
         append_data: &str,
-        config: Arc<Config>,
+        config: &Config,
         tag: String,
     ) -> color_eyre::eyre::Result<()>
     where
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        let mut write_lock = self.data.con_state.write().await;
-        let username = write_lock
+        let username = self
+            .data
+            .con_state
             .username
             .clone()
             .context("Username missing in internal State")?;
-        if let State::Appending(state) = &mut write_lock.state {
+        if let State::Appending(state) = &mut self.data.con_state.state {
             if let Some(buffer) = &mut state.data {
                 write!(buffer, "{append_data}\r\n")?;
                 debug!("Buffer length: {}", buffer.len());
@@ -156,7 +157,7 @@ impl Append<'_> {
                         )
                         .await?;
                     debug!("Stored message via append: {}", message_id);
-                    write_lock.state = State::GotAppendData;
+                    self.data.con_state.state = State::GotAppendData;
                     lines.send(format!("{tag} OK APPEND completed")).await?;
                 }
             } else {
@@ -178,20 +179,18 @@ mod tests {
     use crate::commands::{CommandData, Commands};
     use crate::servers::state::{Access, Connection};
     use futures::{channel::mpsc, StreamExt};
-    use std::sync::Arc;
-    use tokio::sync::RwLock;
 
     #[allow(clippy::unwrap_used)]
     #[tokio::test]
     async fn test_not_authenticated_state() {
-        let caps = Append {
-            data: &Data {
-                con_state: Arc::new(RwLock::new(Connection {
+        let mut caps = Append {
+            data: &mut Data {
+                con_state: Connection {
                     state: State::NotAuthenticated,
                     secure: true,
                     username: None,
                     active_capabilities: vec![],
-                })),
+                },
             },
         };
         let cmd_data = CommandData {
@@ -202,10 +201,10 @@ mod tests {
         let config = erooster_core::get_config(String::from("./config.yml"))
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+        let database = erooster_core::backend::database::get_database(&config)
             .await
             .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok());
@@ -215,14 +214,14 @@ mod tests {
     #[allow(clippy::unwrap_used)]
     #[tokio::test]
     async fn test_not_enough_arguments() {
-        let caps = Append {
-            data: &Data {
-                con_state: Arc::new(RwLock::new(Connection {
+        let mut caps = Append {
+            data: &mut Data {
+                con_state: Connection {
                     state: State::Selected(String::from("INBOX"), Access::ReadOnly),
                     secure: true,
                     username: Some(String::from("meow")),
                     active_capabilities: vec![],
-                })),
+                },
             },
         };
         let cmd_data = CommandData {
@@ -233,10 +232,10 @@ mod tests {
         let config = erooster_core::get_config(String::from("./config.yml"))
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+        let database = erooster_core::backend::database::get_database(&config)
             .await
             .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok());
@@ -249,14 +248,14 @@ mod tests {
     #[allow(clippy::unwrap_used)]
     #[tokio::test]
     async fn test_read_only_arguments() {
-        let caps = Append {
-            data: &Data {
-                con_state: Arc::new(RwLock::new(Connection {
+        let mut caps = Append {
+            data: &mut Data {
+                con_state: Connection {
                     state: State::Selected(String::from("INBOX"), Access::ReadOnly),
                     secure: true,
                     username: Some(String::from("meow")),
                     active_capabilities: vec![],
-                })),
+                },
             },
         };
         let cmd_data = CommandData {
@@ -268,10 +267,10 @@ mod tests {
         let config = erooster_core::get_config(String::from("./config.yml"))
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+        let database = erooster_core::backend::database::get_database(&config)
             .await
             .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok());
@@ -285,14 +284,14 @@ mod tests {
     #[allow(clippy::too_many_lines)]
     #[tokio::test]
     async fn test_append() {
-        let caps = Append {
-            data: &Data {
-                con_state: Arc::new(RwLock::new(Connection {
+        let mut caps = Append {
+            data: &mut Data {
+                con_state: Connection {
                     state: State::Selected(String::from("INBOX"), Access::ReadOnly),
                     secure: true,
                     username: Some(String::from("meow")),
                     active_capabilities: vec![],
-                })),
+                },
             },
         };
         let cmd_data = CommandData {
@@ -304,10 +303,10 @@ mod tests {
         let config = erooster_core::get_config(String::from("./config.yml"))
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(Arc::clone(&config))
+        let database = erooster_core::backend::database::get_database(&config)
             .await
             .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, Arc::clone(&config));
+        let storage = erooster_core::backend::storage::get_storage(database, config.clone());
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok());
@@ -323,7 +322,7 @@ mod tests {
                 &mut tx,
                 &storage,
                 "Date: Mon, 7 Feb 1994 21:52:25 -0800 (PST)",
-                Arc::clone(&config),
+                &config,
                 cmd_data.tag.to_string(),
             )
             .await;
@@ -333,7 +332,7 @@ mod tests {
                 &mut tx,
                 &storage,
                 "From: Fred Foobar <foobar@Blurdybloop.example>",
-                Arc::clone(&config),
+                &config,
                 cmd_data.tag.to_string(),
             )
             .await;
@@ -343,7 +342,7 @@ mod tests {
                 &mut tx,
                 &storage,
                 "Subject: afternoon meeting",
-                Arc::clone(&config),
+                &config,
                 cmd_data.tag.to_string(),
             )
             .await;
@@ -353,7 +352,7 @@ mod tests {
                 &mut tx,
                 &storage,
                 "To: mooch@owatagu.siam.edu.example",
-                Arc::clone(&config),
+                &config,
                 cmd_data.tag.to_string(),
             )
             .await;
@@ -363,7 +362,7 @@ mod tests {
                 &mut tx,
                 &storage,
                 "Message-Id: <B27397-0100000@Blurdybloop.example>",
-                Arc::clone(&config),
+                &config,
                 cmd_data.tag.to_string(),
             )
             .await;
@@ -373,7 +372,7 @@ mod tests {
                 &mut tx,
                 &storage,
                 "MIME-Version: 1.0",
-                Arc::clone(&config),
+                &config,
                 cmd_data.tag.to_string(),
             )
             .await;
@@ -383,19 +382,13 @@ mod tests {
                 &mut tx,
                 &storage,
                 "Content-Type: TEXT/PLAIN; CHARSET=US-ASCII",
-                Arc::clone(&config),
+                &config,
                 cmd_data.tag.to_string(),
             )
             .await;
         assert!(res.is_ok());
         let res = caps
-            .append(
-                &mut tx,
-                &storage,
-                "",
-                Arc::clone(&config),
-                cmd_data.tag.to_string(),
-            )
+            .append(&mut tx, &storage, "", &config, cmd_data.tag.to_string())
             .await;
         assert!(res.is_ok());
         let res = caps
@@ -403,19 +396,13 @@ mod tests {
                 &mut tx,
                 &storage,
                 "Hello Joe, do you think we can meet at 3:30 tomorrow?",
-                Arc::clone(&config),
+                &config,
                 cmd_data.tag.to_string(),
             )
             .await;
         assert!(res.is_ok());
         let res = caps
-            .append(
-                &mut tx,
-                &storage,
-                "",
-                Arc::clone(&config),
-                cmd_data.tag.to_string(),
-            )
+            .append(&mut tx, &storage, "", &config, cmd_data.tag.to_string())
             .await;
         assert!(res.is_ok());
         assert_eq!(

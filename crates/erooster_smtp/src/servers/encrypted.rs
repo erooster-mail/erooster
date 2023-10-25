@@ -60,7 +60,7 @@ fn load_key(path: &Path) -> color_eyre::eyre::Result<PrivateKey> {
     color_eyre::eyre::bail!("no keys found in {:?} (encrypted keys not supported)", path)
 }
 
-pub fn get_tls_acceptor(config: &Arc<Config>) -> color_eyre::eyre::Result<TlsAcceptor> {
+pub fn get_tls_acceptor(config: &Config) -> color_eyre::eyre::Result<TlsAcceptor> {
     // Load SSL Keys
     let certs = load_certs(Path::new(&config.tls.cert_path))?;
     let key = load_key(Path::new(&config.tls.key_path))?;
@@ -84,7 +84,7 @@ impl Encrypted {
     /// Returns an error if the cert setup fails
     #[instrument(skip(config, database, storage))]
     pub(crate) async fn run(
-        config: Arc<Config>,
+        config: Config,
         database: &DB,
         storage: &Storage,
     ) -> color_eyre::eyre::Result<()> {
@@ -104,19 +104,12 @@ impl Encrypted {
             let listener = TcpListener::bind(addr).await?;
             info!("[SMTP] Listening on ecrypted Port");
             let stream = TcpListenerStream::new(listener);
-            let config = Arc::clone(&config);
             let database = database.clone();
             let storage = storage.clone();
             let acceptor = acceptor.clone();
+            let config = config.clone();
             tokio::spawn(async move {
-                listen(
-                    stream,
-                    Arc::clone(&config),
-                    &database,
-                    &storage,
-                    acceptor.clone(),
-                )
-                .await;
+                listen(stream, &config, &database, &storage, acceptor.clone()).await;
             });
         }
 
@@ -127,7 +120,7 @@ impl Encrypted {
 #[instrument(skip(stream, config, database, storage, acceptor))]
 async fn listen(
     mut stream: TcpListenerStream,
-    config: Arc<Config>,
+    config: &Config,
     database: &DB,
     storage: &Storage,
     acceptor: TlsAcceptor,
@@ -136,7 +129,7 @@ async fn listen(
     while let Some(Ok(tcp_stream)) = stream.next().await {
         if let Err(e) = listen_tls(
             tcp_stream,
-            &config,
+            config,
             database,
             storage,
             acceptor.clone(),
@@ -150,7 +143,7 @@ async fn listen(
 
 pub fn listen_tls(
     tcp_stream: TcpStream,
-    config: &Arc<Config>,
+    config: &Config,
     database: &DB,
     storage: &Storage,
     acceptor: TlsAcceptor,
@@ -163,9 +156,9 @@ pub fn listen_tls(
     debug!("[SMTP] Got new TLS peer: {:?}", peer);
 
     // We need to clone these as we move into a new thread
-    let config = Arc::clone(config);
     let database = database.clone();
     let storage = storage.clone();
+    let config = config.clone();
 
     // Start talking with new peer on new thread
     tokio::spawn(async move {
@@ -186,8 +179,7 @@ pub fn listen_tls(
                 let connection = Connection::new(true, peer.ip().to_string());
                 if !starttls {
                     // Greet the client with the capabilities we provide
-                    if let Err(e) = send_capabilities(Arc::clone(&config), &mut lines_sender).await
-                    {
+                    if let Err(e) = send_capabilities(&config, &mut lines_sender).await {
                         error!(
                             "Unable to send greeting to client. Closing connection. Error: {}",
                             e
@@ -212,13 +204,7 @@ pub fn listen_tls(
 
                     {
                         let response = data
-                            .parse(
-                                &mut lines_sender,
-                                Arc::clone(&config),
-                                &database,
-                                &storage,
-                                line,
-                            )
+                            .parse(&mut lines_sender, &config, &database, &storage, line)
                             .await;
                         match response {
                             Ok(response) => {

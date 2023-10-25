@@ -32,7 +32,7 @@
     clippy::panic_in_result_fn
 )]
 
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 
 use base64::{
     alphabet,
@@ -55,13 +55,13 @@ pub mod config;
 
 /// Returns the config struct from the provided location or defaults
 #[instrument(skip(config_path))]
-pub async fn get_config(config_path: String) -> Result<Arc<config::Config>> {
+pub async fn get_config(config_path: String) -> Result<config::Config> {
     let config = if Path::new(&config_path).exists() {
-        Arc::new(config::Config::load(config_path).await?)
+        config::Config::load(config_path).await?
     } else if Path::new("/etc/erooster/config.yml").exists() {
-        Arc::new(config::Config::load("/etc/erooster/config.yml").await?)
+        config::Config::load("/etc/erooster/config.yml").await?
     } else if Path::new("/etc/erooster/config.yaml").exists() {
-        Arc::new(config::Config::load("/etc/erooster/config.yaml").await?)
+        config::Config::load("/etc/erooster/config.yaml").await?
     } else {
         error!("No config file found. Please follow the readme.");
         color_eyre::eyre::bail!("No config file found");

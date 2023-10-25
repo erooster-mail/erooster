@@ -28,8 +28,6 @@ impl Unsubscribe<'_> {
                 folder.clone(),
                 self.data
                     .con_state
-                    .read()
-                    .await
                     .username
                     .clone()
                     .context("Username missing in internal State")?,

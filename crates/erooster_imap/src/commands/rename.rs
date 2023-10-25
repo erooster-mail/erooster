@@ -6,13 +6,13 @@ use tokio::fs;
 use tracing::instrument;
 
 pub struct Rename<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 impl Rename<'_> {
     #[instrument(skip(self, lines, command_data, storage))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         command_data: &CommandData<'_>,
         storage: &Storage,
@@ -28,8 +28,6 @@ impl Rename<'_> {
             old_folder.clone(),
             self.data
                 .con_state
-                .read()
-                .await
                 .username
                 .clone()
                 .context("Username missing in internal State")?,
@@ -39,8 +37,6 @@ impl Rename<'_> {
             new_folder.clone(),
             self.data
                 .con_state
-                .read()
-                .await
                 .username
                 .clone()
                 .context("Username missing in internal State")?,

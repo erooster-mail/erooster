@@ -12,13 +12,13 @@ use tracing::{debug, error, instrument};
 use super::parsers::{parse_search_date, SearchProgram, SearchReturnOption};
 
 pub struct Search<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 impl Search<'_> {
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         storage: &Storage,
         command_data: &CommandData<'_>,
@@ -28,13 +28,11 @@ impl Search<'_> {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
+        if let State::Selected(folder, _) = &self.data.con_state.state {
             let folder = folder.replace('/', ".");
             let username = self
                 .data
                 .con_state
-                .read()
-                .await
                 .username
                 .clone()
                 .context("Username missing in internal State")?;
@@ -240,7 +238,7 @@ impl Search<'_> {
                 .await?;
             error!(
                 "State was {:#?} instead of selected",
-                self.data.con_state.read().await.state
+                self.data.con_state.state
             );
             lines.flush().await?;
         }

@@ -27,13 +27,11 @@ impl Store<'_> {
         let arguments = &command_data.arguments;
         assert!(arguments.len() >= 2 + offset);
         if arguments.len() >= 2 + offset {
-            if let State::Selected(folder, _) = &self.data.con_state.read().await.state {
+            if let State::Selected(folder, _) = &self.data.con_state.state {
                 let folder = folder.replace('/', ".");
                 let username = self
                     .data
                     .con_state
-                    .read()
-                    .await
                     .username
                     .clone()
                     .context("Username missing in internal State")?;

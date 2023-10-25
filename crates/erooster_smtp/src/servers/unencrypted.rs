@@ -14,7 +14,7 @@ use erooster_core::{
     LINE_LIMIT,
 };
 use futures::{SinkExt, StreamExt};
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 use tokio::{net::TcpListener, task::JoinHandle};
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::codec::Framed;
@@ -29,7 +29,7 @@ impl Unencrypted {
     #[allow(clippy::missing_errors_doc)]
     #[instrument(skip(config, database, storage))]
     pub async fn run(
-        config: Arc<Config>,
+        config: Config,
         database: &DB,
         storage: &Storage,
     ) -> color_eyre::eyre::Result<()> {
@@ -49,11 +49,11 @@ impl Unencrypted {
             info!("[SMTP] Listening on unecrypted Port");
             let stream = TcpListenerStream::new(listener);
 
-            let config = Arc::clone(&config);
             let database = database.clone();
             let storage = storage.clone();
+            let config = config.clone();
             tokio::spawn(async move {
-                listen(stream, Arc::clone(&config), &database, &storage).await;
+                listen(stream, &config, &database, &storage).await;
             });
         }
 
@@ -62,19 +62,14 @@ impl Unencrypted {
 }
 
 #[allow(clippy::too_many_lines)]
-async fn listen(
-    mut stream: TcpListenerStream,
-    config: Arc<Config>,
-    database: &DB,
-    storage: &Storage,
-) {
+async fn listen(mut stream: TcpListenerStream, config: &Config, database: &DB, storage: &Storage) {
     while let Some(Ok(tcp_stream)) = stream.next().await {
         let peer = tcp_stream.peer_addr().expect("[SMTP] peer addr to exist");
         debug!("[SMTP] Got new peer: {}", peer);
 
-        let config = Arc::clone(&config);
         let database = database.clone();
         let storage = storage.clone();
+        let config = config.clone();
         let connection: JoinHandle<Result<()>> = tokio::spawn(async move {
             let lines = Framed::new(tcp_stream, LinesCodec::new_with_max_length(LINE_LIMIT));
             let (mut lines_sender, mut lines_reader) = lines.split();
@@ -82,7 +77,7 @@ async fn listen(
             let state = Connection::new(false, peer.ip().to_string());
 
             // Greet the client with the capabilities we provide
-            send_capabilities(Arc::clone(&config), &mut lines_sender)
+            send_capabilities(&config, &mut lines_sender)
                 .await
                 .context("Unable to send greeting to client. Closing connection.")?;
 
@@ -95,13 +90,7 @@ async fn listen(
                 // TODO make sure to handle IDLE different as it needs us to stream lines
                 // TODO pass lines and make it possible to not need new lines in responds but instead directly use `lines.send`
                 let response = data
-                    .parse(
-                        &mut lines_sender,
-                        Arc::clone(&config),
-                        &database,
-                        &storage,
-                        line,
-                    )
+                    .parse(&mut lines_sender, &config, &database, &storage, line)
                     .await;
 
                 match response {

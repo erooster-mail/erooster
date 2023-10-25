@@ -45,7 +45,7 @@ use tracing::{error, info};
 
 /// Starts the webserver used for the admin page and metrics
 #[tracing::instrument(skip(config))]
-pub async fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
+pub async fn start(config: &Config) -> color_eyre::eyre::Result<()> {
     let metrics_middleware =
         axum_opentelemetry_middleware::RecorderMiddlewareBuilder::new(env!("CARGO_PKG_NAME"));
     let metrics_middleware = metrics_middleware.build();
@@ -60,10 +60,9 @@ pub async fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
         vec![format!("0.0.0.0:{}", config.webserver.port).parse()?]
     };
     for addr in addrs {
-        let config = Arc::clone(&config);
+        let config = config.clone();
         let metrics_middleware = metrics_middleware.clone();
         tokio::spawn(async move {
-            let config = Arc::clone(&config);
             let app = Router::new()
                 .route("/", get(handler))
                 .route(
@@ -74,7 +73,7 @@ pub async fn start(config: Arc<Config>) -> color_eyre::eyre::Result<()> {
                     "/metrics",
                     get(axum_opentelemetry_middleware::metrics_endpoint),
                 )
-                .layer(Extension(Arc::clone(&config)))
+                .layer(Extension(Arc::new(config.clone())))
                 .layer(metrics_middleware.clone())
                 .layer(TraceLayer::new_for_http());
 

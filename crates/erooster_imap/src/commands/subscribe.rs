@@ -28,7 +28,6 @@ impl Subscribe<'_> {
                 folder.clone(),
                 self.data
                     .con_state
-           
                     .username
                     .clone()
                     .context("Username missing in internal State")?,

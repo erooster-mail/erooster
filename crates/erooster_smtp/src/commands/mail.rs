@@ -5,13 +5,13 @@ use mail_auth::{Resolver, SpfResult};
 use tracing::{error, instrument};
 
 pub struct Mail<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 impl Mail<'_> {
     #[instrument(skip(self, lines, command_data))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         hostname: &str,
         lines: &mut S,
         command_data: &CommandData<'_>,
@@ -28,13 +28,12 @@ impl Mail<'_> {
             Ok(args) => {
                 // Create a resolver using Quad9 DNS
                 let resolver = Resolver::new_quad9_tls()?;
-                let mut write_lock = self.data.con_state.write().await;
                 for sender in &args {
                     // Verify MAIL-FROM identity
                     let result = resolver
                         .verify_spf_sender(
-                            write_lock.peer_addr.parse()?,
-                            write_lock.ehlo.as_ref().context("Missing ehlo")?,
+                            self.data.con_state.peer_addr.parse()?,
+                            self.data.con_state.ehlo.as_ref().context("Missing ehlo")?,
                             hostname,
                             sender,
                         )
@@ -60,7 +59,7 @@ impl Mail<'_> {
                 }
                 let senders: Vec<_> = args.iter().map(ToString::to_string).collect();
                 {
-                    write_lock.sender = Some(senders[0].clone());
+                    self.data.con_state.sender = Some(senders[0].clone());
                 };
                 lines
                     .send(format!(

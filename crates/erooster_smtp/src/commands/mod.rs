@@ -20,7 +20,6 @@ use nom::{
     Finish, IResult,
 };
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use tracing::{debug, error, instrument, warn};
 
 #[cfg(test)]
@@ -38,7 +37,7 @@ mod rset;
 
 #[derive(Debug, Clone)]
 pub struct Data {
-    pub con_state: Arc<RwLock<Connection>>,
+    pub con_state: Connection,
 }
 
 #[derive(Debug)]
@@ -143,7 +142,7 @@ impl Data {
     #[instrument(skip(self, lines, config, database, storage, line))]
     #[allow(clippy::too_many_lines)]
     pub async fn parse<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         config: Arc<Config>,
         database: &DB,
@@ -154,11 +153,10 @@ impl Data {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        debug!("Current state: {:?}", self.con_state.read().await.state);
+        debug!("Current state: {:?}", self.con_state.state);
         debug!("Current request: {}", line);
 
-        let con_clone = Arc::clone(&self.con_state);
-        let state = { con_clone.read().await.state.clone() };
+        let state = { self.con_state.state.clone() };
         if matches!(state, State::ReceivingData(_)) {
             DataCommand { data: self }
                 .receive(config, lines, &line, storage)

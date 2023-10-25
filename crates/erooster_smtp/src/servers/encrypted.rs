@@ -196,18 +196,18 @@ pub fn listen_tls(
                     }
                 }
 
+                let mut data = if let Some(mut data) = upper_data.clone() {
+                    {
+                        data.con_state.secure = true;
+                    };
+                    data
+                } else {
+                    Data {
+                        con_state: connection,
+                    }
+                };
                 // Read lines from the stream
                 while let Some(Ok(line)) = lines_reader.next().await {
-                    let data = if let Some(data) = upper_data.clone() {
-                        {
-                            data.con_state.write().await.secure = true;
-                        };
-                        data
-                    } else {
-                        Data {
-                            con_state: Arc::clone(&connection),
-                        }
-                    };
                     debug!("[SMTP][TLS] [{}] Got Command: {}", peer, line);
 
                     {

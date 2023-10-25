@@ -86,9 +86,7 @@ async fn listen(
                 .await
                 .context("Unable to send greeting to client. Closing connection.")?;
 
-            let data = Data {
-                con_state: Arc::clone(&state),
-            };
+            let mut data = Data { con_state: state };
 
             let mut do_starttls = false;
             while let Some(Ok(line)) = lines_reader.next().await {

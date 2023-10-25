@@ -14,13 +14,13 @@ use secrecy::{ExposeSecret, SecretString, SecretVec};
 use simdutf8::compat::from_utf8;
 use tracing::{debug, error, instrument};
 pub struct Auth<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 impl Auth<'_> {
     #[instrument(skip(self, lines, database, command_data))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         database: &DB,
         command_data: &CommandData<'_>,
@@ -40,8 +40,7 @@ impl Auth<'_> {
             }
             if command_data.arguments[0] == "LOGIN" {
                 {
-                    self.data.con_state.write().await.state =
-                        State::Authenticating(AuthState::Username);
+                    self.data.con_state.state = State::Authenticating(AuthState::Username);
                 };
                 lines.send(String::from("334 VXNlcm5hbWU6")).await?;
             } else if command_data.arguments[0] == "PLAIN" {
@@ -50,8 +49,7 @@ impl Auth<'_> {
                         .await?;
                 } else {
                     {
-                        self.data.con_state.write().await.state =
-                            State::Authenticating(AuthState::Plain);
+                        self.data.con_state.state = State::Authenticating(AuthState::Plain);
                     };
                     lines.send(String::from("+ \"\"")).await?;
                 }
@@ -71,7 +69,11 @@ impl Auth<'_> {
     }
 
     #[instrument(skip(self, lines, line))]
-    pub async fn username<S, E>(&self, lines: &mut S, line: &str) -> color_eyre::eyre::Result<()>
+    pub async fn username<S, E>(
+        &mut self,
+        lines: &mut S,
+        line: &str,
+    ) -> color_eyre::eyre::Result<()>
     where
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
@@ -81,7 +83,7 @@ impl Auth<'_> {
             Ok(bytes) => {
                 let username = from_utf8(&bytes)?;
                 {
-                    self.data.con_state.write().await.state =
+                    self.data.con_state.state =
                         State::Authenticating(AuthState::Password(username.to_string()));
                 };
                 lines.send(String::from("334 UGFzc3dvcmQ6")).await?;
@@ -98,7 +100,7 @@ impl Auth<'_> {
 
     #[instrument(skip(self, lines, database, line))]
     pub async fn plain<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         database: &DB,
         line: &str,
@@ -108,7 +110,6 @@ impl Auth<'_> {
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         let bytes = BASE64_DECODER.decode(line.as_bytes());
-        let mut write_lock = self.data.con_state.write().await;
         match bytes {
             Ok(bytes) => {
                 let auth_data_vec: Vec<&str> = bytes
@@ -134,7 +135,7 @@ impl Auth<'_> {
                         debug!("[SMTP] Verify credentials");
                         if !database.verify_user(username, password).await {
                             {
-                                write_lock.state = State::NotAuthenticated;
+                                self.data.con_state.state = State::NotAuthenticated;
                             };
                             lines
                                 .send(String::from("535 5.7.8 Authentication credentials invalid"))
@@ -142,10 +143,11 @@ impl Auth<'_> {
                             debug!("[SMTP] Invalid user or password");
                             return Ok(());
                         }
-                        let secure = write_lock.secure;
+                        let secure = self.data.con_state.secure;
                         if secure {
                             {
-                                write_lock.state = State::Authenticated(username.to_string());
+                                self.data.con_state.state =
+                                    State::Authenticated(username.to_string());
                                 debug!("[SMTP] User authenticated");
                             };
 
@@ -161,7 +163,7 @@ impl Auth<'_> {
                         }
                     } else {
                         {
-                            write_lock.state = State::NotAuthenticated;
+                            self.data.con_state.state = State::NotAuthenticated;
                         };
                         lines
                             .send(String::from("535 5.7.8 Authentication credentials invalid"))
@@ -169,7 +171,7 @@ impl Auth<'_> {
                     }
                 } else {
                     {
-                        write_lock.state = State::NotAuthenticated;
+                        self.data.con_state.state = State::NotAuthenticated;
                     };
                     lines
                         .send(String::from("432 4.7.12 A password transition is needed"))
@@ -178,7 +180,7 @@ impl Auth<'_> {
             }
             Err(e) => {
                 {
-                    write_lock.state = State::NotAuthenticated;
+                    self.data.con_state.state = State::NotAuthenticated;
                 };
                 error!("Error logging in: {}", e);
                 lines
@@ -191,7 +193,7 @@ impl Auth<'_> {
 
     #[instrument(skip(self, lines, database, line))]
     pub async fn password<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         database: &DB,
         line: &str,
@@ -207,13 +209,13 @@ impl Auth<'_> {
                     SecretString::from_str(from_utf8(SecretVec::new(bytes).expose_secret())?)?;
 
                 {
-                    let mut write_lock = self.data.con_state.write().await;
-                    if let State::Authenticating(AuthState::Password(username)) = &write_lock.state
+                    if let State::Authenticating(AuthState::Password(username)) =
+                        &self.data.con_state.state
                     {
                         if database.user_exists(username).await {
                             let valid = database.verify_user(username, password).await;
                             if !valid {
-                                write_lock.state = State::NotAuthenticated;
+                                self.data.con_state.state = State::NotAuthenticated;
                                 lines
                                     .send(String::from(
                                         "535 5.7.8 Authentication credentials invalid",
@@ -222,22 +224,23 @@ impl Auth<'_> {
                                 return Ok(());
                             }
                         } else {
-                            write_lock.state = State::NotAuthenticated;
+                            self.data.con_state.state = State::NotAuthenticated;
                             lines
                                 .send(String::from("535 5.7.8 Authentication credentials invalid"))
                                 .await?;
                             return Ok(());
                         }
                     } else {
-                        write_lock.state = State::NotAuthenticated;
+                        self.data.con_state.state = State::NotAuthenticated;
                         lines
                             .send(String::from("432 4.7.12 A password transition is needed"))
                             .await?;
                         return Ok(());
                     }
-                    if let State::Authenticating(AuthState::Password(username)) = &write_lock.state
+                    if let State::Authenticating(AuthState::Password(username)) =
+                        &self.data.con_state.state
                     {
-                        write_lock.state = State::Authenticated(username.to_string());
+                        self.data.con_state.state = State::Authenticated(username.to_string());
                     }
                 };
                 lines

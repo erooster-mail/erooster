@@ -1,10 +1,7 @@
-use std::sync::Arc;
-
 use mail_auth::SpfOutput;
-use tokio::sync::RwLock;
 
 /// State of the connection session between us and the Client
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Connection {
     pub state: State,
     pub secure: bool,
@@ -16,8 +13,8 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(secure: bool, peer_addr: String) -> Arc<RwLock<Self>> {
-        Arc::new(RwLock::new(Connection {
+    pub const fn new(secure: bool, peer_addr: String) -> Self {
+        Connection {
             secure,
             state: State::NotAuthenticated,
             receipts: None,
@@ -25,7 +22,7 @@ impl Connection {
             ehlo: None,
             peer_addr,
             spf_result: None,
-        }))
+        }
     }
 }
 

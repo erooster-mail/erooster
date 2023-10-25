@@ -8,13 +8,13 @@ use futures::{Sink, SinkExt};
 use tracing::{info, instrument};
 
 pub struct Rcpt<'a> {
-    pub data: &'a Data,
+    pub data: &'a mut Data,
 }
 
 impl Rcpt<'_> {
     #[instrument(skip(self, lines, database, command_data))]
     pub async fn exec<S, E>(
-        &self,
+        &mut self,
         lines: &mut S,
         database: &DB,
         hostname: &str,
@@ -36,8 +36,7 @@ impl Rcpt<'_> {
             .collect();
 
         {
-            let mut write_lock = self.data.con_state.write().await;
-            if matches!(&write_lock.state, State::NotAuthenticated) {
+            if matches!(&self.data.con_state.state, State::NotAuthenticated) {
                 for receipt in &receipts {
                     if !receipt.contains(hostname) {
                         lines
@@ -62,7 +61,7 @@ impl Rcpt<'_> {
                 }
             }
 
-            write_lock.receipts = Some(receipts);
+            self.data.con_state.receipts = Some(receipts);
         };
 
         lines

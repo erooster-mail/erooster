@@ -141,7 +141,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     });
     thread::sleep(Duration::from_millis(5000));
 
-    group.significance_level(0.05).sample_size(10000);
+    group
+        .significance_level(0.05)
+        .sample_size(10000)
+        .measurement_time(Duration::from_secs(21));
     group.bench_function("receive_message", |b| {
         let rt = runtime::Builder::new_multi_thread()
             .enable_all()

@@ -64,8 +64,7 @@ mod tests {
     use crate::servers::state::{Access, Connection};
     use futures::{channel::mpsc, StreamExt};
 
-    // Failing due to https://github.com/tokio-rs/tokio/issues/6066
-    /*  #[tokio::test]
+    #[tokio::test]
     async fn test_successful_check() {
         let caps = Check {
             data: &mut Data {
@@ -93,7 +92,7 @@ mod tests {
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok());
         assert_eq!(rx.next().await, Some(String::from("1 OK CHECK completed")));
-    } */
+    }
 
     #[tokio::test]
     async fn test_unsuccessful_check() {

@@ -293,7 +293,7 @@ pub async fn send_email_job(
         let response = resolver.ipv6_lookup(target.clone()).await;
         if let Ok(response) = response {
             address = Some(IpAddr::V6(
-                *response.iter().next().ok_or("No address found")?,
+                response.iter().next().ok_or("No address found")?.0,
             ));
             debug!("[{}] Got {:?} for {}", email.id, address, target);
         } else {
@@ -301,7 +301,7 @@ pub async fn send_email_job(
             let response = resolver.ipv4_lookup(target.clone()).await;
             if let Ok(response) = response {
                 address = Some(IpAddr::V4(
-                    *response.iter().next().ok_or("No address found")?,
+                    response.iter().next().ok_or("No address found")?.0,
                 ));
                 debug!("[{}] Got {:?} for {}", email.id, address, target);
             }
@@ -319,7 +319,7 @@ pub async fn send_email_job(
                 let response = resolver.ipv6_lookup(record.exchange().clone()).await;
                 if let Ok(response) = response {
                     address = Some(IpAddr::V6(
-                        *response.iter().next().ok_or("No address found")?,
+                        response.iter().next().ok_or("No address found")?.0,
                     ));
                     let exchange_record = record.exchange().to_utf8();
                     tls_domain = if let Some(record) = exchange_record.strip_suffix('.') {
@@ -335,7 +335,7 @@ pub async fn send_email_job(
                 let response = resolver.ipv4_lookup(record.exchange().clone()).await;
                 if let Ok(response) = response {
                     address = Some(IpAddr::V4(
-                        *response.iter().next().ok_or("No address found")?,
+                        response.iter().next().ok_or("No address found")?.0,
                     ));
                     let exchange_record = record.exchange().to_utf8();
                     tls_domain = if let Some(record) = exchange_record.strip_suffix('.') {

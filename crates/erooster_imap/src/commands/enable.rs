@@ -2,8 +2,11 @@ use crate::{
     commands::{CommandData, Data},
     servers::state::Capabilities,
 };
-use futures::{Sink, SinkExt};
-use tracing::instrument;
+use erooster_deps::{
+    color_eyre,
+    futures::{Sink, SinkExt},
+    tracing::{self, instrument},
+};
 
 pub struct Enable<'a> {
     pub data: &'a mut Data,
@@ -45,7 +48,8 @@ mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};
     use crate::servers::state::{Connection, State};
-    use futures::{channel::mpsc, StreamExt};
+    use erooster_deps::futures::{channel::mpsc, StreamExt};
+    use erooster_deps::tokio;
 
     #[allow(clippy::unwrap_used)]
     #[tokio::test]

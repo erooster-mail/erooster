@@ -1,6 +1,9 @@
 use crate::commands::CommandData;
-use futures::{Sink, SinkExt};
-use tracing::instrument;
+use erooster_deps::{
+    color_eyre,
+    futures::{Sink, SinkExt},
+    tracing::{self, instrument},
+};
 
 pub struct Capability;
 
@@ -42,7 +45,10 @@ pub const fn get_unencrypted_capabilities() -> &'static str {
 mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};
-    use futures::{channel::mpsc, StreamExt};
+    use erooster_deps::{
+        futures::{channel::mpsc, StreamExt},
+        tokio,
+    };
 
     #[tokio::test]
     async fn test_get_capabilities() {

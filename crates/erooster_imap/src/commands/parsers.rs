@@ -1,16 +1,18 @@
 use std::ops::Bound;
 
-use nom::{
-    branch::alt,
-    bytes::complete::{tag_no_case, take_while1},
-    character::complete::{char, digit1, space1},
-    combinator::{map, opt, recognize},
-    error::{context, VerboseError},
-    multi::{many0, separated_list0, separated_list1},
-    sequence::{delimited, pair, separated_pair, terminated, tuple},
-    IResult,
+use erooster_deps::{
+    nom::{
+        branch::alt,
+        bytes::complete::{tag_no_case, take_while1},
+        character::complete::{char, digit1, space1},
+        combinator::{map, opt, recognize},
+        error::{context, VerboseError},
+        multi::{many0, separated_list0, separated_list1},
+        sequence::{delimited, pair, separated_pair, terminated, tuple},
+        IResult,
+    },
+    tracing::{self, instrument},
 };
-use tracing::instrument;
 
 type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
 
@@ -1035,6 +1037,8 @@ fn zone(input: &str) -> Res<&str> {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    use erooster_deps::tokio;
+
     use super::*;
 
     #[tokio::test]

@@ -1,7 +1,9 @@
-use bytes::{Buf, BufMut, BytesMut};
-use simdutf8::compat::from_utf8;
+use erooster_deps::{
+    bytes::{Buf, BufMut, BytesMut},
+    simdutf8::compat::from_utf8,
+    tokio_util::codec::{Decoder, Encoder},
+};
 use std::{cmp, fmt, io, str, usize};
-use tokio_util::codec::{Decoder, Encoder};
 
 /// A simple [`Decoder`] and [`Encoder`] implementation that splits up data into lines.
 ///

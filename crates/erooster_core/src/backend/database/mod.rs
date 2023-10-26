@@ -1,8 +1,11 @@
 use crate::config::Config;
-use color_eyre::Result;
-use secrecy::SecretString;
+use erooster_deps::{
+    async_trait,
+    color_eyre::{self, Result},
+    secrecy::SecretString,
+    tracing::{self, instrument},
+};
 use sqlx::Pool;
-use tracing::instrument;
 
 /// Postgres specific database implementation
 pub mod postgres;

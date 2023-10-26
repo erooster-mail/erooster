@@ -5,9 +5,12 @@ use crate::{
     },
     config::Config,
 };
-use mailparse::{MailHeader, ParsedMail};
+use erooster_deps::{
+    async_trait, color_eyre,
+    mailparse::{MailHeader, ParsedMail},
+    tracing::{self, instrument},
+};
 use std::path::{Path, PathBuf};
-use tracing::instrument;
 
 /// The maildir format
 #[cfg(feature = "maildir")]

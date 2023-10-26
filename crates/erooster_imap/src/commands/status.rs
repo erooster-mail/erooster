@@ -1,9 +1,11 @@
 use crate::commands::{CommandData, Data};
-use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailEntry, MailStorage, Storage};
-use futures::{Sink, SinkExt};
+use erooster_deps::{
+    color_eyre::{self, eyre::ContextCompat},
+    futures::{Sink, SinkExt},
+    tracing::{self, instrument},
+};
 use std::time::{SystemTime, UNIX_EPOCH};
-use tracing::instrument;
 
 pub struct Status<'a> {
     pub data: &'a Data,

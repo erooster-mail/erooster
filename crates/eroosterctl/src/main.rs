@@ -30,23 +30,30 @@
 #![warn(missing_docs)]
 #![allow(clippy::missing_panics_doc)]
 
-use clap::{Parser, Subcommand};
-use color_eyre::eyre::Result;
+use erooster_deps::{
+    clap::{self, Parser, Subcommand},
+    clearscreen,
+    color_eyre::{self, Result},
+    indicatif::{ProgressBar, ProgressStyle},
+    owo_colors::{
+        colors::{BrightCyan, BrightGreen, BrightRed, BrightWhite},
+        DynColors, OwoColorize,
+    },
+    rpassword,
+    secrecy::SecretString,
+    tokio,
+    tracing::{error, warn},
+    tracing_subscriber,
+};
+
 use erooster_core::{
     backend::database::{get_database, Database},
     config::Config,
     panic_handler::EroosterPanicMessage,
 };
-use indicatif::{ProgressBar, ProgressStyle};
-use owo_colors::{
-    colors::{BrightCyan, BrightGreen, BrightRed, BrightWhite},
-    DynColors, OwoColorize,
-};
-use secrecy::SecretString;
 use std::io::Write;
 use std::time::Duration;
 use std::{io, process::exit};
-use tracing::{error, warn};
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None, propagate_version = true)]
 struct Cli {

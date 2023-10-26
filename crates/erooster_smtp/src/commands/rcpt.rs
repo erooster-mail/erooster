@@ -2,10 +2,12 @@ use crate::{
     commands::{parsers::localpart_arguments, CommandData, Data},
     servers::state::State,
 };
-use color_eyre::eyre::bail;
 use erooster_core::backend::database::{Database, DB};
-use futures::{Sink, SinkExt};
-use tracing::{info, instrument};
+use erooster_deps::{
+    color_eyre::{self, eyre::bail},
+    futures::{Sink, SinkExt},
+    tracing::{self, info, instrument},
+};
 
 pub struct Rcpt<'a> {
     pub data: &'a mut Data,

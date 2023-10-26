@@ -1,8 +1,12 @@
 use std::collections::BTreeMap;
 
-use serde::{Deserialize, Serialize};
+use erooster_deps::{
+    serde::{self, Deserialize, Serialize},
+    serde_json,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(crate = "self::serde")]
 pub struct Response {
     pub is_skipped: bool,
     pub score: f64,
@@ -21,6 +25,7 @@ pub struct Response {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(crate = "self::serde")]
 pub struct Symbol {
     pub name: String,
     pub score: f64,
@@ -30,6 +35,7 @@ pub struct Symbol {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(crate = "self::serde")]
 #[allow(clippy::enum_variant_names)]
 pub enum Action {
     #[serde(rename = "no action")]

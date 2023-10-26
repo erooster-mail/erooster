@@ -2,29 +2,35 @@ use crate::{
     commands::{Data, Response},
     servers::{send_capabilities, state::Connection},
 };
-use color_eyre::eyre::Context;
 use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
     line_codec::LinesCodec,
     LINE_LIMIT,
 };
-use futures::{SinkExt, StreamExt};
+use erooster_deps::{
+    color_eyre,
+    color_eyre::eyre::Context,
+    futures::{SinkExt, StreamExt},
+    rustls_pemfile,
+    tokio::{
+        self,
+        net::{TcpListener, TcpStream},
+    },
+    tokio_rustls::{
+        rustls::{self, Certificate, PrivateKey},
+        TlsAcceptor,
+    },
+    tokio_stream::wrappers::TcpListenerStream,
+    tokio_util::codec::Framed,
+    tracing::{self, debug, error, info, instrument},
+};
 use std::{
     fs,
     io::{self, BufReader},
     net::SocketAddr,
     path::Path,
 };
-use tokio::net::{TcpListener, TcpStream};
-use tokio_rustls::{
-    rustls::{self, Certificate, PrivateKey},
-    TlsAcceptor,
-};
-use tokio_stream::wrappers::TcpListenerStream;
-use tokio_util::codec::Framed;
-use tracing::{debug, error, info, instrument};
-
 /// An encrypted smtp Server
 pub struct Encrypted;
 

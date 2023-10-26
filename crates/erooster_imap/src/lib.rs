@@ -40,13 +40,17 @@
 )]
 
 use crate::commands::capability::{get_capabilities, get_unencrypted_capabilities};
-use async_trait::async_trait;
-use const_format::formatcp;
 use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
 };
-use tracing::instrument;
+use erooster_deps::{
+    async_trait::async_trait,
+    color_eyre,
+    const_format::formatcp,
+    tokio,
+    tracing::{self, instrument},
+};
 
 pub(crate) mod commands;
 pub(crate) mod servers;

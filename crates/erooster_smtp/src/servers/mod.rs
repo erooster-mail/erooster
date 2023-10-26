@@ -3,9 +3,13 @@ use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
 };
-use futures::{Sink, SinkExt};
-use tracing::{error, info, instrument, warn};
-use yaque::{recovery::recover, Receiver, Sender};
+use erooster_deps::{
+    color_eyre,
+    futures::{Sink, SinkExt},
+    serde_json, tokio,
+    tracing::{self, error, info, instrument, warn},
+    yaque::{recovery::recover, Receiver, Sender},
+};
 
 use self::sending::EmailPayload;
 

@@ -3,15 +3,29 @@ use crate::{
     servers::state::Connection,
     Server, CAPABILITY_HELLO,
 };
-use async_trait::async_trait;
-use color_eyre::eyre::Context;
 use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
     line_codec::LinesCodec,
     LINE_LIMIT,
 };
-use futures::{SinkExt, StreamExt};
+use erooster_deps::{
+    async_trait::async_trait,
+    color_eyre::{self, eyre::Context},
+    futures::{SinkExt, StreamExt},
+    rustls_pemfile,
+    tokio::{
+        self,
+        net::{TcpListener, TcpStream},
+    },
+    tokio_rustls::{
+        rustls::{self, Certificate, PrivateKey},
+        TlsAcceptor,
+    },
+    tokio_stream::wrappers::TcpListenerStream,
+    tokio_util::codec::Framed,
+    tracing::{self, debug, error, info, instrument},
+};
 use std::{
     fs::{self},
     io::{self, BufReader},
@@ -19,14 +33,6 @@ use std::{
     path::Path,
     sync::Arc,
 };
-use tokio::net::{TcpListener, TcpStream};
-use tokio_rustls::{
-    rustls::{self, Certificate, PrivateKey},
-    TlsAcceptor,
-};
-use tokio_stream::wrappers::TcpListenerStream;
-use tokio_util::codec::Framed;
-use tracing::{debug, error, info, instrument};
 
 /// An encrypted imap Server
 pub struct Encrypted;

@@ -3,19 +3,23 @@ use crate::{
     servers::{sending::EmailPayload, state::Data as StateData, state::State},
     utils::rspamd::Response,
 };
-use color_eyre::eyre::ContextCompat;
 use erooster_core::{
     backend::storage::{MailStorage, Storage},
     config::{Config, Rspamd},
 };
-use futures::{Sink, SinkExt};
-use mail_auth::{AuthenticatedMessage, DkimResult, DmarcResult, Resolver};
-use simdutf8::compat::from_utf8;
-use std::io::Write;
-use std::{collections::BTreeMap, path::Path, time::Duration};
+use erooster_deps::{
+    cfg_if::cfg_if,
+    color_eyre::{self, eyre::ContextCompat},
+    futures::{Sink, SinkExt},
+    mail_auth::{AuthenticatedMessage, DkimResult, DmarcResult, Resolver},
+    reqwest, serde_json,
+    simdutf8::compat::from_utf8,
+    tracing::{self, debug, instrument},
+    uuid,
+    yaque::Sender,
+};
+use std::{collections::BTreeMap, io::Write, path::Path, time::Duration};
 use time::{macros::format_description, OffsetDateTime};
-use tracing::{debug, instrument};
-use yaque::Sender;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct DataCommand<'a> {
@@ -194,7 +198,7 @@ impl DataCommand<'_> {
 
                     // Handle fail
                     // TODO: generate reports
-                    cfg_if::cfg_if! {
+                    cfg_if! {
                         if #[cfg(feature = "benchmarking")] {} else {
                             if !dkim_result
                                 .iter()

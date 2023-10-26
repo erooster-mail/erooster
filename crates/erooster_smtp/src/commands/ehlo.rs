@@ -1,9 +1,10 @@
-use color_eyre::eyre::bail;
-use futures::{Sink, SinkExt};
-use mail_auth::{Resolver, SpfResult};
-use tracing::instrument;
-
 use crate::commands::{CommandData, Data};
+use erooster_deps::{
+    color_eyre::{self, eyre::bail},
+    futures::{Sink, SinkExt},
+    mail_auth::{Resolver, SpfResult},
+    tracing::{self, instrument},
+};
 
 pub struct Ehlo<'a> {
     pub data: &'a mut Data,

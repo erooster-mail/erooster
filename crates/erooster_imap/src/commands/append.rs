@@ -2,16 +2,17 @@ use crate::{
     commands::{parsers::append_arguments, CommandData, Data},
     servers::state::{AppendingState, State},
 };
-use color_eyre::eyre::ContextCompat;
 use erooster_core::{
     backend::storage::{MailStorage, Storage},
     config::Config,
 };
-use futures::{Sink, SinkExt};
-use nom::{error::convert_error, Finish};
-use std::io::Write;
-use std::path::Path;
-use tracing::{debug, error, instrument};
+use erooster_deps::{
+    color_eyre::{self, eyre::ContextCompat},
+    futures::{Sink, SinkExt},
+    nom::{error::convert_error, Finish},
+    tracing::{self, debug, error, instrument},
+};
+use std::{io::Write, path::Path};
 
 pub struct Append<'a> {
     pub data: &'a mut Data,
@@ -178,7 +179,8 @@ mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};
     use crate::servers::state::{Access, Connection};
-    use futures::{channel::mpsc, StreamExt};
+    use erooster_deps::futures::{channel::mpsc, StreamExt};
+    use erooster_deps::tokio;
 
     #[allow(clippy::unwrap_used)]
     #[tokio::test]

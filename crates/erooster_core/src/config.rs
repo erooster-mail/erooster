@@ -1,4 +1,8 @@
-use serde::{Deserialize, Serialize};
+use erooster_deps::{
+    color_eyre,
+    serde::{self, Deserialize, Serialize},
+    serde_yaml, tokio,
+};
 
 const fn default_webserver_port() -> u16 {
     8080
@@ -6,6 +10,7 @@ const fn default_webserver_port() -> u16 {
 
 /// The config for the mailserver
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(crate = "self::serde")]
 pub struct Config {
     /// Configurations specific to the TLS part
     pub tls: Tls,
@@ -25,6 +30,7 @@ pub struct Config {
 
 /// The config for the webserver
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(crate = "self::serde")]
 pub struct Webserver {
     /// The port of the webserver
     #[serde(default = "default_webserver_port")]
@@ -36,6 +42,7 @@ pub struct Webserver {
 
 /// Configurations specific to the Database
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(crate = "self::serde")]
 pub struct Database {
     /// Connection string for the postgres database
     pub postgres_url: String,
@@ -43,6 +50,7 @@ pub struct Database {
 
 /// Configurations specific to the TLS part
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(crate = "self::serde")]
 pub struct Tls {
     /// Path to the key file
     pub key_path: String,
@@ -52,6 +60,7 @@ pub struct Tls {
 
 /// Configuration specific to rspamd
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(crate = "self::serde")]
 pub struct Rspamd {
     /// Address where the rspamd worker is at
     pub address: String,
@@ -59,6 +68,7 @@ pub struct Rspamd {
 
 /// Configurations specific to the mail concept itself
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(crate = "self::serde")]
 pub struct Mail {
     /// Path where maildir style mailboxes are going to get created
     pub maildir_folders: String,

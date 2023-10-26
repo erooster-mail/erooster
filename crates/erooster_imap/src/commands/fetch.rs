@@ -7,16 +7,19 @@ use crate::{
     },
     servers::state::State,
 };
-use color_eyre::{
-    eyre::{eyre, ContextCompat, WrapErr},
-    Result,
-};
 use erooster_core::backend::storage::{
     maildir::MaildirMailEntry, MailEntry, MailEntryType, MailStorage, Storage,
 };
-use futures::{Sink, SinkExt};
-use nom::{error::convert_error, Finish};
-use tracing::{debug, error, instrument, log::warn};
+use erooster_deps::{
+    color_eyre::{
+        self,
+        eyre::{eyre, Context, ContextCompat},
+        Result,
+    },
+    futures::{Sink, SinkExt},
+    nom::{error::convert_error, Finish},
+    tracing::{self, debug, error, instrument, warn},
+};
 
 pub struct Fetch<'a> {
     pub data: &'a Data,

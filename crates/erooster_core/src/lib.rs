@@ -34,12 +34,14 @@
 
 use std::path::Path;
 
-use base64::{
-    alphabet,
-    engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig},
+use erooster_deps::{
+    base64::{
+        alphabet,
+        engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig},
+    },
+    color_eyre::{self, Result},
+    tracing::{self, error, instrument},
 };
-use color_eyre::Result;
-use tracing::{error, instrument};
 
 // TODO make this only pub for benches and tests
 #[allow(missing_docs)]

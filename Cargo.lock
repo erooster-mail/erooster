@@ -1034,22 +1034,13 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 name = "erooster"
 version = "0.1.0"
 dependencies = [
- "cfg-if",
  "clap",
  "clap_mangen",
- "color-eyre",
  "erooster_core",
+ "erooster_deps",
  "erooster_imap",
  "erooster_smtp",
  "erooster_web",
- "opentelemetry 0.20.0",
- "opentelemetry-jaeger",
- "serde",
- "tokio",
- "tracing",
- "tracing-error",
- "tracing-opentelemetry",
- "tracing-subscriber",
  "vergen",
 ]
 
@@ -1057,103 +1048,94 @@ dependencies = [
 name = "erooster_core"
 version = "0.1.0"
 dependencies = [
- "argon2",
- "async-trait",
- "base64 0.21.5",
- "bytes",
- "cfg-if",
- "color-eyre",
  "convert_case",
  "criterion",
  "enum-display-derive",
  "enum-iterator",
+ "erooster_deps",
+ "sqlx",
+ "vergen",
+]
+
+[[package]]
+name = "erooster_deps"
+version = "0.1.0"
+dependencies = [
+ "argon2",
+ "async-trait",
+ "axum",
+ "axum-opentelemetry-middleware",
+ "axum-server",
+ "base64 0.21.5",
+ "bytes",
+ "cfg-if",
+ "clap",
+ "clearscreen",
+ "color-eyre",
+ "const_format",
  "futures",
+ "indicatif",
+ "mail-auth",
  "maildir",
  "mailparse",
+ "mime",
  "nom",
+ "notify 6.1.1",
  "once_cell",
+ "opentelemetry 0.20.0",
  "opentelemetry-jaeger",
  "owo-colors",
  "rand_core",
+ "reqwest",
+ "rpassword",
  "rustls",
+ "rustls-pemfile",
  "secrecy",
  "serde",
+ "serde_json",
  "serde_yaml",
  "simdutf8",
- "sqlx",
  "sys-info",
  "tokio",
+ "tokio-rustls",
  "tokio-stream",
  "tokio-util",
+ "tower-http",
  "tracing",
  "tracing-error",
+ "tracing-opentelemetry",
  "tracing-subscriber",
+ "trust-dns-resolver 0.22.0",
  "url",
- "vergen",
+ "uuid",
+ "webpki-roots 0.25.2",
+ "yaque",
 ]
 
 [[package]]
 name = "erooster_imap"
 version = "0.1.0"
 dependencies = [
- "async-trait",
- "base64 0.21.5",
- "color-eyre",
- "const_format",
  "convert_case",
  "enum-display-derive",
  "enum-iterator",
  "erooster_core",
- "futures",
- "nom",
- "notify 6.1.1",
- "rustls",
- "rustls-pemfile",
- "secrecy",
- "simdutf8",
+ "erooster_deps",
  "time",
- "tokio",
- "tokio-rustls",
- "tokio-stream",
- "tokio-util",
- "tracing",
 ]
 
 [[package]]
 name = "erooster_smtp"
 version = "0.1.0"
 dependencies = [
- "base64 0.21.5",
- "cfg-if",
- "color-eyre",
  "convert_case",
  "criterion",
  "enum-display-derive",
  "enum-iterator",
  "erooster_core",
- "futures",
- "mail-auth",
- "mailparse",
- "nom",
- "reqwest",
- "rustls",
- "rustls-pemfile",
- "secrecy",
- "serde",
- "serde_json",
- "simdutf8",
+ "erooster_deps",
  "sqlx",
  "time",
- "tokio",
- "tokio-rustls",
- "tokio-stream",
- "tokio-util",
- "tracing",
- "tracing-subscriber",
- "trust-dns-resolver 0.22.0",
- "uuid",
- "webpki-roots 0.25.2",
- "yaque",
 ]
 
 [[package]]
@@ -1161,34 +1143,16 @@ name = "erooster_web"
 version = "0.1.0"
 dependencies = [
  "askama",
- "axum",
- "axum-opentelemetry-middleware",
- "axum-server",
- "color-eyre",
  "erooster_core",
- "mime",
- "tokio",
- "tower-http",
- "tracing",
+ "erooster_deps",
 ]
 
 [[package]]
 name = "eroosterctl"
 version = "0.1.0"
 dependencies = [
- "clap",
- "clearscreen",
- "color-eyre",
  "erooster_core",
- "indicatif",
- "owo-colors",
- "rpassword",
- "secrecy",
- "sys-info",
- "tokio",
- "tracing",
- "tracing-error",
- "tracing-subscriber",
+ "erooster_deps",
  "vergen",
 ]
 

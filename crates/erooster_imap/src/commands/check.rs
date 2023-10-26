@@ -3,8 +3,11 @@ use crate::{
     servers::state::State,
 };
 use erooster_core::backend::storage::{MailEntryType, MailStorage, Storage};
-use futures::{Sink, SinkExt};
-use tracing::instrument;
+use erooster_deps::{
+    color_eyre,
+    futures::{Sink, SinkExt},
+    tracing::{self, instrument},
+};
 
 pub struct Check<'a> {
     pub data: &'a Data,
@@ -62,7 +65,8 @@ mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};
     use crate::servers::state::{Access, Connection};
-    use futures::{channel::mpsc, StreamExt};
+    use erooster_deps::futures::{channel::mpsc, StreamExt};
+    use erooster_deps::tokio;
 
     #[tokio::test]
     async fn test_successful_check() {

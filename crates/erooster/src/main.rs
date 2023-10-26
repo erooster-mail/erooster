@@ -31,14 +31,19 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::items_after_statements)]
 
-use clap::Parser;
-use color_eyre::eyre::Result;
 use erooster_core::{
     backend::{database::get_database, storage::get_storage},
     panic_handler::EroosterPanicMessage,
 };
-use tokio::signal;
-use tracing::{error, info, warn};
+use erooster_deps::{
+    cfg_if::cfg_if,
+    clap::{self, Parser},
+    color_eyre::{self, eyre::Result},
+    opentelemetry,
+    tokio::{self, signal},
+    tracing::{error, info, warn},
+    tracing_error, tracing_subscriber,
+};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -61,7 +66,7 @@ async fn main() -> Result<()> {
     let config = erooster_core::get_config(args.config).await?;
 
     // Setup the rest of our logging
-    cfg_if::cfg_if! {
+    cfg_if! {
         if #[cfg(feature = "jaeger")] {
             use tracing_subscriber::layer::SubscriberExt;
             use tracing_subscriber::util::SubscriberInitExt;

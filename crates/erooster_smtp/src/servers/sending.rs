@@ -1,24 +1,28 @@
-use color_eyre::Result;
 use erooster_core::line_codec::{LinesCodec, LinesCodecError};
-use futures::{Sink, SinkExt, Stream, StreamExt};
-use mail_auth::{
-    common::{
-        crypto::{RsaKey, Sha256},
-        headers::HeaderWriter,
+use erooster_deps::{
+    color_eyre::Result,
+    futures::{Sink, SinkExt, Stream, StreamExt},
+    mail_auth::{
+        common::{
+            crypto::{RsaKey, Sha256},
+            headers::HeaderWriter,
+        },
+        dkim::DkimSigner,
     },
-    dkim::DkimSigner,
+    rustls::{self, OwnedTrustAnchor},
+    serde::{self, Deserialize, Serialize},
+    tokio::{net::TcpStream, time::timeout},
+    tokio_rustls::TlsConnector,
+    tokio_util::codec::Framed,
+    tracing::{self, debug, error, instrument, warn},
+    trust_dns_resolver::TokioAsyncResolver,
+    uuid::Uuid,
+    webpki_roots,
 };
-use rustls::OwnedTrustAnchor;
-use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, error::Error, io, net::IpAddr, path::Path, time::Duration};
-use tokio::{net::TcpStream, time::timeout};
-use tokio_rustls::TlsConnector;
-use tokio_util::codec::Framed;
-use tracing::{debug, error, instrument, warn};
-use trust_dns_resolver::TokioAsyncResolver;
-use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "self::serde")]
 pub struct EmailPayload {
     pub id: Uuid,
     // Map to addresses by domain

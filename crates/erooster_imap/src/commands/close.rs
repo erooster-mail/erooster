@@ -2,11 +2,13 @@ use crate::{
     commands::{CommandData, Data},
     servers::state::{Access, State},
 };
-use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailEntry, MailStorage, Storage};
-use futures::{Sink, SinkExt};
-use tokio::fs;
-use tracing::{debug, instrument};
+use erooster_deps::{
+    color_eyre::{self, eyre::ContextCompat},
+    futures::{Sink, SinkExt},
+    tokio::fs,
+    tracing::{self, debug, instrument},
+};
 
 pub struct Close<'a> {
     pub data: &'a mut Data,
@@ -80,7 +82,8 @@ mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};
     use crate::servers::state::{Access, Connection};
-    use futures::{channel::mpsc, StreamExt};
+    use erooster_deps::futures::{channel::mpsc, StreamExt};
+    use erooster_deps::tokio;
 
     #[tokio::test]
     async fn test_select_rw() {

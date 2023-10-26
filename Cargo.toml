@@ -8,6 +8,7 @@ members = [
     "crates/erooster_imap",
     "crates/erooster_smtp",
     "crates/erooster_web",
+    "crates/erooster_deps",
 ]
 
 [profile.dev.package.backtrace]

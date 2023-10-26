@@ -1,11 +1,14 @@
 use crate::{backend::database::Database, config::Config};
-use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-use color_eyre::Result;
-use once_cell::sync::OnceCell;
-use rand_core::OsRng;
-use secrecy::{ExposeSecret, SecretString};
+use erooster_deps::{
+    argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier},
+    async_trait,
+    color_eyre::{self, Result},
+    once_cell::sync::OnceCell,
+    rand_core::OsRng,
+    secrecy::{ExposeSecret, SecretString},
+    tracing::{self, debug, debug_span, error, instrument},
+};
 use sqlx::{pool::PoolOptions, PgPool};
-use tracing::{debug, debug_span, error, instrument};
 
 /// Postgres specific database implementation
 /// Holds data to connect to the database

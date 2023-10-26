@@ -2,14 +2,16 @@ use crate::{
     commands::{CommandData, Data},
     servers::state::{Access, State},
 };
-use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailStorage, Storage};
-use futures::{Sink, SinkExt};
+use erooster_deps::{
+    color_eyre::{self, eyre::ContextCompat},
+    futures::{Sink, SinkExt},
+    tracing::{self, instrument},
+};
 use std::{
     path::PathBuf,
     time::{SystemTime, UNIX_EPOCH},
 };
-use tracing::instrument;
 
 pub struct Select<'a> {
     pub data: &'a mut Data,

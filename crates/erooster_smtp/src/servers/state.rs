@@ -1,4 +1,4 @@
-use mail_auth::SpfOutput;
+use erooster_deps::mail_auth::SpfOutput;
 
 /// State of the connection session between us and the Client
 #[derive(Debug, Clone)]

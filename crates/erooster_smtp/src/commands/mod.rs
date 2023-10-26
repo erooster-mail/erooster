@@ -9,17 +9,20 @@ use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
 };
-use futures::{Sink, SinkExt};
-use nom::{
-    branch::alt,
-    bytes::complete::{tag, take_while1},
-    character::complete::alpha1,
-    error::{context, convert_error, VerboseError},
-    multi::many0,
-    sequence::{terminated, tuple},
-    Finish, IResult,
+use erooster_deps::{
+    color_eyre,
+    futures::{Sink, SinkExt},
+    nom::{
+        branch::alt,
+        bytes::complete::{tag, take_while1},
+        character::complete::alpha1,
+        error::{context, convert_error, VerboseError},
+        multi::many0,
+        sequence::{terminated, tuple},
+        Finish, IResult,
+    },
+    tracing::{self, debug, error, instrument, warn},
 };
-use tracing::{debug, error, instrument, warn};
 
 #[cfg(test)]
 use std::fmt::Display;

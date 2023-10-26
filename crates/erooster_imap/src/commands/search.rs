@@ -2,12 +2,13 @@ use crate::{
     commands::{parsers::search_arguments, CommandData, Data},
     servers::state::State,
 };
-use color_eyre::eyre::ContextCompat;
-use erooster_core::backend::storage::{maildir::MaildirMailEntry, MailEntry};
-use erooster_core::backend::storage::{MailStorage, Storage};
-use futures::{Sink, SinkExt};
-use nom::{error::convert_error, Finish};
-use tracing::{debug, error, instrument};
+use erooster_core::backend::storage::{maildir::MaildirMailEntry, MailEntry, MailStorage, Storage};
+use erooster_deps::{
+    color_eyre::{self, eyre::ContextCompat},
+    futures::{Sink, SinkExt},
+    nom::{error::convert_error, Finish},
+    tracing::{self, debug, error, instrument},
+};
 
 use super::parsers::{parse_search_date, SearchProgram, SearchReturnOption};
 

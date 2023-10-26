@@ -31,17 +31,21 @@
 )]
 
 use askama::Template;
-use axum::{
-    http::{header, HeaderValue, StatusCode},
-    response::{Html, IntoResponse, Response},
-    routing::get,
-    Extension, Router,
-};
-use axum_server::tls_rustls::RustlsConfig;
 use erooster_core::config::Config;
+use erooster_deps::{
+    axum::{
+        http::{header, HeaderValue, StatusCode},
+        response::{Html, IntoResponse, Response},
+        routing::get,
+        Extension, Router,
+    },
+    axum_opentelemetry_middleware,
+    axum_server::{self, tls_rustls::RustlsConfig},
+    color_eyre, mime, tokio,
+    tower_http::trace::TraceLayer,
+    tracing::{self, error, info},
+};
 use std::net::SocketAddr;
-use tower_http::trace::TraceLayer;
-use tracing::{error, info};
 
 /// Starts the webserver used for the admin page and metrics
 #[tracing::instrument(skip(config))]

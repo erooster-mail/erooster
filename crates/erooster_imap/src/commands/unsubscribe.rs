@@ -1,8 +1,10 @@
 use crate::commands::{CommandData, Data};
-use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailStorage, Storage};
-use futures::{Sink, SinkExt};
-use tracing::instrument;
+use erooster_deps::{
+    color_eyre::{self, eyre::ContextCompat},
+    futures::{Sink, SinkExt},
+    tracing::{self, instrument},
+};
 
 pub struct Unsubscribe<'a> {
     pub data: &'a Data,

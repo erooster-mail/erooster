@@ -1,18 +1,20 @@
-use std::str::FromStr;
-
 use crate::{
     commands::{CommandData, Data},
     servers::state::State,
 };
-use base64::Engine;
 use erooster_core::{
     backend::database::{Database, DB},
     BASE64_DECODER,
 };
-use futures::{Sink, SinkExt};
-use secrecy::SecretString;
-use simdutf8::compat::from_utf8;
-use tracing::{debug, error, instrument};
+use erooster_deps::{
+    base64::Engine,
+    color_eyre,
+    futures::{Sink, SinkExt},
+    secrecy::SecretString,
+    simdutf8::compat::from_utf8,
+    tracing::{self, debug, error, instrument},
+};
+use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum AuthenticationMethod {

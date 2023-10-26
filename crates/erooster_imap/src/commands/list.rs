@@ -2,14 +2,16 @@ use crate::{
     commands::{CommandData, Commands, Data},
     servers::state::State,
 };
-use color_eyre::eyre::ContextCompat;
 use erooster_core::{
     backend::storage::{MailStorage, Storage},
     config::Config,
 };
-use futures::{Sink, SinkExt};
+use erooster_deps::{
+    color_eyre::{self, eyre::ContextCompat},
+    futures::{Sink, SinkExt},
+    tracing::{self, debug, instrument},
+};
 use std::path::Path;
-use tracing::{debug, instrument};
 
 #[allow(clippy::too_many_lines)]
 #[instrument(skip(data, lines, config, storage, command_data))]

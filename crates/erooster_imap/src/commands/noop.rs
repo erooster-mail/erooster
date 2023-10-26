@@ -2,10 +2,12 @@ use crate::{
     commands::{CommandData, Data},
     servers::state::State,
 };
-use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailStorage, Storage};
-use futures::{Sink, SinkExt};
-use tracing::instrument;
+use erooster_deps::{
+    color_eyre::{self, eyre::ContextCompat},
+    futures::{Sink, SinkExt},
+    tracing::{self, instrument},
+};
 
 pub struct Noop<'a> {
     pub data: &'a Data,
@@ -49,7 +51,8 @@ mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};
     use crate::servers::state::{Access, Connection, State};
-    use futures::{channel::mpsc, StreamExt};
+    use erooster_deps::futures::{channel::mpsc, StreamExt};
+    use erooster_deps::tokio;
 
     #[allow(clippy::unwrap_used)]
     #[tokio::test]

@@ -1,8 +1,13 @@
 use crate::commands::{parsers::localpart_arguments, CommandData, Data};
-use color_eyre::eyre::{bail, ContextCompat};
-use futures::{Sink, SinkExt};
-use mail_auth::{Resolver, SpfResult};
-use tracing::{error, instrument};
+use erooster_deps::{
+    color_eyre::{
+        self,
+        eyre::{bail, ContextCompat},
+    },
+    futures::{Sink, SinkExt},
+    mail_auth::{Resolver, SpfResult},
+    tracing::{self, error, instrument},
+};
 
 pub struct Mail<'a> {
     pub data: &'a mut Data,

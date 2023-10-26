@@ -14,50 +14,17 @@ include = ["src/**/*", "build.rs", "migrations/**/*"]
 bench = false
 
 [dependencies]
-argon2 = { version = "0.5.1", features = ["std"] }
-async-trait = "0.1.64"
-base64 = "0.21.3"
-bytes = "1.4.0"
-cfg-if = "1.0.0"
-color-eyre = "0.6.2"
-futures = { version = "0.3.26", features = ["thread-pool"] }
-mailparse = "0.14.0"
-nom = "7.1.3"
-opentelemetry-jaeger = { version = "0.19.0", features = [
-    "tokio",
-], optional = true }
-owo-colors = "3.5.0"
-rand_core = { version = "0.6.4", features = ["std"] }
-rustls = "0.21.5"
-serde = { version = "1.0.189", features = ["derive"] }
-serde_yaml = "0.9.17"
-simdutf8 = { version = "0.1.4" }
+erooster_deps = { version = "0.1.0", path = "../erooster_deps" }
+# Cannot be reexported
 sqlx = { version = "0.7.1", features = ["postgres", "runtime-tokio-rustls"] }
-sys-info = "0.9.1"
-tokio = { version = "1.25.0", features = ["full"] }
-tokio-stream = { version = "0.1.12", features = ["net", "io-util"] }
-tokio-util = { version = "0.7.7", features = ["full"] }
-tracing = "0.1.37"
-tracing-error = "0.2.0"
-tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
-url = "2.4.1"
-secrecy = "0.8.0"
-once_cell = "1.18.0"
 
 [build-dependencies]
 vergen = { version = "8.2.4", features = ["git", "gitoxide"] }
 
-[dependencies.maildir]
-version = "0.6.3"
-git = "https://github.com/erooster-mail/maildir.git"
-#rev = "179625c3cc15212fb26eca5b819f7fe0d6f802e1"
-branch = "MTRNord/clippy"
-optional = true
-
 [features]
 default = ["maildir"]
-maildir = ["dep:maildir", "maildir/mmap"]
-jaeger = ["dep:opentelemetry-jaeger"]
+maildir = ["erooster_deps/maildir"]
+jaeger = ["erooster_deps/jaeger"]
 
 #[profile.release]
 #debug = true

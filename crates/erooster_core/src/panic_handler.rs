@@ -1,8 +1,10 @@
-use color_eyre::section::PanicMessage;
-use owo_colors::OwoColorize;
+use erooster_deps::{
+    color_eyre::section::PanicMessage,
+    owo_colors::OwoColorize,
+    sys_info::{os_release, os_type},
+    url::Url,
+};
 use std::{fmt, panic::Location};
-use sys_info::{os_release, os_type};
-use url::Url;
 
 /// An custom panic handler for erooster
 pub struct EroosterPanicMessage;

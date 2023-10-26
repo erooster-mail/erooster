@@ -1,5 +1,8 @@
-use futures::{Sink, SinkExt};
-use tracing::instrument;
+use erooster_deps::{
+    color_eyre,
+    futures::{Sink, SinkExt},
+    tracing::{self, instrument},
+};
 
 pub struct Rset;
 

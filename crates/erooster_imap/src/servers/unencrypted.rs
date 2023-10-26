@@ -6,20 +6,22 @@ use crate::{
     },
     Server, CAPABILITY_UNENCRYPTED_HELLO,
 };
-use async_trait::async_trait;
-use color_eyre::Result;
 use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
     line_codec::LinesCodec,
     LINE_LIMIT,
 };
-use futures::{SinkExt, StreamExt};
+use erooster_deps::{
+    async_trait::async_trait,
+    color_eyre::{self, Result},
+    futures::{SinkExt, StreamExt},
+    tokio::{self, net::TcpListener, task::JoinHandle},
+    tokio_stream::wrappers::TcpListenerStream,
+    tokio_util::codec::Framed,
+    tracing::{self, debug, error, info, instrument},
+};
 use std::net::SocketAddr;
-use tokio::{net::TcpListener, task::JoinHandle};
-use tokio_stream::wrappers::TcpListenerStream;
-use tokio_util::codec::Framed;
-use tracing::{debug, error, info, instrument};
 
 /// An unencrypted imap Server
 pub struct Unencrypted;

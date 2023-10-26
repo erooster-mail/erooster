@@ -6,20 +6,21 @@ use crate::{
         state::Connection,
     },
 };
-use color_eyre::{eyre::Context, Result};
 use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
     line_codec::LinesCodec,
     LINE_LIMIT,
 };
-use futures::{SinkExt, StreamExt};
+use erooster_deps::{
+    color_eyre::{self, eyre::Context, Result},
+    futures::{SinkExt, StreamExt},
+    tokio::{self, net::TcpListener, task::JoinHandle},
+    tokio_stream::wrappers::TcpListenerStream,
+    tokio_util::codec::Framed,
+    tracing::{self, debug, error, info, instrument},
+};
 use std::net::SocketAddr;
-use tokio::{net::TcpListener, task::JoinHandle};
-use tokio_stream::wrappers::TcpListenerStream;
-use tokio_util::codec::Framed;
-use tracing::{debug, error, info, instrument};
-
 /// An unencrypted smtp Server
 pub struct Unencrypted;
 

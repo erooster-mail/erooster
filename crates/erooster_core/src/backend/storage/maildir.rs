@@ -5,15 +5,22 @@ use crate::{
     },
     config::Config,
 };
-use futures::{StreamExt, TryStreamExt};
-use maildir::Maildir;
-use mailparse::ParsedMail;
 use std::path::{Path, PathBuf};
-use tokio::fs::File;
-use tokio::io::{AsyncBufReadExt, BufReader};
-use tokio::{fs::OpenOptions, io::AsyncWriteExt};
-use tokio_stream::wrappers::LinesStream;
-use tracing::{debug, error, instrument};
+
+use erooster_deps::{
+    async_trait, color_eyre,
+    futures::{StreamExt, TryStreamExt},
+    maildir::{self, Maildir},
+    mailparse::{self, ParsedMail},
+    tokio::{
+        fs::File,
+        fs::OpenOptions,
+        io::AsyncWriteExt,
+        io::{AsyncBufReadExt, BufReader},
+    },
+    tokio_stream::wrappers::LinesStream,
+    tracing::{self, debug, error, instrument},
+};
 
 /// The Storage handler for the maildir format
 #[derive(Debug, Clone)]

@@ -1,12 +1,14 @@
-use nom::{
-    bytes::complete::take_while1,
-    character::complete::char,
-    error::{context, VerboseError},
-    multi::many0,
-    sequence::delimited,
-    IResult,
+use erooster_deps::{
+    nom::{
+        bytes::complete::take_while1,
+        character::complete::char,
+        error::{context, VerboseError},
+        multi::many0,
+        sequence::delimited,
+        IResult,
+    },
+    tracing::{self, instrument},
 };
-use tracing::instrument;
 
 type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
 

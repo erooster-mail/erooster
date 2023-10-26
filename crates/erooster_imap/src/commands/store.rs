@@ -2,10 +2,12 @@ use crate::{
     commands::{CommandData, Data},
     servers::state::State,
 };
-use color_eyre::eyre::ContextCompat;
 use erooster_core::backend::storage::{MailEntry, MailEntryType, MailStorage, Storage};
-use futures::{Sink, SinkExt};
-use tracing::{debug, error, instrument};
+use erooster_deps::{
+    color_eyre::{self, eyre::ContextCompat},
+    futures::{Sink, SinkExt},
+    tracing::{self, debug, error, instrument},
+};
 
 pub struct Store<'a> {
     pub data: &'a Data,

@@ -8,7 +8,7 @@ use erooster_deps::{
     futures::{Sink, SinkExt},
     serde_json, tokio,
     tracing::{self, error, info, instrument, warn},
-    yaque::{recovery::recover, Receiver, Sender},
+    yaque::{recovery::recover, ReceiverBuilder, Sender},
 };
 
 use self::sending::EmailPayload;
@@ -65,11 +65,15 @@ pub async fn start(
     });
 
     // Start listening for tasks
-    let mut receiver = Receiver::open(config.task_folder.clone());
+    let mut receiver = ReceiverBuilder::default()
+        .save_every_nth(None)
+        .open(config.task_folder.clone());
     if let Err(e) = receiver {
         warn!("Unable to open receiver: {:?}. Trying to recover.", e);
         recover(&config.task_folder)?;
-        receiver = Receiver::open(config.task_folder.clone());
+        receiver = ReceiverBuilder::default()
+            .save_every_nth(None)
+            .open(config.task_folder.clone());
         info!("Recovered queue successfully");
     }
 

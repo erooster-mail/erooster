@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2023 MTRNord
+//
+// SPDX-License-Identifier: Apache-2.0
+
 pub use futures;
 pub use tokio;
 pub use tokio_rustls;

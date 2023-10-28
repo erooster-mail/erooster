@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2023 MTRNord
+//
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{
     commands::{
         auth::Auth, data::DataCommand, ehlo::Ehlo, mail::Mail, noop::Noop, quit::Quit, rcpt::Rcpt,

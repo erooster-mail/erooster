@@ -1,3 +1,7 @@
+-- SPDX-FileCopyrightText: 2023 MTRNord
+--
+-- SPDX-License-Identifier: Apache-2.0
+
 -- Main entry-point for job runner: pulls a batch of messages from the queue.
 CREATE OR REPLACE FUNCTION mq_poll(channel_names TEXT[], batch_size INT DEFAULT 1)
 RETURNS TABLE(

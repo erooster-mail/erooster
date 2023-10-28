@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2023 MTRNord
+//
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::commands::{auth::AuthenticationMethod, parsers::DateTime};
 
 /// State of the connection session between us and the Client

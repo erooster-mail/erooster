@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2023 MTRNord
+//
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
+
 use erooster_deps::{
     bytes::{Buf, BufMut, BytesMut},
     simdutf8::compat::from_utf8,

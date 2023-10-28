@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2023 MTRNord
+//
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{backend::database::Database, config::Config};
 use erooster_deps::{
     argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier},

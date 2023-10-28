@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2023 MTRNord
+//
+// SPDX-License-Identifier: Apache-2.0
+
 //! Core logic for the erooster mail server
 //!
 #![feature(string_remove_matches)]

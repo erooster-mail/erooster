@@ -1,3 +1,7 @@
+-- SPDX-FileCopyrightText: 2023 MTRNord
+--
+-- SPDX-License-Identifier: Apache-2.0
+
 CREATE OR REPLACE FUNCTION mq_latest_message(from_channel_name TEXT, from_channel_args TEXT)
 RETURNS UUID AS $$
     SELECT COALESCE(

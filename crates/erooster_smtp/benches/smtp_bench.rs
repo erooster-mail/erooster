@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2023 MTRNord
+//
+// SPDX-License-Identifier: Apache-2.0
+
 use criterion::{criterion_group, criterion_main, Criterion};
 use erooster_core::backend::database::{get_database, Database};
 use erooster_core::backend::storage::get_storage;

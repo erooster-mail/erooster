@@ -1,3 +1,7 @@
+-- SPDX-FileCopyrightText: 2023 MTRNord
+--
+-- SPDX-License-Identifier: Apache-2.0
+
 DROP FUNCTION IF EXISTS next_uid_for_folder;
 
 CREATE OR REPLACE function next_uid_for_folder(m_mailbox VARCHAR) 

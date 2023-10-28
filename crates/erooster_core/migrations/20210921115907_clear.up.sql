@@ -1,3 +1,7 @@
+-- SPDX-FileCopyrightText: 2023 MTRNord
+--
+-- SPDX-License-Identifier: Apache-2.0
+
 -- Deletes all messages from a list of channel names.
 CREATE FUNCTION mq_clear(channel_names TEXT[])
 RETURNS VOID AS $$

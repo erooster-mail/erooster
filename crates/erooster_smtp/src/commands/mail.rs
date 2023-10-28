@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2023 MTRNord
+//
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::commands::{parsers::localpart_arguments, CommandData, Data};
 use erooster_deps::{
     color_eyre::{

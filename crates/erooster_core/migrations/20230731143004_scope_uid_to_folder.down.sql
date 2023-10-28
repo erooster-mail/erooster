@@ -1,3 +1,7 @@
+-- SPDX-FileCopyrightText: 2023 MTRNord
+--
+-- SPDX-License-Identifier: Apache-2.0
+
 DROP TRIGGER IF EXISTS base_table_update_unknown_trigger ON mails;
 
 DROP TRIGGER IF EXISTS base_table_insert_trigger ON mails;

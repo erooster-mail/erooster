@@ -1,3 +1,7 @@
+-- SPDX-FileCopyrightText: 2023 MTRNord
+--
+-- SPDX-License-Identifier: Apache-2.0
+
 ALTER TABLE mails
   ADD "uid" BIGINT NOT NULL DEFAULT 0,
   ADD "mailbox" VARCHAR DEFAULT 'unknown' NOT NULL;

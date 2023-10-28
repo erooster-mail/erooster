@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2023 MTRNord
+//
+// SPDX-License-Identifier: Apache-2.0
+
 use erooster_deps::mail_auth::SpfOutput;
 
 /// State of the connection session between us and the Client

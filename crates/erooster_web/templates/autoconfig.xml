@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+SPDX-FileCopyrightText: 2023 MTRNord
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 <clientConfig version="1.1">
   <emailProvider id="{{ domain }}">
     <domain>{{ domain }}</domain>

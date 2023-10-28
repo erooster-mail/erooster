@@ -1,3 +1,7 @@
+-- SPDX-FileCopyrightText: 2023 MTRNord
+--
+-- SPDX-License-Identifier: Apache-2.0
+
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- The UDT for creating messages

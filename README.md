@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2023 MTRNord
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Erooster
 
 [![codecov](https://codecov.io/gh/MTRNord/erooster/branch/main/graph/badge.svg?token=ieNQlSkDTF)](https://codecov.io/gh/MTRNord/erooster)

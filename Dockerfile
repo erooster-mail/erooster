@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 MTRNord
+#
+# SPDX-License-Identifier: Apache-2.0
+
 FROM rustlang/rust:nightly-slim AS chef
 
 # We only pay the installation cost once,

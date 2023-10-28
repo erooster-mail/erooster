@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2023 MTRNord
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # What do I need to know to help?
 
 If you are looking to help to with a code contribution our project uses Rust, Postgres SQL, the IMAP protocol and the SMTP Protocol.

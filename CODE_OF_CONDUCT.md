@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2023 MTRNord
+
+SPDX-License-Identifier: CC0-1.0
+-->
 
 # Contributor Covenant Code of Conduct
 

@@ -1,0 +1,10 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: erooster
+Upstream-Contact: MTRNord <support@nordgedanken.dev>
+Source: https://github.com/erooster-mail/erooster
+
+# Sample paragraph, commented out:
+#
+# Files: src/*
+# Copyright: $YEAR $NAME <$CONTACT>
+# License: ...

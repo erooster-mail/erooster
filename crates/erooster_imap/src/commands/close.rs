@@ -57,7 +57,6 @@ impl Close<'_> {
                         .await,
                 );
             for mail in mails {
-                debug!("Checking mails");
                 if mail.is_trashed() {
                     let path = mail.path();
                     fs::remove_file(path).await?;
@@ -88,6 +87,8 @@ mod tests {
     use crate::servers::state::{Access, Connection};
     use erooster_deps::futures::{channel::mpsc, StreamExt};
     use erooster_deps::tokio;
+
+    // TODO: A test with data to delete is missing
 
     #[tokio::test]
     async fn test_select_rw() {

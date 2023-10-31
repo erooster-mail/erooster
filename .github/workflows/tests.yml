@@ -42,7 +42,7 @@ jobs:
 
   test-pg:
     continue-on-error: true
-    name: Coverage
+    name: Coverage Postgres
     runs-on: ubuntu-latest
     container:
       image: rust:latest
@@ -74,7 +74,7 @@ jobs:
 
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - name: Install Rust
-        run: rustup toolchain install nightly --component llvm-tools-preview
+        run: rustup toolchain install stable --component llvm-tools-preview
       - uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b
       - name: Install opendkim
         run: apt update && apt install -y opendkim-tools
@@ -105,9 +105,9 @@ jobs:
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
         run: |
-          cargo +nightly llvm-cov --no-report --workspace
-          cargo +nightly llvm-cov --no-report --features "jaeger" --workspace
-          cargo +nightly llvm-cov report --html
+          cargo llvm-cov --no-report --workspace
+          cargo llvm-cov --no-report --features "jaeger" --workspace
+          cargo llvm-cov report --html
         env:
           RUST_BACKTRACE: "1"
       - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
@@ -116,9 +116,9 @@ jobs:
           path: target/llvm-cov/html/
       - name: Generate code coverage for codecov
         run: |
-          cargo +nightly llvm-cov --no-report --workspace
-          cargo +nightly llvm-cov --no-report --features "jaeger" --workspace
-          cargo +nightly llvm-cov report --lcov --output-path lcov.info
+          cargo llvm-cov --no-report --workspace
+          cargo llvm-cov --no-report --features "jaeger" --workspace
+          cargo llvm-cov report --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
@@ -127,7 +127,7 @@ jobs:
           fail_ci_if_error: false
 
   test-sqlite:
-    name: Coverage
+    name: Coverage Sqlite
     runs-on: ubuntu-latest
     container:
       image: rust:latest
@@ -140,7 +140,7 @@ jobs:
 
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
       - name: Install Rust
-        run: rustup toolchain install nightly --component llvm-tools-preview
+        run: rustup toolchain install stable --component llvm-tools-preview
       - uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b
       - name: Install opendkim and sqlite
         run: apt update && apt install -y opendkim-tools sqlite3
@@ -171,9 +171,9 @@ jobs:
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
         run: |
-          cargo +nightly llvm-cov --no-report --workspace
-          cargo +nightly llvm-cov --no-report --features "jaeger" --workspace
-          cargo +nightly llvm-cov report --html
+          cargo llvm-cov --no-report --workspace --features sqlite --no-default-features 
+          cargo llvm-cov --no-report --features "jaeger" --workspace --features sqlite --no-default-features 
+          cargo llvm-cov report --html
         env:
           RUST_BACKTRACE: "1"
       - uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32
@@ -182,9 +182,9 @@ jobs:
           path: target/llvm-cov/html/
       - name: Generate code coverage for codecov
         run: |
-          cargo +nightly llvm-cov --no-report --workspace
-          cargo +nightly llvm-cov --no-report --features "jaeger" --workspace
-          cargo +nightly llvm-cov report --lcov --output-path lcov.info
+          cargo llvm-cov --no-report --workspace --features sqlite --no-default-features 
+          cargo llvm-cov --no-report --features "jaeger" --workspace --features sqlite --no-default-features 
+          cargo llvm-cov report --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:

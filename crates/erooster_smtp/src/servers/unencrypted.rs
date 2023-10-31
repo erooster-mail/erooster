@@ -51,7 +51,7 @@ impl Unencrypted {
         for addr in addrs {
             info!("[SMTP] Trying to listen on {:?}", addr);
             let listener = TcpListener::bind(addr).await?;
-            info!("[SMTP] Listening on unecrypted Port");
+            info!("[SMTP] Listening on unencrypted Port");
             let stream = TcpListenerStream::new(listener);
 
             let database = database.clone();

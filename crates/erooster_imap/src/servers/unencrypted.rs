@@ -46,7 +46,7 @@ impl Server for Unencrypted {
         for addr in addrs {
             info!("[IMAP] Trying to listen on {:?}", addr);
             let listener = TcpListener::bind(addr).await?;
-            info!("[IMAP] Listening on unecrypted Port");
+            info!("[IMAP] Listening on unencrypted Port");
             let stream = TcpListenerStream::new(listener);
 
             let database = database.clone();

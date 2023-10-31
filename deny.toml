@@ -88,7 +88,7 @@ allow = [
     "OpenSSL",
     "Zlib",
     "WTFPL",
-    "Unicode-DFS-2016"
+    "Unicode-DFS-2016",
     #"Apache-2.0 WITH LLVM-exception",
 ]
 # List of explicitly disallowed licenses
@@ -141,7 +141,7 @@ expression = "MIT AND ISC AND OpenSSL"
 # depending on the rest of your configuration
 license-files = [
     # Each entry is a crate relative path, and the (opaque) hash of its contents
-    { path = "LICENSE", hash = 0xbd0eed23 }
+    { path = "LICENSE", hash = 0xbd0eed23 },
 ]
 
 [licenses.private]
@@ -215,8 +215,8 @@ allow-git = []
 
 [sources.allow-org]
 # 1 or more github.com organizations to allow git sources for
-github = ["erooster-email"]
+github = ["erooster-mail"]
 # 1 or more gitlab.com organizations to allow git sources for
 gitlab = ["famedly"]
 # 1 or more bitbucket.org organizations to allow git sources for
-bitbucket = [""]
+bitbucket = []

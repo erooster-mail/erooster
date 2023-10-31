@@ -22,6 +22,11 @@ erooster_core = { version = "0.1.0", path = "../erooster_core" }
 erooster_deps = { version = "0.1.0", path = "../erooster_deps" }
 time = { version = "0.3.30", features = ["parsing", "macros"] }
 
+[features]
+default = []
+postgres = ["erooster_core/postgres"]
+sqlite = ["erooster_core/sqlite"]
+
 [dev-dependencies]
 convert_case = "0.6.0"
 enum-iterator = "1.3.0"

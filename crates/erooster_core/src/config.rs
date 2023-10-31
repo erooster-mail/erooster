@@ -48,8 +48,8 @@ pub struct Webserver {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(crate = "self::serde")]
 pub struct Database {
-    /// Connection string for the postgres database
-    pub postgres_url: String,
+    /// Connection string for the database
+    pub url: String,
 }
 
 /// Configurations specific to the TLS part

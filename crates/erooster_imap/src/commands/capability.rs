@@ -64,7 +64,7 @@ mod tests {
         };
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &cmd_data, true).await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         assert_eq!(
             rx.next().await,
             Some(String::from(
@@ -87,7 +87,7 @@ mod tests {
         };
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &cmd_data, false).await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         assert_eq!(
             rx.next().await,
             Some(String::from(

@@ -12,10 +12,18 @@ use erooster_deps::{
 use sqlx::Pool;
 
 /// Postgres specific database implementation
+#[cfg(feature = "postgres")]
 pub mod postgres;
+/// Sqlite specific database implementation
+#[cfg(feature = "sqlite")]
+pub mod sqlite;
 
 /// Wrapper to simplify the Database types
+#[cfg(feature = "postgres")]
 pub type DB = postgres::Postgres;
+/// Wrapper to simplify the Database types
+#[cfg(feature = "sqlite")]
+pub type DB = sqlite::Sqlite;
 
 /// A uniform interface for database access
 #[async_trait::async_trait]
@@ -48,6 +56,15 @@ pub trait Database<S: sqlx::Database> {
 /// Get a postgres database connection pool and the higher level wrapper
 #[allow(clippy::module_name_repetitions)]
 #[instrument(skip(config))]
+#[cfg(feature = "postgres")]
 pub async fn get_database(config: &Config) -> Result<postgres::Postgres> {
     postgres::Postgres::new(config).await
+}
+
+/// Get a sqlite database connection pool and the higher level wrapper
+#[allow(clippy::module_name_repetitions)]
+#[instrument(skip(config))]
+#[cfg(feature = "sqlite")]
+pub async fn get_database(config: &Config) -> Result<sqlite::Sqlite> {
+    sqlite::Sqlite::new(config).await
 }

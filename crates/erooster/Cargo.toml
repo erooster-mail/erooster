@@ -27,8 +27,20 @@ erooster_web = { version = "0.1.0", path = "../erooster_web" }
 erooster_deps = { version = "0.1.0", path = "../erooster_deps" }
 
 [features]
-default = []
+default = ["postgres"]
 jaeger = ["erooster_deps/jaeger"]
+postgres = [
+    "erooster_core/postgres",
+    "erooster_smtp/postgres",
+    "erooster_imap/postgres",
+    "erooster_web/postgres",
+]
+sqlite = [
+    "erooster_core/sqlite",
+    "erooster_smtp/sqlite",
+    "erooster_imap/sqlite",
+    "erooster_web/sqlite",
+]
 
 [build-dependencies]
 clap = { version = "4.1.6", features = [

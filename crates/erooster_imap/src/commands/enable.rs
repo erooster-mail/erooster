@@ -75,7 +75,7 @@ mod tests {
 
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &cmd_data).await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         assert_eq!(rx.next().await, Some(String::from("* ENABLED UTF8=ACCEPT")));
         assert_eq!(rx.next().await, Some(String::from("a1 OK")));
 
@@ -105,7 +105,7 @@ mod tests {
 
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &cmd_data).await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         assert_eq!(rx.next().await, Some(String::from("* ENABLED Random")));
         assert_eq!(rx.next().await, Some(String::from("a1 OK")));
 

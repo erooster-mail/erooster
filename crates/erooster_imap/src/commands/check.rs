@@ -98,7 +98,7 @@ mod tests {
         let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         assert_eq!(rx.next().await, Some(String::from("1 OK CHECK completed")));
     }
 
@@ -128,7 +128,7 @@ mod tests {
         let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         assert_eq!(rx.next().await, Some(String::from("1 NO invalid state")));
     }
 }

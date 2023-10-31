@@ -213,7 +213,7 @@ mod tests {
         let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         assert_eq!(rx.next().await, Some(String::from("a1 NO invalid state")));
     }
 
@@ -244,7 +244,7 @@ mod tests {
         let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         assert_eq!(
             rx.next().await,
             Some(String::from("a1 NO invalid argument count"))
@@ -279,7 +279,7 @@ mod tests {
         let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         assert_eq!(
             rx.next().await,
             Some(String::from("+ Ready for literal data"))
@@ -315,7 +315,7 @@ mod tests {
         let storage = erooster_core::backend::storage::get_storage(database, config.clone());
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         assert_eq!(
             rx.next().await,
             Some(String::from("+ Ready for literal data"))
@@ -332,7 +332,7 @@ mod tests {
                 cmd_data.tag.to_string(),
             )
             .await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         let res = caps
             .append(
                 &mut tx,
@@ -342,7 +342,7 @@ mod tests {
                 cmd_data.tag.to_string(),
             )
             .await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         let res = caps
             .append(
                 &mut tx,
@@ -352,7 +352,7 @@ mod tests {
                 cmd_data.tag.to_string(),
             )
             .await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         let res = caps
             .append(
                 &mut tx,
@@ -362,7 +362,7 @@ mod tests {
                 cmd_data.tag.to_string(),
             )
             .await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         let res = caps
             .append(
                 &mut tx,
@@ -372,7 +372,7 @@ mod tests {
                 cmd_data.tag.to_string(),
             )
             .await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         let res = caps
             .append(
                 &mut tx,
@@ -382,7 +382,7 @@ mod tests {
                 cmd_data.tag.to_string(),
             )
             .await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         let res = caps
             .append(
                 &mut tx,
@@ -392,11 +392,11 @@ mod tests {
                 cmd_data.tag.to_string(),
             )
             .await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         let res = caps
             .append(&mut tx, &storage, "", &config, cmd_data.tag.to_string())
             .await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         let res = caps
             .append(
                 &mut tx,
@@ -406,11 +406,11 @@ mod tests {
                 cmd_data.tag.to_string(),
             )
             .await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         let res = caps
             .append(&mut tx, &storage, "", &config, cmd_data.tag.to_string())
             .await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{:?}", res);
         assert_eq!(
             rx.next().await,
             Some(String::from("a1 OK APPEND completed"))

@@ -23,12 +23,13 @@ bench = false
 [dependencies]
 erooster_deps = { version = "0.1.0", path = "../erooster_deps" }
 time = { version = "0.3.30", features = ["formatting", "parsing", "macros"] }
-
-
 erooster_core = { version = "0.1.0", path = "../erooster_core" }
+
 [features]
 default = []
 benchmarking = []
+postgres = ["erooster_core/postgres"]
+sqlite = ["erooster_core/sqlite"]
 
 [[bench]]
 name = "smtp_bench"

@@ -106,3 +106,9 @@ Due to personal constraints, I currently do not prove enterprise support for thi
 ## Contact
 
 To contact the erooster team you can find us at <https://matrix.to/#/#erooster:midnightthoughts.space> or if an email is absolutely needed please write to [support@nordgedanken.dev](mailto:support@nordgedanken.dev). As written in the Support section, there is no enterprise support at this time. So please don't ask for it. It will just fill up the mailbox. :)
+
+## Note on SQLITE
+
+Note that this isnt officially supported outside of running tests. Some migrations rely on sql functions which sqlite does NOT support.
+
+Running sqlite in prod means no support whatsoever.

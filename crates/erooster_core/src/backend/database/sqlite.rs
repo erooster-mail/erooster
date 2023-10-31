@@ -7,44 +7,34 @@ use erooster_deps::{
     argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier},
     async_trait,
     color_eyre::{self, Result},
-    once_cell::sync::OnceCell,
     rand_core::OsRng,
     secrecy::{ExposeSecret, SecretString},
     tracing::{self, debug, debug_span, error, instrument},
 };
-use sqlx::{pool::PoolOptions, PgPool};
+use sqlx::{pool::PoolOptions, SqlitePool};
 
 /// Postgres specific database implementation
 /// Holds data to connect to the database
 #[derive(Debug, Clone)]
-pub struct Postgres {
-    pool: PgPool,
+pub struct Sqlite {
+    pool: SqlitePool,
 }
 
 #[async_trait::async_trait]
-impl Database<sqlx::Postgres> for Postgres {
+impl Database<sqlx::Sqlite> for Sqlite {
     #[instrument(skip(config))]
     async fn new(config: &Config) -> Result<Self> {
-        static INSTANCE: OnceCell<Postgres> = OnceCell::new();
-
-        let pool = INSTANCE.get();
-
-        if let Some(pool) = pool {
-            Ok(pool.clone())
-        } else {
-            let pool = PoolOptions::new()
-                .min_connections(2)
-                .max_connections(10)
-                .connect(&config.database.url)
-                .await?;
-            sqlx::migrate!("./postgres_migrations").run(&pool).await?;
-            let new_self = INSTANCE.get_or_init(|| Self { pool });
-            Ok(new_self.clone())
-        }
+        let pool = PoolOptions::new()
+            .min_connections(2)
+            .max_connections(10)
+            .connect(&config.database.url)
+            .await?;
+        sqlx::migrate!("./sqlite_migrations").run(&pool).await?;
+        Ok(Self { pool })
     }
 
     #[instrument(skip(self))]
-    fn get_pool(&self) -> &PgPool {
+    fn get_pool(&self) -> &SqlitePool {
         &self.pool
     }
 
@@ -118,7 +108,7 @@ impl Database<sqlx::Postgres> for Postgres {
             .await;
         match exists {
             Ok(exists) => {
-                debug!("[POSTGRES] [user_exists] {:?}", exists.len());
+                debug!("[SQLITE] [user_exists] {:?}", exists.len());
                 exists.len() == 1
             }
             Err(e) => {

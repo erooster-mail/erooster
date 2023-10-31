@@ -66,7 +66,7 @@ jobs:
           echo '  dkim_key_path: /etc/erooster/keys/default.private' >> /etc/erooster/config.yml
           echo '  dkim_key_selector: default' >> /etc/erooster/config.yml
           echo 'database:' >> /etc/erooster/config.yml
-          echo '  postgres_url: "postgres://postgres:postgres@postgres/erooster"' >> /etc/erooster/config.yml
+          echo '  url: "postgres://postgres:postgres@postgres/erooster"' >> /etc/erooster/config.yml
           echo 'webserver:' >> /etc/erooster/config.yml
           echo '  port: 80' >> /etc/erooster/config.yml
           echo '  tls: false' >> /etc/erooster/config.yml

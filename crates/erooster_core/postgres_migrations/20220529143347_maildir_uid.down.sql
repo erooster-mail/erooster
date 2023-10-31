@@ -2,5 +2,4 @@
 --
 -- SPDX-License-Identifier: Apache-2.0
 
-DROP FUNCTION mq_clear;
-DROP FUNCTION mq_clear_all;
+DROP mails;

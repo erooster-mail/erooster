@@ -7,7 +7,7 @@
 /*.stacks
 /windows_thunderbird_debug.cmd
 /config.yml
-/maildir
+maildir
 /flamegraph*.svg
 /perf.data*
 /db.sqlite

@@ -59,6 +59,7 @@ mod tests {
     use erooster_deps::tokio;
 
     #[allow(clippy::unwrap_used)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_not_selected() {
         let state = &mut Data {
@@ -89,6 +90,7 @@ mod tests {
     }
 
     #[allow(clippy::unwrap_used)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_selected_empty() {
         let state = &mut Data {

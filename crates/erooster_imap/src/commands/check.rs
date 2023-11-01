@@ -72,6 +72,7 @@ mod tests {
     use erooster_deps::futures::{channel::mpsc, StreamExt};
     use erooster_deps::tokio;
 
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_successful_check() {
         let caps = Check {
@@ -102,6 +103,7 @@ mod tests {
         assert_eq!(rx.next().await, Some(String::from("1 OK CHECK completed")));
     }
 
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_unsuccessful_check() {
         let caps = Check {

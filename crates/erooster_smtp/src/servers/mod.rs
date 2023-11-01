@@ -21,7 +21,7 @@ pub(crate) mod encrypted;
 pub(crate) mod sending;
 pub(crate) mod state;
 
-// TODO make this only pub for benches and tests
+// TODO: make this only pub for benches and tests
 #[allow(missing_docs)]
 pub mod unencrypted;
 

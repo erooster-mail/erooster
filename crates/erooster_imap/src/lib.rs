@@ -12,6 +12,7 @@
 //!
 #![feature(string_remove_matches)]
 #![feature(box_into_inner)]
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 #![deny(unsafe_code, clippy::unwrap_used)]
 #![warn(
     clippy::cognitive_complexity,

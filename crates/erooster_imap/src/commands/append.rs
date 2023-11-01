@@ -187,6 +187,7 @@ mod tests {
     use erooster_deps::tokio;
 
     #[allow(clippy::unwrap_used)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_not_authenticated_state() {
         let mut caps = Append {
@@ -218,6 +219,7 @@ mod tests {
     }
 
     #[allow(clippy::unwrap_used)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_not_enough_arguments() {
         let mut caps = Append {
@@ -252,6 +254,7 @@ mod tests {
     }
 
     #[allow(clippy::unwrap_used)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_read_only_arguments() {
         let mut caps = Append {
@@ -288,6 +291,7 @@ mod tests {
 
     #[allow(clippy::unwrap_used)]
     #[allow(clippy::too_many_lines)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_append() {
         let mut caps = Append {

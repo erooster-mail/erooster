@@ -29,7 +29,7 @@ use std::net::SocketAddr;
 pub struct Unencrypted;
 
 impl Unencrypted {
-    // TODO make this only pub for benches and tests
+    // TODO: make this only pub for benches and tests
     #[allow(missing_docs)]
     #[allow(clippy::missing_errors_doc)]
     #[instrument(skip(config, database, storage))]

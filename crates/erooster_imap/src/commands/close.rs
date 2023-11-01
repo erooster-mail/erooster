@@ -90,6 +90,7 @@ mod tests {
 
     // TODO: A test with data to delete is missing
 
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_select_rw() {
         let mut caps = Close {
@@ -120,6 +121,7 @@ mod tests {
         assert_eq!(rx.next().await, Some(String::from("1 OK CLOSE completed")));
     }
 
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_selected_ro() {
         let mut caps = Close {
@@ -153,6 +155,7 @@ mod tests {
         );
     }
 
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_no_auth() {
         let mut caps = Close {

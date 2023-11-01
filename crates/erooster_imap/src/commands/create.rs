@@ -105,6 +105,7 @@ mod tests {
         tokio,
     };
 
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_create_trash() {
         let caps = Create {
@@ -142,6 +143,7 @@ mod tests {
     }
 
     /// Since the state Authenticated is only required read-only selected is allowed to create rooms!
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_create_read_only() {
         let caps = Create {
@@ -178,6 +180,7 @@ mod tests {
         );
     }
 
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_create_not_logged_in() {
         let caps = Create {

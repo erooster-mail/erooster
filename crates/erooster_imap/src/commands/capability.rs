@@ -54,6 +54,7 @@ mod tests {
         tokio,
     };
 
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_get_capabilities() {
         let caps = Capability {};
@@ -77,6 +78,7 @@ mod tests {
         );
     }
 
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_get_unencrypted_capabilities() {
         let caps = Capability {};

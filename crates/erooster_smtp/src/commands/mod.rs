@@ -265,6 +265,7 @@ mod tests {
     use enum_iterator::all;
 
     #[test]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     fn test_parsing_commands() {
         for command_variant in all::<Commands>() {
             if let Commands::MAILFROM = command_variant {

@@ -56,6 +56,7 @@ mod tests {
     use erooster_deps::tokio;
 
     #[allow(clippy::unwrap_used)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_utf8() {
         let state = &mut Data {
@@ -86,6 +87,7 @@ mod tests {
     }
 
     #[allow(clippy::unwrap_used)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
     async fn test_custom() {
         let state = &mut Data {

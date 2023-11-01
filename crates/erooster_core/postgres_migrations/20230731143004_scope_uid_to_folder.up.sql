@@ -3,8 +3,8 @@
 -- SPDX-License-Identifier: Apache-2.0
 
 ALTER TABLE mails
-  ADD "uid" BIGINT NOT NULL DEFAULT 0,
-  ADD "mailbox" VARCHAR DEFAULT 'unknown' NOT NULL;
+  ADD COLUMN IF NOT EXISTS uid BIGINT NOT NULL DEFAULT 0,
+  ADD COLUMN mailbox IF NOT EXISTS VARCHAR DEFAULT 'unknown' NOT NULL;
 
 create table IF NOT EXISTS mailbox_uid_counter 
 (

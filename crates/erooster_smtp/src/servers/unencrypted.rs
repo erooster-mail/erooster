@@ -32,7 +32,7 @@ impl Unencrypted {
     // TODO: make this only pub for benches and tests
     #[allow(missing_docs)]
     #[allow(clippy::missing_errors_doc)]
-    #[instrument(skip(config, database, storage))]
+    #[instrument(skip(config, database, storage, shutdown_flag))]
     pub async fn run(
         config: Config,
         database: &DB,

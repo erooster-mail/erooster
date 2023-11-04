@@ -91,7 +91,7 @@ impl Encrypted {
     /// # Errors
     ///
     /// Returns an error if the cert setup fails
-    #[instrument(skip(config, database, storage))]
+    #[instrument(skip(config, database, storage, shutdown_flag))]
     pub(crate) async fn run(
         config: Config,
         database: &DB,
@@ -136,7 +136,7 @@ impl Encrypted {
     }
 }
 
-#[instrument(skip(stream, config, database, storage, acceptor))]
+#[instrument(skip(stream, config, database, storage, acceptor, shutdown_flag))]
 async fn listen(
     mut stream: TcpListenerStream,
     config: &Config,

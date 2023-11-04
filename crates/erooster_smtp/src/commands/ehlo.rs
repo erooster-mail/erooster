@@ -66,6 +66,7 @@ impl Ehlo<'_> {
         }
         if self.data.con_state.secure {
             lines.feed(String::from("250-AUTH LOGIN PLAIN")).await?;
+            lines.feed(String::from("250-REQUIRETLS")).await?;
         }
         lines.feed(String::from("250 SMTPUTF8")).await?;
         lines.flush().await?;

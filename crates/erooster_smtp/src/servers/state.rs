@@ -9,6 +9,7 @@ use erooster_deps::mail_auth::SpfOutput;
 pub struct Connection {
     pub state: State,
     pub secure: bool,
+    pub require_tls: bool,
     pub receipts: Option<Vec<String>>,
     pub sender: Option<String>,
     pub ehlo: Option<String>,
@@ -20,6 +21,7 @@ impl Connection {
     pub const fn new(secure: bool, peer_addr: String) -> Self {
         Connection {
             secure,
+            require_tls: false,
             state: State::NotAuthenticated,
             receipts: None,
             sender: None,

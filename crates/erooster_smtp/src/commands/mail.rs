@@ -33,10 +33,12 @@ impl Mail<'_> {
             bail!("Failed to parse localpart arguments (no arguments)");
         }
 
+        // FIXME: This is just plain wrong
+        // TODO: Parse for `REQUIRETLS` as an argument to then set it on the data
         match localpart_arguments(command_data.arguments[0]).map(|(_, senders)| senders) {
             Ok(args) => {
                 // Create a resolver using Quad9 DNS
-                let resolver = Resolver::new_quad9_tls()?;
+                let resolver = Resolver::new_system_conf()?;
                 for sender in &args {
                     // Verify MAIL-FROM identity
                     let result = resolver

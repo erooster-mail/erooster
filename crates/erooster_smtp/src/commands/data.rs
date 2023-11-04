@@ -18,7 +18,7 @@ use erooster_deps::{
     mail_auth::{AuthenticatedMessage, DkimResult, DmarcResult, Resolver},
     reqwest, serde_json,
     simdutf8::compat::from_utf8,
-    tracing::{self, debug, instrument},
+    tracing::{self, debug, instrument, warn},
     uuid,
     yaque::Sender,
 };
@@ -213,12 +213,14 @@ impl DataCommand<'_> {
                                     .iter()
                                     .any(|d| matches!(d.result(), DkimResult::TempError(_)))
                                 {
+                                    warn!("Message was rejected for missing passing DKIM signatures.");
                                     lines
                                         .send(String::from(
                                             "451 4.7.20 No passing DKIM signatures found.\r\n",
                                         ))
                                         .await?;
                                 } else {
+                                    warn!("Message was rejected for missing passing DKIM signatures.");
                                     lines
                                         .send(String::from(
                                             "550 5.7.20 No passing DKIM signatures found.\r\n",
@@ -248,6 +250,7 @@ impl DataCommand<'_> {
                             if matches!(dmarc_result.dkim_result(), &DmarcResult::Fail(_))
                                 || matches!(dmarc_result.spf_result(), &DmarcResult::Fail(_))
                             {
+                                warn!("Message was rejected due to DMARC policy.");
                                 lines
                                     .send(String::from(
                                         "550 5.7.1 Email rejected per DMARC policy.\r\n",
@@ -257,6 +260,7 @@ impl DataCommand<'_> {
                             } else if matches!(dmarc_result.dkim_result(), &DmarcResult::TempError(_))
                                 || matches!(dmarc_result.spf_result(), &DmarcResult::TempError(_))
                             {
+                                warn!("Message was rejected due to DMARC policy.");
                                 lines
                                     .send(String::from(
                                         "451 4.7.1 Email temporarily rejected per DMARC policy.\r\n",

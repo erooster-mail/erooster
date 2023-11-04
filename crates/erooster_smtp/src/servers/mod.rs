@@ -2,7 +2,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{process::exit, sync::Arc};
+use std::{
+    process::exit,
+    sync::{Arc, Mutex},
+};
 
 use crate::servers::sending::send_email_job;
 use erooster_core::{
@@ -16,7 +19,6 @@ use erooster_deps::{
     tokio::{
         self,
         signal::unix::{signal, SignalKind},
-        sync::Mutex,
     },
     tracing::{self, error, info, instrument, warn},
     yaque::{recovery::recover, Receiver, ReceiverBuilder, Sender},
@@ -93,7 +95,7 @@ pub async fn start(
 
     match receiver {
         Ok(receiver) => {
-            let receiver = Arc::new(Mutex::const_new(receiver));
+            let receiver = Arc::new(Mutex::new(receiver));
             let receiver_clone = Arc::clone(&receiver);
             let receiver_clone_2 = Arc::clone(&receiver);
 
@@ -101,7 +103,7 @@ pub async fn start(
                 tokio::signal::ctrl_c()
                     .await
                     .expect("failed to listen for ctrl-c event");
-                cleanup(receiver_clone).await;
+                cleanup(&receiver_clone);
             });
 
             tokio::spawn(async move {
@@ -109,11 +111,11 @@ pub async fn start(
                     .recv()
                     .await
                     .expect("failed to listen for ctrl-c event");
-                cleanup(receiver_clone_2).await;
+                cleanup(&receiver_clone_2);
             });
 
             loop {
-                let mut receiver_lock = Arc::clone(&receiver).lock_owned().await;
+                let mut receiver_lock = receiver.lock().expect("Unable to lock receiver");
                 let data = receiver_lock.recv().await;
 
                 match data {
@@ -138,7 +140,7 @@ pub async fn start(
                     Err(e) => {
                         tracing::error!("Error while receiving data from receiver: {:?}", e);
                     }
-                }
+                };
             }
         }
         Err(e) => {
@@ -148,12 +150,12 @@ pub async fn start(
     }
 }
 
-async fn cleanup(receiver: Arc<Mutex<Receiver>>) {
+fn cleanup(receiver: &Arc<Mutex<Receiver>>) {
     info!("Received ctr-c. Cleaning up");
-    receiver
-        .lock_owned()
-        .await
-        .save()
-        .expect("Unable to save queue");
+    let mut lock = receiver.lock().expect("Unable to lock receiver");
+
+    info!("Gained lock. Saving queue");
+    lock.save().expect("Unable to save queue");
+    info!("Saved queue. Exiting");
     exit(0);
 }

@@ -5,6 +5,8 @@
 use std::{
     process::exit,
     sync::{Arc, Mutex},
+    thread,
+    time::Duration,
 };
 
 use crate::servers::sending::send_email_job;
@@ -115,6 +117,8 @@ pub async fn start(
             });
 
             loop {
+                // Marginally slow it down to have it not locked constantly
+                thread::sleep(Duration::from_millis(5));
                 let mut receiver_lock = receiver.lock().expect("Unable to lock receiver");
                 let data = receiver_lock.recv().await;
 

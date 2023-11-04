@@ -13,9 +13,13 @@ use erooster_deps::{
     color_eyre,
     futures::{Sink, SinkExt},
     serde_json,
-    tokio::{self, sync::Mutex},
+    tokio::{
+        self,
+        signal::unix::{signal, SignalKind},
+        sync::Mutex,
+    },
     tracing::{self, error, info, instrument, warn},
-    yaque::{recovery::recover, ReceiverBuilder, Sender},
+    yaque::{recovery::recover, Receiver, ReceiverBuilder, Sender},
 };
 
 use self::sending::EmailPayload;
@@ -84,22 +88,28 @@ pub async fn start(
         info!("Recovered queue successfully");
     }
 
+    // Get SIGTERMs
+    let mut sigterms = signal(SignalKind::terminate())?;
+
     match receiver {
         Ok(receiver) => {
             let receiver = Arc::new(Mutex::new(receiver));
             let receiver_clone = Arc::clone(&receiver);
+            let receiver_clone_2 = Arc::clone(&receiver);
 
             tokio::spawn(async move {
                 tokio::signal::ctrl_c()
                     .await
                     .expect("failed to listen for ctrl-c event");
-                info!("Received ctr-c. Cleaning up");
-                receiver_clone
-                    .lock()
+                cleanup(receiver_clone).await;
+            });
+
+            tokio::spawn(async move {
+                sigterms
+                    .recv()
                     .await
-                    .save()
-                    .expect("Unable to save queue");
-                exit(0);
+                    .expect("failed to listen for ctrl-c event");
+                cleanup(receiver_clone_2).await;
             });
 
             loop {
@@ -136,4 +146,10 @@ pub async fn start(
             Ok(())
         }
     }
+}
+
+async fn cleanup(receiver: Arc<Mutex<Receiver>>) {
+    info!("Received ctr-c. Cleaning up");
+    receiver.lock().await.save().expect("Unable to save queue");
+    exit(0);
 }

@@ -113,7 +113,7 @@ pub async fn start(
             });
 
             loop {
-                let mut receiver_lock = receiver.lock().await;
+                let mut receiver_lock = receiver.clone().lock_owned().await;
                 let data = receiver_lock.recv().await;
 
                 match data {
@@ -150,6 +150,10 @@ pub async fn start(
 
 async fn cleanup(receiver: Arc<Mutex<Receiver>>) {
     info!("Received ctr-c. Cleaning up");
-    receiver.lock().await.save().expect("Unable to save queue");
+    receiver
+        .lock_owned()
+        .await
+        .save()
+        .expect("Unable to save queue");
     exit(0);
 }

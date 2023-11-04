@@ -93,7 +93,7 @@ pub async fn start(
 
     match receiver {
         Ok(receiver) => {
-            let receiver = Arc::new(Mutex::new(receiver));
+            let receiver = Arc::new(Mutex::const_new(receiver));
             let receiver_clone = Arc::clone(&receiver);
             let receiver_clone_2 = Arc::clone(&receiver);
 
@@ -113,7 +113,7 @@ pub async fn start(
             });
 
             loop {
-                let mut receiver_lock = receiver.clone().lock_owned().await;
+                let mut receiver_lock = Arc::clone(&receiver).lock_owned().await;
                 let data = receiver_lock.recv().await;
 
                 match data {

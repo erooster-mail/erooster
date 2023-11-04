@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{process::exit, sync::Arc};
+
 use crate::servers::sending::send_email_job;
 use erooster_core::{
     backend::{database::DB, storage::Storage},
@@ -10,7 +12,8 @@ use erooster_core::{
 use erooster_deps::{
     color_eyre,
     futures::{Sink, SinkExt},
-    serde_json, tokio,
+    serde_json,
+    tokio::{self, sync::Mutex},
     tracing::{self, error, info, instrument, warn},
     yaque::{recovery::recover, ReceiverBuilder, Sender},
 };
@@ -82,33 +85,52 @@ pub async fn start(
     }
 
     match receiver {
-        Ok(mut receiver) => loop {
-            let data = receiver.recv().await;
+        Ok(receiver) => {
+            let receiver = Arc::new(Mutex::new(receiver));
+            let receiver_clone = Arc::clone(&receiver);
 
-            match data {
-                Ok(data) => {
-                    let email_bytes = &*data;
-                    let email_json = serde_json::from_slice::<EmailPayload>(email_bytes)?;
+            tokio::spawn(async move {
+                tokio::signal::ctrl_c()
+                    .await
+                    .expect("failed to listen for ctrl-c event");
+                info!("Received ctr-c. Cleaning up");
+                receiver_clone
+                    .lock()
+                    .await
+                    .save()
+                    .expect("Unable to save queue");
+                exit(0);
+            });
 
-                    if let Err(e) = send_email_job(&email_json).await {
-                        tracing::error!(
-                            "Error while sending email: {:?}. Adding it to the queue again",
-                            e
-                        );
-                        // FIXME: This can race the lock leading to an error. We should
-                        //        probably handle this better.
-                        let mut sender = Sender::open(config.task_folder.clone())?;
-                        let json_bytes = serde_json::to_vec(&email_json)?;
-                        sender.send(json_bytes).await?;
+            loop {
+                let mut receiver_lock = receiver.lock().await;
+                let data = receiver_lock.recv().await;
+
+                match data {
+                    Ok(data) => {
+                        let email_bytes = &*data;
+                        let email_json = serde_json::from_slice::<EmailPayload>(email_bytes)?;
+
+                        if let Err(e) = send_email_job(&email_json).await {
+                            tracing::error!(
+                                "Error while sending email: {:?}. Adding it to the queue again",
+                                e
+                            );
+                            // FIXME: This can race the lock leading to an error. We should
+                            //        probably handle this better.
+                            let mut sender = Sender::open(config.task_folder.clone())?;
+                            let json_bytes = serde_json::to_vec(&email_json)?;
+                            sender.send(json_bytes).await?;
+                        }
+                        // Mark the job as complete
+                        data.commit()?;
                     }
-                    // Mark the job as complete
-                    data.commit()?;
-                }
-                Err(e) => {
-                    tracing::error!("Error while receiving data from receiver: {:?}", e);
+                    Err(e) => {
+                        tracing::error!("Error while receiving data from receiver: {:?}", e);
+                    }
                 }
             }
-        },
+        }
         Err(e) => {
             error!("Unable to open receiver: {:?}. Giving up.", e);
             Ok(())

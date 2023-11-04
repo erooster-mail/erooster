@@ -11,7 +11,7 @@ use erooster_deps::{
     color_eyre::{self, eyre::ContextCompat},
     futures::{Sink, SinkExt},
     tokio::fs,
-    tracing::{self, debug, instrument},
+    tracing::{self, instrument},
 };
 
 pub struct Close<'a> {

@@ -71,7 +71,10 @@ impl Authenticate<'_> {
                                 self.data.con_state.state = State::NotAuthenticated;
                             };
                             lines
-                                .send(format!("{} NO Invalid user or password", command_data.tag))
+                                .send(format!(
+                                    "{} NO [AUTHENTICATIONFAILED] Invalid user or password",
+                                    command_data.tag
+                                ))
                                 .await?;
                             debug!("[IMAP] Invalid user or password");
                             return Ok(());
@@ -95,7 +98,10 @@ impl Authenticate<'_> {
                             self.data.con_state.state = State::NotAuthenticated;
                         };
                         lines
-                            .send(format!("{} NO Invalid user or password", command_data.tag))
+                            .send(format!(
+                                "{} NO [AUTHENTICATIONFAILED] Invalid user or password",
+                                command_data.tag
+                            ))
                             .await?;
                     }
                 } else {

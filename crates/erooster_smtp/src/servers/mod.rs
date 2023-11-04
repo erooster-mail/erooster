@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{process::exit, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use crate::servers::sending::send_email_job;
 use erooster_core::{
@@ -21,10 +21,7 @@ use erooster_deps::{
     },
     tokio_util::sync::CancellationToken,
     tracing::{self, error, info, instrument, warn},
-    yaque::{
-        recovery::{recover, unlock_queue},
-        Receiver, ReceiverBuilder, Sender,
-    },
+    yaque::{recovery::recover, Receiver, ReceiverBuilder, Sender},
 };
 
 use self::sending::EmailPayload;
@@ -113,9 +110,12 @@ pub async fn start(
             let receiver = Arc::new(Mutex::const_new(receiver));
             let receiver_clone = Arc::clone(&receiver);
 
-            let config_clone = config.clone();
+            let shutdown_flag_clone = shutdown_flag.clone();
             tokio::spawn(async move {
                 loop {
+                    if shutdown_flag_clone.is_cancelled() {
+                        break;
+                    }
                     let mut receiver_lock = Arc::clone(&receiver).lock_owned().await;
                     let data = timeout(Duration::from_secs(1), receiver_lock.recv()).await;
 
@@ -159,10 +159,10 @@ pub async fn start(
 
             tokio::select! {
                 _ = tokio::signal::ctrl_c() => {
-                    cleanup(&receiver_clone, &shutdown_flag, &config_clone).await;
+                    cleanup(&receiver_clone, &shutdown_flag).await;
                 }
                 _ = sigterms.recv() => {
-                    cleanup(&receiver_clone, &shutdown_flag, &config_clone).await;
+                    cleanup(&receiver_clone, &shutdown_flag).await;
                 }
             }
             Ok(())
@@ -174,18 +174,14 @@ pub async fn start(
     }
 }
 
-async fn cleanup(
-    receiver: &Arc<Mutex<Receiver>>,
-    shutdown_flag: &CancellationToken,
-    config: &Config,
-) {
+async fn cleanup(receiver: &Arc<Mutex<Receiver>>, shutdown_flag: &CancellationToken) {
     info!("Received ctr-c. Cleaning up");
-    let mut lock = receiver.lock().await;
-
-    info!("Gained lock. Saving queue");
-    lock.save().expect("Unable to save queue");
-    info!("Saved queue. Exiting");
     shutdown_flag.cancel();
-    unlock_queue(&config.task_folder).expect("Failed to unlock queue");
-    exit(0);
+    {
+        let mut lock = receiver.lock().await;
+
+        info!("Gained lock. Saving queue");
+        lock.save().expect("Unable to save queue");
+        info!("Saved queue. Exiting");
+    };
 }

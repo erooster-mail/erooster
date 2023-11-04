@@ -19,8 +19,12 @@ use erooster_deps::{
         sync::Mutex,
         time::timeout,
     },
+    tokio_util::sync::CancellationToken,
     tracing::{self, error, info, instrument, warn},
-    yaque::{recovery::recover, Receiver, ReceiverBuilder, Sender},
+    yaque::{
+        recovery::{recover, unlock_queue},
+        Receiver, ReceiverBuilder, Sender,
+    },
 };
 
 use self::sending::EmailPayload;
@@ -58,11 +62,19 @@ pub async fn start(
     database: &DB,
     storage: &Storage,
 ) -> color_eyre::eyre::Result<()> {
+    let shutdown_flag = CancellationToken::new();
     let db_clone = database.clone();
     let storage_clone = storage.clone();
     let config_clone = config.clone();
+    let shutdown_flag_clone = shutdown_flag.clone();
     tokio::spawn(async move {
-        if let Err(e) = unencrypted::Unencrypted::run(config_clone, &db_clone, &storage_clone).await
+        if let Err(e) = unencrypted::Unencrypted::run(
+            config_clone,
+            &db_clone,
+            &storage_clone,
+            shutdown_flag_clone,
+        )
+        .await
         {
             panic!("Unable to start server: {e:?}");
         }
@@ -70,8 +82,12 @@ pub async fn start(
     let db_clone = database.clone();
     let storage_clone = storage.clone();
     let config_clone = config.clone();
+    let shutdown_flag_clone = shutdown_flag.clone();
     tokio::spawn(async move {
-        if let Err(e) = encrypted::Encrypted::run(config_clone, &db_clone, &storage_clone).await {
+        if let Err(e) =
+            encrypted::Encrypted::run(config_clone, &db_clone, &storage_clone, shutdown_flag_clone)
+                .await
+        {
             panic!("Unable to start TLS server: {e:?}");
         }
     });
@@ -97,6 +113,7 @@ pub async fn start(
             let receiver = Arc::new(Mutex::const_new(receiver));
             let receiver_clone = Arc::clone(&receiver);
 
+            let config_clone = config.clone();
             tokio::spawn(async move {
                 loop {
                     let mut receiver_lock = Arc::clone(&receiver).lock_owned().await;
@@ -142,10 +159,10 @@ pub async fn start(
 
             tokio::select! {
                 _ = tokio::signal::ctrl_c() => {
-                    cleanup(&receiver_clone).await;
+                    cleanup(&receiver_clone, &shutdown_flag, &config_clone).await;
                 }
                 _ = sigterms.recv() => {
-                    cleanup(&receiver_clone).await;
+                    cleanup(&receiver_clone, &shutdown_flag, &config_clone).await;
                 }
             }
             Ok(())
@@ -157,12 +174,18 @@ pub async fn start(
     }
 }
 
-async fn cleanup(receiver: &Arc<Mutex<Receiver>>) {
+async fn cleanup(
+    receiver: &Arc<Mutex<Receiver>>,
+    shutdown_flag: &CancellationToken,
+    config: &Config,
+) {
     info!("Received ctr-c. Cleaning up");
     let mut lock = receiver.lock().await;
 
     info!("Gained lock. Saving queue");
     lock.save().expect("Unable to save queue");
     info!("Saved queue. Exiting");
+    shutdown_flag.cancel();
+    unlock_queue(&config.task_folder).expect("Failed to unlock queue");
     exit(0);
 }

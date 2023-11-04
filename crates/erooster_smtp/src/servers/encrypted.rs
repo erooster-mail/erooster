@@ -26,7 +26,7 @@ use erooster_deps::{
         TlsAcceptor,
     },
     tokio_stream::wrappers::TcpListenerStream,
-    tokio_util::codec::Framed,
+    tokio_util::{codec::Framed, sync::CancellationToken},
     tracing::{self, debug, error, info, instrument},
 };
 use std::{
@@ -96,6 +96,7 @@ impl Encrypted {
         config: Config,
         database: &DB,
         storage: &Storage,
+        shutdown_flag: CancellationToken,
     ) -> color_eyre::eyre::Result<()> {
         let acceptor = get_tls_acceptor(&config)?;
         // Opens the listener
@@ -117,8 +118,17 @@ impl Encrypted {
             let storage = storage.clone();
             let acceptor = acceptor.clone();
             let config = config.clone();
+            let shutdown_flag_clone = shutdown_flag.clone();
             tokio::spawn(async move {
-                listen(stream, &config, &database, &storage, acceptor.clone()).await;
+                listen(
+                    stream,
+                    &config,
+                    &database,
+                    &storage,
+                    acceptor.clone(),
+                    shutdown_flag_clone.clone(),
+                )
+                .await;
             });
         }
 
@@ -133,9 +143,14 @@ async fn listen(
     database: &DB,
     storage: &Storage,
     acceptor: TlsAcceptor,
+    shutdown_flag: CancellationToken,
 ) {
     // Looks for new peers
+    let shutdown_flag_clone = shutdown_flag.clone();
     while let Some(Ok(tcp_stream)) = stream.next().await {
+        if shutdown_flag_clone.clone().is_cancelled() {
+            break;
+        }
         if let Err(e) = listen_tls(
             tcp_stream,
             config,
@@ -144,12 +159,14 @@ async fn listen(
             acceptor.clone(),
             None,
             false,
+            shutdown_flag_clone.clone(),
         ) {
             error!("[SMTP][ENCRYPTED] Error while listening: {}", e);
         }
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn listen_tls(
     tcp_stream: TcpStream,
     config: &Config,
@@ -158,6 +175,7 @@ pub fn listen_tls(
     acceptor: TlsAcceptor,
     upper_data: Option<Data>,
     starttls: bool,
+    shutdown_flag: CancellationToken,
 ) -> color_eyre::eyre::Result<()> {
     let peer = tcp_stream
         .peer_addr()
@@ -209,6 +227,12 @@ pub fn listen_tls(
                 };
                 // Read lines from the stream
                 while let Some(Ok(line)) = lines_reader.next().await {
+                    if shutdown_flag.is_cancelled() {
+                        if let Err(e) = lines_sender.send(String::from("421 Shutting down")).await {
+                            error!("[SMTP] Error sending response: {:?}", e);
+                        }
+                        break;
+                    }
                     debug!("[SMTP][TLS] [{}] Got Command: {}", peer, line);
 
                     {

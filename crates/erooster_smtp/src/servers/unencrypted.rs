@@ -21,7 +21,7 @@ use erooster_deps::{
     futures::{SinkExt, StreamExt},
     tokio::{self, net::TcpListener, task::JoinHandle},
     tokio_stream::wrappers::TcpListenerStream,
-    tokio_util::codec::Framed,
+    tokio_util::{codec::Framed, sync::CancellationToken},
     tracing::{self, debug, error, info, instrument},
 };
 use std::net::SocketAddr;
@@ -37,6 +37,7 @@ impl Unencrypted {
         config: Config,
         database: &DB,
         storage: &Storage,
+        shutdown_flag: CancellationToken,
     ) -> color_eyre::eyre::Result<()> {
         let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
             listen_ips
@@ -57,8 +58,9 @@ impl Unencrypted {
             let database = database.clone();
             let storage = storage.clone();
             let config = config.clone();
+            let shutdown_flag = shutdown_flag.clone();
             tokio::spawn(async move {
-                listen(stream, &config, &database, &storage).await;
+                listen(stream, &config, &database, &storage, shutdown_flag.clone()).await;
             });
         }
 
@@ -67,14 +69,25 @@ impl Unencrypted {
 }
 
 #[allow(clippy::too_many_lines)]
-async fn listen(mut stream: TcpListenerStream, config: &Config, database: &DB, storage: &Storage) {
+async fn listen(
+    mut stream: TcpListenerStream,
+    config: &Config,
+    database: &DB,
+    storage: &Storage,
+    shutdown_flag: CancellationToken,
+) {
+    let shutdown_flag_clone = shutdown_flag.clone();
     while let Some(Ok(tcp_stream)) = stream.next().await {
+        if shutdown_flag_clone.clone().is_cancelled() {
+            break;
+        }
         let peer = tcp_stream.peer_addr().expect("[SMTP] peer addr to exist");
         debug!("[SMTP] Got new peer: {}", peer);
 
         let database = database.clone();
         let storage = storage.clone();
         let config = config.clone();
+        let shutdown_flag_clone = shutdown_flag_clone.clone();
         let connection: JoinHandle<Result<()>> = tokio::spawn(async move {
             let lines = Framed::new(tcp_stream, LinesCodec::new_with_max_length(LINE_LIMIT));
             let (mut lines_sender, mut lines_reader) = lines.split();
@@ -89,7 +102,14 @@ async fn listen(mut stream: TcpListenerStream, config: &Config, database: &DB, s
             let mut data = Data { con_state: state };
 
             let mut do_starttls = false;
+            let shutdown_flag_clone = shutdown_flag_clone.clone();
             while let Some(Ok(line)) = lines_reader.next().await {
+                if shutdown_flag_clone.clone().is_cancelled() {
+                    if let Err(e) = lines_sender.send(String::from("421 Shutting down")).await {
+                        error!("[SMTP] Error sending response: {:?}", e);
+                    }
+                    break;
+                }
                 debug!("[SMTP] [{}] Got Command: {}", peer, line);
 
                 // TODO make sure to handle IDLE different as it needs us to stream lines
@@ -145,6 +165,7 @@ async fn listen(mut stream: TcpListenerStream, config: &Config, database: &DB, s
                     acceptor,
                     Some(data),
                     true,
+                    shutdown_flag_clone.clone(),
                 ) {
                     error!("[SMTP] Error while upgrading to tls: {}", e);
                 }

@@ -36,6 +36,8 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::items_after_statements)]
 
+use std::sync::Arc;
+
 use erooster_core::{
     backend::{database::get_database, storage::get_storage},
     panic_handler::EroosterPanicMessage,
@@ -45,9 +47,15 @@ use erooster_deps::{
     clap::{self, Parser},
     color_eyre::{self, eyre::Result},
     opentelemetry,
-    tokio::{self, signal},
+    tokio::{
+        self,
+        signal::unix::{signal, SignalKind},
+        sync::Mutex,
+    },
+    tokio_util::sync::CancellationToken,
     tracing::{error, info, warn},
     tracing_error, tracing_subscriber,
+    yaque::{recovery::recover, Receiver, ReceiverBuilder},
 };
 
 #[derive(Parser, Debug)]
@@ -58,7 +66,7 @@ struct Args {
 }
 
 #[tokio::main]
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_lines, clippy::redundant_pub_crate)]
 async fn main() -> Result<()> {
     // Setup logging and metrics
     let builder = color_eyre::config::HookBuilder::default().panic_message(EroosterPanicMessage);
@@ -118,20 +126,74 @@ async fn main() -> Result<()> {
     let database = get_database(&config).await?;
     let storage = get_storage(database.clone(), config.clone());
 
-    // Startup servers
-    erooster_imap::start(config.clone(), &database, &storage)?;
-    // We do need the let here to make sure that the runner is bound to the lifetime of main.
-    erooster_smtp::servers::start(config.clone(), &database, &storage).await?;
+    // Start listening for tasks
+    let mut receiver = ReceiverBuilder::default()
+        .save_every_nth(None)
+        .open(config.task_folder.clone());
+    if let Err(e) = receiver {
+        warn!("Unable to open receiver: {:?}. Trying to recover.", e);
+        recover(&config.task_folder)?;
+        receiver = ReceiverBuilder::default()
+            .save_every_nth(None)
+            .open(config.task_folder.clone());
+        info!("Recovered queue successfully");
+    }
 
-    erooster_web::start(&config).await?;
+    // Get SIGTERMs
+    let mut sigterms = signal(SignalKind::terminate())?;
+    let shutdown_flag = CancellationToken::new();
 
-    match signal::ctrl_c().await {
-        Ok(()) => {}
-        Err(err) => {
-            error!("Unable to listen for shutdown signal: {}", err);
-            // we also shut down in case of error
+    match receiver {
+        Ok(receiver) => {
+            let receiver = Arc::new(Mutex::const_new(receiver));
+
+            // Startup servers
+            erooster_imap::start(config.clone(), &database, &storage)?;
+
+            let config_clone = config.clone();
+            tokio::spawn(async move {
+                erooster_web::start(&config_clone)
+                    .await
+                    .expect("Unable to start webserver");
+            });
+
+            let receiver_clone: Arc<Mutex<Receiver>> = Arc::clone(&receiver);
+            let shutdown_flag_clone = shutdown_flag.clone();
+            // We do need the let here to make sure that the runner is bound to the lifetime of main.
+            erooster_smtp::servers::start(
+                config.clone(),
+                &database,
+                &storage,
+                shutdown_flag_clone,
+                receiver,
+            )
+            .await?;
+
+            tokio::select! {
+                _ = tokio::signal::ctrl_c() => {
+                    cleanup(&receiver_clone, &shutdown_flag).await;
+                }
+                _ = sigterms.recv() => {
+                    cleanup(&receiver_clone, &shutdown_flag).await;
+                }
+            }
+        }
+        Err(e) => {
+            error!("Unable to open receiver: {:?}. Giving up.", e);
         }
     }
-    opentelemetry::global::shutdown_tracer_provider();
     Ok(())
+}
+
+async fn cleanup(receiver: &Arc<Mutex<Receiver>>, shutdown_flag: &CancellationToken) {
+    info!("Received ctr-c. Cleaning up");
+    shutdown_flag.cancel();
+    opentelemetry::global::shutdown_tracer_provider();
+    {
+        let mut lock = receiver.lock().await;
+
+        info!("Gained lock. Saving queue");
+        lock.save().expect("Unable to save queue");
+        info!("Saved queue. Exiting");
+    };
 }

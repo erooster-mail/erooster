@@ -191,8 +191,8 @@ impl DataCommand<'_> {
                         data
                     };
 
-                    // Create a resolver using Quad9 DNS
-                    let resolver = Resolver::new_quad9_tls()?;
+                    // Create a resolver using System DNS
+                    let resolver = Resolver::new_system_conf()?;
                     // Parse message
                     let authenticated_message = AuthenticatedMessage::parse(data.as_bytes())
                         .context("Failed to parse email")?;

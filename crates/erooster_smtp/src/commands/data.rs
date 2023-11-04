@@ -204,30 +204,31 @@ impl DataCommand<'_> {
                     // TODO: generate reports
                     cfg_if! {
                         if #[cfg(feature = "benchmarking")] {} else {
-                            if !dkim_result
-                                .iter()
-                                .any(|s| matches!(s.result(), &DkimResult::Pass))
-                            {
-                                // 'Strict' mode violates the advice of Section 6.1 of RFC6376
-                                if dkim_result
-                                    .iter()
-                                    .any(|d| matches!(d.result(), DkimResult::TempError(_)))
-                                {
-                                    warn!("Message was rejected for missing passing DKIM signatures.");
-                                    lines
-                                        .send(String::from(
-                                            "451 4.7.20 No passing DKIM signatures found.\r\n",
-                                        ))
-                                        .await?;
-                                } else {
-                                    warn!("Message was rejected for missing passing DKIM signatures.");
-                                    lines
-                                        .send(String::from(
-                                            "550 5.7.20 No passing DKIM signatures found.\r\n",
-                                        ))
-                                        .await?;
-                                };
-                                return Ok(());
+                            for s in &dkim_result {
+                                match s.result() {
+                                    DkimResult::Pass | DkimResult::None => break,
+                                    DkimResult::Neutral(e) => {
+                                        warn!("DKIM neutral result for email: {:?}", e);
+                                    },
+                                    DkimResult::Fail(e) | DkimResult::PermError(e) => {
+                                        warn!("Message was rejected for missing passing DKIM signatures: {}", e);
+                                        lines
+                                            .send(String::from(
+                                                "550 5.7.20 No passing DKIM signatures found.\r\n",
+                                            ))
+                                            .await?;
+                                        return Ok(());
+                                    },
+                                    DkimResult::TempError(e) => {
+                                        warn!("Message was rejected for missing passing DKIM signatures due to temp error: {}", e);
+                                        lines
+                                            .send(String::from(
+                                                "451 4.7.20 No passing DKIM signatures found.\r\n",
+                                            ))
+                                            .await?;
+                                        return Ok(());
+                                    },
+                                }
                             }
 
                             // Verify DMARC

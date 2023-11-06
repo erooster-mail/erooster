@@ -110,7 +110,7 @@ jobs:
           cargo +nightly llvm-cov report --html
         env:
           RUST_BACKTRACE: "1"
-      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+      - uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32
         with:
           name: coverage-report
           path: target/llvm-cov/html/
@@ -134,11 +134,11 @@ jobs:
       options: --user root
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@8ca2b8b2ece13480cda6dacd3511b49857a23c09
+        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423
         with:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - name: Install Rust
         run: rustup toolchain install nightly --component llvm-tools-preview
       - uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b

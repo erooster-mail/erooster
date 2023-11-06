@@ -24,7 +24,7 @@ erooster_core = { version = "0.1.0", path = "../erooster_core" }
 erooster_deps = { version = "0.1.0", path = "../erooster_deps" }
 
 [build-dependencies]
-vergen = { version = "8.2.4", features = ["git", "gitoxide"] }
+vergen = { version = "8.2.6", features = ["git", "gitoxide"] }
 
 [features]
 default = ["postgres"]

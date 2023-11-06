@@ -50,4 +50,4 @@ clap = { version = "4.1.6", features = [
     "env",
 ] }
 clap_mangen = "0.2.13"
-vergen = { version = "8.2.4", features = ["git", "gitoxide"] }
+vergen = { version = "8.2.6", features = ["git", "gitoxide"] }

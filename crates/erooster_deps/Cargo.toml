@@ -47,7 +47,7 @@ clap = { version = "4.4.7", features = [
     "env",
 ] }
 opentelemetry = { version = "0.20.0", features = ["metrics", "rt-tokio"] }
-tracing-opentelemetry = { version = "0.20.0", optional = true }
+tracing-opentelemetry = { version = "0.22.0", optional = true }
 const_format = "0.2.32"
 notify = "6.1.1"
 rustls-pemfile = "1.0.3"

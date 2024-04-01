@@ -50,7 +50,7 @@ opentelemetry = { version = "0.20.0", features = ["metrics", "rt-tokio"] }
 tracing-opentelemetry = { version = "0.20.0", optional = true }
 const_format = "0.2.32"
 notify = "6.1.1"
-rustls-pemfile = "1.0.3"
+rustls-pemfile = "2.1.1"
 tokio-rustls = { version = "0.24.1", features = ["tls12"] }
 trust-dns-resolver = "0.23.2"
 webpki-roots = "0.25.2"

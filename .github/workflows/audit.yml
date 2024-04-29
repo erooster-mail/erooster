@@ -24,7 +24,7 @@ jobs:
       checks: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423
+        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142
         with:
           egress-policy: block
           allowed-endpoints: >
@@ -36,7 +36,7 @@ jobs:
             static.rust-lang.org:443
             index.crates.io:443
 
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
       - uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b
       - uses: actions-rs/audit-check@35b7b53b1e25b55642157ac01b4adceb5b9ebef3
         with:
@@ -54,7 +54,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423
+        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142
         with:
           egress-policy: block
           allowed-endpoints: >
@@ -67,7 +67,7 @@ jobs:
             static.rust-lang.org:443
             index.crates.io:443
 
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-      - uses: EmbarkStudios/cargo-deny-action@1e59595bed8fc55c969333d08d7817b36888f0c5
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+      - uses: EmbarkStudios/cargo-deny-action@3f4a782664881cf5725d0ffd23969fcce89fd868
         with:
           command: check ${{ matrix.checks }}

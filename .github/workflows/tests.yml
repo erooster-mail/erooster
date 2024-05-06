@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423
+        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4
         with:
           egress-policy: block
           allowed-endpoints: >
@@ -29,7 +29,7 @@ jobs:
             static.crates.io:443
             static.rust-lang.org:443
 
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
       - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
         with:
           profile: minimal
@@ -68,11 +68,11 @@ jobs:
           - 5432:5432
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423
+        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4
         with:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
       - name: Install Rust
         run: rustup toolchain install nightly --component llvm-tools-preview
       - uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b
@@ -110,7 +110,7 @@ jobs:
           cargo +nightly llvm-cov report --html
         env:
           RUST_BACKTRACE: "1"
-      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
         with:
           name: coverage-report
           path: target/llvm-cov/html/
@@ -120,7 +120,7 @@ jobs:
           cargo +nightly llvm-cov --no-report --features "jaeger" --workspace
           cargo +nightly llvm-cov report --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
@@ -134,11 +134,11 @@ jobs:
       options: --user root
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@8ca2b8b2ece13480cda6dacd3511b49857a23c09
+        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4
         with:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
       - name: Install Rust
         run: rustup toolchain install nightly --component llvm-tools-preview
       - uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b
@@ -176,7 +176,7 @@ jobs:
           cargo +nightly llvm-cov report --html
         env:
           RUST_BACKTRACE: "1"
-      - uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32
+      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
         with:
           name: coverage-report
           path: target/llvm-cov/html/
@@ -186,7 +186,7 @@ jobs:
           cargo +nightly llvm-cov --no-report --features "jaeger" --workspace --features sqlite --no-default-features 
           cargo +nightly llvm-cov report --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
@@ -197,7 +197,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423
+        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4
         with:
           egress-policy: block
           allowed-endpoints: >
@@ -211,7 +211,7 @@ jobs:
             index.crates.io:443
             static.crates.io:443
 
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
       - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
         with:
           profile: minimal

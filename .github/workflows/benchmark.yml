@@ -36,11 +36,11 @@ jobs:
           - 5432:5432
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423
+        uses: step-security/harden-runner@f086349bfa2bd1361f7909c78558e816508cdc10
         with:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
         with:
           set-safe-directory: true
       - run: rustup default nightly

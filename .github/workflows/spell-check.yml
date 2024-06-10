@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423
+        uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6
         with:
           egress-policy: block
           allowed-endpoints: >
@@ -29,9 +29,9 @@ jobs:
         env:
           USER: runner
       - name: Checkout Actions Repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v2
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v2
 
       - name: Check spelling
-        uses: crate-ci/typos@47dd2976043bd5c76a33aa9300b328a176a1d6f7 # master
+        uses: crate-ci/typos@8382594ee09667379b652553cf57daebb8176a3f # master
         with:
           config: ${{github.workspace}}/_typos.toml

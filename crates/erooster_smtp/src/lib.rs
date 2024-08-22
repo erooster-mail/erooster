@@ -11,7 +11,6 @@
 //! This crate is containing the smtp logic of the erooster mail server.
 //!
 #![feature(string_remove_matches)]
-#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 #![deny(unsafe_code, clippy::unwrap_used)]
 #![warn(
     clippy::branches_sharing_code,

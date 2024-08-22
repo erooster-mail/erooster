@@ -5,7 +5,6 @@
 //! Core logic for the webserver for the erooster mail server
 //!
 #![feature(string_remove_matches)]
-#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 #![deny(unsafe_code, clippy::unwrap_used)]
 #![warn(
     clippy::cognitive_complexity,
@@ -91,7 +90,7 @@ pub async fn start(config: &Config) -> color_eyre::eyre::Result<()> {
                     config.tls.cert_path.clone(),
                     config.tls.key_path.clone(),
                 )
-                .await
+                    .await
                 {
                     Ok(tls_config) => tls_config,
                     Err(e) => {

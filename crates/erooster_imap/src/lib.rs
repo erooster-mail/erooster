@@ -12,7 +12,6 @@
 //!
 #![feature(string_remove_matches)]
 #![feature(box_into_inner)]
-#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 #![deny(unsafe_code, clippy::unwrap_used)]
 #![warn(
     clippy::cognitive_complexity,
@@ -54,7 +53,7 @@ use erooster_deps::{
     color_eyre,
     const_format::formatcp,
     tokio,
-    tracing::{self, instrument},
+    tracing::instrument,
 };
 
 pub(crate) mod commands;

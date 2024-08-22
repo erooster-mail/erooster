@@ -9,7 +9,6 @@
 //! while being also fast and efficient.
 //!
 #![feature(string_remove_matches)]
-#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 #![deny(unsafe_code, clippy::unwrap_used)]
 #![warn(
     clippy::cognitive_complexity,
@@ -167,7 +166,7 @@ async fn main() -> Result<()> {
                 shutdown_flag_clone,
                 receiver,
             )
-            .await?;
+                .await?;
 
             tokio::select! {
                 _ = tokio::signal::ctrl_c() => {

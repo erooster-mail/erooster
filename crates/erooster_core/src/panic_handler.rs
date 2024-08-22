@@ -16,7 +16,7 @@ pub struct EroosterPanicMessage;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 impl PanicMessage for EroosterPanicMessage {
-    fn display(&self, pi: &std::panic::PanicInfo<'_>, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn display(&self, pi: &std::panic::PanicHookInfo<'_>, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}", "The application panicked (crashed).".red())?;
 
         // Print panic message.
@@ -78,7 +78,7 @@ fn custom_url(location: &Location<'_>, message: &str) -> impl fmt::Display {
                     message,
                     location,
                 )
-                .as_str(),
+                    .as_str(),
             ),
         ],
     );

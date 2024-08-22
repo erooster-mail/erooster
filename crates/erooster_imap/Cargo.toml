@@ -21,6 +21,7 @@ bench = false
 erooster_core = { version = "0.1.0", path = "../erooster_core" }
 erooster_deps = { version = "0.1.0", path = "../erooster_deps" }
 time = { version = "0.3.30", features = ["parsing", "macros"] }
+tracing = "0.1.40"
 
 [features]
 default = []

@@ -1,6 +1,0 @@
-# SPDX-FileCopyrightText: 2023 MTRNord
-#
-# SPDX-License-Identifier: Apache-2.0
-
-[toolchain]
-channel = "nightly-2023-07-30"

@@ -35,7 +35,7 @@ impl DataCommand<'_> {
     pub async fn exec<S, E>(&mut self, lines: &mut S) -> color_eyre::eyre::Result<()>
     where
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
-        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
+        S: Sink<String, Error=E> + std::marker::Unpin + std::marker::Send,
     {
         debug!("Waiting for incoming data");
         {
@@ -62,7 +62,7 @@ impl DataCommand<'_> {
     ) -> color_eyre::eyre::Result<()>
     where
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
-        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
+        S: Sink<String, Error=E> + std::marker::Unpin + std::marker::Send,
     {
         debug!("Reading incoming data");
 
@@ -89,15 +89,15 @@ impl DataCommand<'_> {
                         .or_default()
                         .push(address.clone());
                     let received_header = format!(
-                            "Received: from {} ({} [{}])\r\n	by {} (Erooster) with ESMTPS\r\n	id 00000001\r\n	(envelope-from <{}>)\r\n	for <{}>; {}\r\n",
-                            self.data.con_state.ehlo.as_ref().context("Missing ehlo")?,
-                            self.data.con_state.ehlo.as_ref().context("Missing ehlo")?,
-                            self.data.con_state.peer_addr,
-                            config.mail.hostname,
-                            self.data.con_state.sender.as_ref().context("Missing sender")?,
-                            address,
-                            OffsetDateTime::now_utc().format(&date_format)?
-                        );
+                        "Received: from {} ({} [{}])\r\n	by {} (Erooster) with ESMTPS\r\n	id 00000001\r\n	(envelope-from <{}>)\r\n	for <{}>; {}\r\n",
+                        self.data.con_state.ehlo.as_ref().context("Missing ehlo")?,
+                        self.data.con_state.ehlo.as_ref().context("Missing ehlo")?,
+                        self.data.con_state.peer_addr,
+                        config.mail.hostname,
+                        self.data.con_state.sender.as_ref().context("Missing sender")?,
+                        address,
+                        OffsetDateTime::now_utc().format(&date_format)?
+                    );
                     let temp_data = [received_header.as_bytes(), &inner_data.0].concat();
                     let data = from_utf8(&temp_data)?;
 
@@ -115,7 +115,7 @@ impl DataCommand<'_> {
                             address,
                             Some(username.to_string()),
                         )
-                        .await?
+                            .await?
                     } else {
                         data
                     };
@@ -154,21 +154,21 @@ impl DataCommand<'_> {
                     let mailbox_path = Path::new(&config.mail.maildir_folders)
                         .join(receipt.clone())
                         .join(folder.clone());
-                    let db_foldername = format!("{}/{}", receipt, folder,);
+                    let db_foldername = format!("{}/{}", receipt, folder, );
                     if !mailbox_path.exists() {
                         storage.create_dirs(&mailbox_path)?;
                         storage.add_flag(&mailbox_path, "\\Subscribed").await?;
                         storage.add_flag(&mailbox_path, "\\NoInferiors").await?;
                     }
                     let received_header = format!(
-                            "Received: from {} ({} [{}])\r\n	by {} (Erooster) with ESMTPS\r\n	id 00000001\r\n	for <{}>; {}\r\n",
-                            self.data.con_state.ehlo.as_ref().context("Missing ehlo")?,
-                            self.data.con_state.ehlo.as_ref().context("Missing ehlo")?,
-                            self.data.con_state.peer_addr,
-                            config.mail.hostname,
-                            receipt,
-                            OffsetDateTime::now_utc().format(&date_format)?,
-                        );
+                        "Received: from {} ({} [{}])\r\n	by {} (Erooster) with ESMTPS\r\n	id 00000001\r\n	for <{}>; {}\r\n",
+                        self.data.con_state.ehlo.as_ref().context("Missing ehlo")?,
+                        self.data.con_state.ehlo.as_ref().context("Missing ehlo")?,
+                        self.data.con_state.peer_addr,
+                        config.mail.hostname,
+                        receipt,
+                        OffsetDateTime::now_utc().format(&date_format)?,
+                    );
                     let temp_data = [received_header.as_bytes(), &data.0].concat();
                     let data = from_utf8(&temp_data)?;
 
@@ -186,7 +186,7 @@ impl DataCommand<'_> {
                             receipt,
                             None,
                         )
-                        .await?
+                            .await?
                     } else {
                         data
                     };
@@ -307,7 +307,7 @@ impl DataCommand<'_> {
         username: Option<String>,
     ) -> color_eyre::Result<&'a str> {
         let client = reqwest::Client::builder()
-            .trust_dns(true)
+            .hickory_dns(true)
             .timeout(Duration::from_secs(30))
             .user_agent("Erooster")
             .build()?;

@@ -9,13 +9,17 @@ use crate::{
         capability::Capability,
         check::Check,
         close::Close,
+        copy::Copy,
         create::Create,
         delete::Delete,
         enable::Enable,
+        expunge::Expunge,
         fetch::Fetch,
         list::{LSub, List},
         login::Login,
         logout::Logout,
+        move_::Move,
+        namespace::Namespace,
         noop::Noop,
         rename::Rename,
         search::Search,
@@ -24,6 +28,7 @@ use crate::{
         store::Store,
         subscribe::Subscribe,
         uid::Uid,
+        unselect::Unselect,
         unsubscribe::Unsubscribe,
     },
     servers::state::{Connection, State},
@@ -32,7 +37,7 @@ use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
 };
-use erooster_deps::{
+use {
     color_eyre,
     futures::{Sink, SinkExt},
     nom::{
@@ -44,7 +49,7 @@ use erooster_deps::{
         sequence::{terminated, tuple},
         Finish, IResult,
     },
-    tracing::{self, debug, error, instrument, warn},
+    tracing::{debug, error, instrument, warn},
 };
 
 #[cfg(test)]
@@ -55,22 +60,27 @@ pub mod auth;
 pub mod capability;
 mod check;
 mod close;
+mod copy;
 mod create;
 mod delete;
 mod enable;
+mod expunge;
 mod fetch;
 mod list;
 mod login;
 mod logout;
+mod move_;
+mod namespace;
 mod noop;
 pub mod parsers;
 mod rename;
 mod search;
-mod select;
+pub mod select;
 mod status;
 mod store;
 mod subscribe;
 mod uid;
+mod unselect;
 mod unsubscribe;
 
 #[derive(Debug, Clone)]
@@ -103,15 +113,20 @@ pub enum Commands {
     Capability,
     Check,
     Close,
+    Copy,
     Create,
     Delete,
     Enable,
     Examine,
+    Expunge,
     Fetch,
+    Idle,
     List,
     Login,
     Logout,
     LSub,
+    Move,
+    Namespace,
     Noop,
     Rename,
     Search,
@@ -120,8 +135,9 @@ pub enum Commands {
     Starttls,
     Store,
     Subscribe,
-    Unsubscribe,
     Uid,
+    Unselect,
+    Unsubscribe,
 }
 
 impl TryFrom<&str> for Commands {
@@ -131,7 +147,9 @@ impl TryFrom<&str> for Commands {
     fn try_from(i: &str) -> Result<Self, Self::Error> {
         match i.to_lowercase().as_str() {
             "capability" => Ok(Commands::Capability),
+            "copy" => Ok(Commands::Copy),
             "login" => Ok(Commands::Login),
+            "move" => Ok(Commands::Move),
             "authenticate" => Ok(Commands::Authenticate),
             "list" => Ok(Commands::List),
             "lsub" => Ok(Commands::LSub),
@@ -142,12 +160,16 @@ impl TryFrom<&str> for Commands {
             "check" => Ok(Commands::Check),
             "create" => Ok(Commands::Create),
             "delete" => Ok(Commands::Delete),
+            "expunge" => Ok(Commands::Expunge),
+            "namespace" => Ok(Commands::Namespace),
             "subscribe" => Ok(Commands::Subscribe),
             "unsubscribe" => Ok(Commands::Unsubscribe),
+            "unselect" => Ok(Commands::Unselect),
             "close" => Ok(Commands::Close),
             "rename" => Ok(Commands::Rename),
             "uid" => Ok(Commands::Uid),
             "fetch" => Ok(Commands::Fetch),
+            "idle" => Ok(Commands::Idle),
             "store" => Ok(Commands::Store),
             "append" => Ok(Commands::Append),
             "enable" => Ok(Commands::Enable),
@@ -180,25 +202,24 @@ fn is_imaptag_char(c: char) -> bool {
 
 /// Takes as input the full string
 #[instrument(skip(input))]
-fn imaptag(input: &str) -> Res<&str> {
+fn imaptag(input: &str) -> Res<'_, &str> {
     //alphanumeric1, none_of("+(){ %\\\""), one_of("1*]")
     context(
         "imaptag",
         terminated(take_while1(is_imaptag_char), tag(" ")),
     )(input)
-    .map(|(next_input, res)| (next_input, res))
 }
 
 /// Gets the input minus the tag
 #[instrument(skip(input))]
-fn command(input: &str) -> Res<Result<Commands, String>> {
+fn command(input: &str) -> Res<'_, Result<Commands, String>> {
     context("command", alt((terminated(alpha1, tag(" ")), alpha1)))(input)
         .map(|(next_input, res)| (next_input, res.try_into()))
 }
 
 /// Gets the input minus the tag and minus the command
 #[instrument(skip(input))]
-fn arguments(input: &str) -> Res<Vec<&str>> {
+fn arguments(input: &str) -> Res<'_, Vec<&str>> {
     debug!("parsing arguments");
     context(
         "arguments",
@@ -207,19 +228,23 @@ fn arguments(input: &str) -> Res<Vec<&str>> {
             take_while1(|c: char| c != ' '),
         ))),
     )(input)
-    .map(|(x, y)| (x, y))
 }
 
 #[allow(clippy::upper_case_acronyms)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Response {
     Exit,
     Continue,
     STARTTLS(String),
+    /// Client sent IDLE; server already sent `+ idling`.  The server loop
+    /// must now watch the selected mailbox and send unsolicited EXISTS updates
+    /// until the client sends `DONE`.
+    Idle { tag: String },
 }
 
 impl Data {
     #[instrument(skip(line))]
-    fn parse_internal(line: &str) -> Res<(&str, Result<Commands, String>, Vec<&str>)> {
+    fn parse_internal(line: &str) -> Res<'_, (&str, Result<Commands, String>, Vec<&str>)> {
         context("parse_internal", tuple((imaptag, command, arguments)))(line)
     }
 
@@ -292,6 +317,20 @@ impl Data {
                 match command_data.command {
                     Commands::Starttls => {
                         return Ok(Response::STARTTLS(tag.to_string()));
+                    }
+                    Commands::Idle => {
+                        if !matches!(self.con_state.state, State::Selected(..)) {
+                            lines
+                                .send(format!(
+                                    "{tag} BAD [CLIENTBUG] IDLE requires a selected mailbox"
+                                ))
+                                .await?;
+                            return Ok(Response::Continue);
+                        }
+                        lines.send(String::from("+ idling")).await?;
+                        return Ok(Response::Idle {
+                            tag: tag.to_string(),
+                        });
                     }
                     Commands::Enable => {
                         Enable { data: self }.exec(lines, &command_data).await?;
@@ -406,6 +445,29 @@ impl Data {
                             .exec(lines, storage, &command_data, false)
                             .await?;
                     }
+                    Commands::Expunge => {
+                        Expunge { data: self }
+                            .exec(lines, storage, &command_data)
+                            .await?;
+                    }
+                    Commands::Namespace => {
+                        Namespace.exec(lines, &command_data).await?;
+                    }
+                    Commands::Unselect => {
+                        Unselect { data: self }
+                            .exec(lines, &command_data)
+                            .await?;
+                    }
+                    Commands::Copy => {
+                        Copy { data: self }
+                            .exec(lines, storage, &command_data, false)
+                            .await?;
+                    }
+                    Commands::Move => {
+                        Move { data: self }
+                            .exec(lines, storage, &command_data, false)
+                            .await?;
+                    }
                 }
             }
             Err(e) => {
@@ -429,6 +491,7 @@ impl Data {
 mod tests {
     use super::*;
     use convert_case::{Case, Casing};
+    use tokio;
     use enum_iterator::all;
 
     #[test]
@@ -518,5 +581,74 @@ mod tests {
         assert_eq!(tag, "18");
         assert_eq!(command.unwrap(), Commands::List);
         assert_eq!(arguments, &["\"\"", "\"\""]);
+    }
+
+    #[test]
+    fn test_parsing_idle_command() {
+        let result = Data::parse_internal("a1 IDLE");
+        assert!(result.is_ok());
+        let (_, (tag, command, arguments)) = result.unwrap();
+        assert!(command.is_ok());
+        assert_eq!(tag, "a1");
+        assert_eq!(command.unwrap(), Commands::Idle);
+        assert!(arguments.is_empty());
+    }
+
+    #[cfg_attr(coverage_nightly, coverage(off))]
+    #[tokio::test]
+    async fn test_idle_requires_selected_state() {
+        use crate::servers::state::Connection;
+        use futures::{channel::mpsc, StreamExt};
+
+        let (config, storage) = erooster_core::test_helpers::setup_test_storage()
+            .await
+            .unwrap();
+        let database = erooster_core::backend::database::get_database(&config)
+            .await
+            .unwrap();
+
+        let mut data = Data {
+            con_state: Connection::new(true),
+        };
+        let (mut tx, mut rx) = mpsc::unbounded::<String>();
+        let response = data
+            .parse(&mut tx, &config, &database, &storage, "a1 IDLE".to_string())
+            .await;
+        assert!(response.is_ok());
+        assert_eq!(response.unwrap(), Response::Continue);
+        assert_eq!(
+            rx.next().await,
+            Some(String::from("a1 BAD [CLIENTBUG] IDLE requires a selected mailbox"))
+        );
+    }
+
+    #[cfg_attr(coverage_nightly, coverage(off))]
+    #[tokio::test]
+    async fn test_idle_sends_continuation_when_selected() {
+        use crate::servers::state::{Access, Connection, State};
+        use futures::{channel::mpsc, StreamExt};
+
+        let (config, storage) = erooster_core::test_helpers::setup_test_storage()
+            .await
+            .unwrap();
+        let database = erooster_core::backend::database::get_database(&config)
+            .await
+            .unwrap();
+
+        let mut data = Data {
+            con_state: Connection {
+                state: State::Selected("INBOX".to_string(), Access::ReadOnly),
+                secure: true,
+                username: Some("testuser".to_string()),
+                active_capabilities: vec![],
+            },
+        };
+        let (mut tx, mut rx) = mpsc::unbounded::<String>();
+        let response = data
+            .parse(&mut tx, &config, &database, &storage, "a1 IDLE".to_string())
+            .await;
+        assert!(response.is_ok());
+        assert_eq!(response.unwrap(), Response::Idle { tag: "a1".to_string() });
+        assert_eq!(rx.next().await, Some(String::from("+ idling")));
     }
 }

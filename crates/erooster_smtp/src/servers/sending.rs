@@ -2,10 +2,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use erooster_core::line_codec::{LinesCodec, LinesCodecError};
-use erooster_deps::{
-    color_eyre::Result,
-    futures::{Sink, SinkExt, Stream, StreamExt},
+use super::dane::{fetch_tlsa_records, validate_cert_against_tlsa};
+use super::mta_sts::{fetch_mta_sts_policy, mx_allowed_by_policy, MtaStsMode};
+use erooster_core::line_codec::LinesCodec;
+use {
+    color_eyre::{self, Result},
+    futures::{SinkExt, StreamExt},
+    hickory_resolver::{proto::rr::RData, TokioResolver},
     mail_auth::{
         common::{
             crypto::{RsaKey, Sha256},
@@ -13,30 +16,46 @@ use erooster_deps::{
         },
         dkim::DkimSigner,
     },
-    rustls::{self, OwnedTrustAnchor},
+    rustls::{
+        self,
+        pki_types::{pem::PemObject, PrivateKeyDer, PrivatePkcs1KeyDer, ServerName},
+        RootCertStore,
+    },
     serde::{self, Deserialize, Serialize},
-    tokio::{net::TcpStream, time::timeout},
+    tokio::{
+        io::{AsyncRead, AsyncWrite},
+        net::TcpStream,
+        time::timeout,
+    },
     tokio_rustls::TlsConnector,
     tokio_util::codec::Framed,
-    tracing::{self, debug, error, instrument, warn},
-    trust_dns_resolver::TokioAsyncResolver,
+    tracing::{debug, instrument, warn},
     uuid::Uuid,
     webpki_roots,
 };
 use std::{collections::BTreeMap, error::Error, io, net::IpAddr, path::Path, time::Duration};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(crate = "self::serde")]
 pub struct EmailPayload {
     pub id: Uuid,
-    // Map to addresses by domain
+    /// Recipients grouped by their destination domain.
     pub to: BTreeMap<String, Vec<String>>,
     pub from: String,
     pub body: String,
     pub sender_domain: String,
     pub dkim_key_path: String,
     pub dkim_key_selector: String,
+    /// When true, delivery MUST use TLS (RFC 8689). Defaults to false for
+    /// backwards-compatibility with serialized payloads that predate this field.
+    #[serde(default)]
+    pub require_tls: bool,
 }
+
+trait AsyncReadWrite: AsyncRead + AsyncWrite + Send {}
+impl<T: AsyncRead + AsyncWrite + Send> AsyncReadWrite for T {}
+type DynStream = Box<dyn AsyncReadWrite + Unpin>;
+type DynFramed = Framed<DynStream, LinesCodec>;
 
 fn dkim_sign(
     domain: &str,
@@ -45,450 +64,450 @@ fn dkim_sign(
     dkim_key_selector: &str,
 ) -> Result<String> {
     let private_key = std::fs::read_to_string(Path::new(&dkim_key_path))?;
-    let pk_rsa =
-        RsaKey::<Sha256>::from_pkcs1_pem(&private_key).expect("Failed to load private key");
+    let pk_rsa = RsaKey::<Sha256>::from_key_der(
+        PrivateKeyDer::Pkcs1(
+            PrivatePkcs1KeyDer::from_pem_slice(private_key.as_bytes())
+                .map_err(|e| color_eyre::eyre::eyre!("Failed to parse DKIM PEM: {e}"))?,
+        ),
+    )
+    .map_err(|e| color_eyre::eyre::eyre!("Failed to load DKIM private key: {e:?}"))?;
     let signature_rsa = DkimSigner::from_key(pk_rsa)
         .domain(domain)
         .selector(dkim_key_selector)
         .headers(["From", "To", "Subject"])
         .sign(raw_email.as_bytes())
-        .expect("Failed to sign email");
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to sign email: {e:?}"))?;
 
     Ok(format!("{}{raw_email}", signature_rsa.to_header()))
 }
 
+/// Builds a `TlsConnector` backed by the system root certificates.
+fn tls_connector() -> TlsConnector {
+    let mut roots = RootCertStore::empty();
+    roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+    let config = rustls::ClientConfig::builder()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    TlsConnector::from(std::sync::Arc::new(config))
+}
+
+/// Outcome of a port-25 connection attempt.
+struct Port25Connection {
+    framed: DynFramed,
+    /// True when STARTTLS was successfully negotiated.
+    is_tls: bool,
+    /// True when the remote server advertised REQUIRETLS in its post-STARTTLS
+    /// EHLO (RFC 8689 §4).  Always false when `is_tls` is false.
+    requiretls_advertised: bool,
+    /// DER-encoded leaf certificate presented by the server during TLS handshake.
+    /// None when `is_tls` is false.
+    peer_cert_der: Option<Vec<u8>>,
+}
+
+/// Connects to the remote host on port 25, negotiates STARTTLS when available
+/// (RFC 3207), and returns a stream positioned after the EHLO exchange, ready
+/// for MAIL FROM.
 #[allow(clippy::too_many_lines)]
-#[instrument(skip(con, email, to))]
-async fn send_email<T>(
-    con: T,
+#[instrument(skip(addr, email, tls_domain))]
+async fn connect_with_starttls(
+    addr: IpAddr,
     email: &EmailPayload,
-    to: &Vec<String>,
-    tls: bool,
-) -> Result<(), Box<dyn Error + Send + Sync + 'static>>
-where
-    T: Stream<Item = Result<String, LinesCodecError>> + Sink<String, Error = LinesCodecError>,
-{
-    let (mut lines_sender, mut lines_reader) = con.split();
-    debug!(
-        "[{}] [{}] Fully Connected. Waiting for response",
-        email.id,
-        if tls { "TLS" } else { "Plain" }
-    );
-    // TODO this is totally dumb code currently.
-    // We check if we get a ready status
-    let first = lines_reader
+    tls_domain: &str,
+) -> Result<Port25Connection, Box<dyn Error + Send + Sync + 'static>> {
+    let tcp = match timeout(
+        Duration::from_secs(10),
+        TcpStream::connect((addr, 25u16)),
+    )
+    .await
+    {
+        Ok(Ok(s)) => s,
+        Ok(Err(e)) => return Err(e.into()),
+        Err(_) => return Err("Connection to port 25 timed out".into()),
+    };
+    debug!("[{}] Connected to {} port 25", email.id, tls_domain);
+
+    let plain = Framed::new(tcp, LinesCodec::new());
+    let (mut sender, mut reader) = plain.split();
+
+    // Read server greeting (220)
+    let greeting = reader
         .next()
         .await
-        .ok_or("Server did not send ready status")??;
-
-    debug!(
-        "[{}] [{}] Got greeting: {}",
-        email.id,
-        if tls { "TLS" } else { "Plain" },
-        first
-    );
-    if !first.starts_with("220") {
-        lines_sender.send(String::from("RSET")).await?;
-        lines_sender.send(String::from("QUIT")).await?;
-        debug!(
-            "[{}] [{}] Got full {:?}",
-            email.id,
-            if tls { "TLS" } else { "Plain" },
-            lines_reader
-                .filter_map(|x| async move { x.ok() })
-                .collect::<Vec<String>>()
-                .await
-        );
-        return Err("Server did not send ready status".into());
+        .ok_or("Server did not send a greeting")??;
+    debug!("[{}] Greeting: {}", email.id, greeting);
+    if !greeting.starts_with("220") {
+        return Err(format!("Unexpected SMTP greeting: {greeting}").into());
     }
-    // We send EHLO
-    lines_sender
+
+    // Send EHLO and collect capability lines
+    sender
         .send(format!("EHLO {}", email.sender_domain))
         .await?;
-
-    debug!(
-        "[{}] [{}] Sent EHLO",
-        email.id,
-        if tls { "TLS" } else { "Plain" },
-    );
-    // Check if we get greeted and finished all caps
-    let mut capabilities_happening = true;
-    while capabilities_happening {
-        let line = lines_reader
+    let mut starttls_available = false;
+    loop {
+        let line = reader
             .next()
             .await
-            .ok_or("Server did not respond")??;
-        debug!(
-            "[{}] [{}] Got: {}",
-            email.id,
-            if tls { "TLS" } else { "Plain" },
-            line
-        );
-        let char_4 = line
-            .chars()
-            .nth(3)
-            .ok_or("Server did not respond as expected")?;
-        if char_4 == ' ' {
-            capabilities_happening = false;
+            .ok_or("Server did not respond to EHLO")??;
+        debug!("[{}] EHLO: {}", email.id, line);
+        if !line.starts_with("250") {
+            return Err(format!("EHLO rejected: {line}").into());
+        }
+        // Capability keyword is after "250-" or "250 "
+        if line.len() > 4 && line[4..].eq_ignore_ascii_case("STARTTLS") {
+            starttls_available = true;
+        }
+        // The final EHLO line uses a space instead of a hyphen after the code
+        if line.len() > 3 && line.as_bytes()[3] == b' ' {
+            break;
         }
     }
 
-    // We send MAIL FROM
-    lines_sender
+    if starttls_available {
+        sender.send(String::from("STARTTLS")).await?;
+        let starttls_resp = reader
+            .next()
+            .await
+            .ok_or("No response to STARTTLS command")??;
+        debug!("[{}] STARTTLS: {}", email.id, starttls_resp);
+
+        if starttls_resp.starts_with("220") {
+            // Extract the underlying TcpStream and wrap in TLS
+            let plain_framed = sender
+                .reunite(reader)
+                .map_err(|e| -> Box<dyn Error + Send + Sync + 'static> {
+                    e.to_string().into()
+                })?;
+            let tcp = plain_framed.into_inner();
+
+            let connector = tls_connector();
+            let domain = ServerName::try_from(tls_domain)
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid dnsname"))?
+                .to_owned();
+            let tls_stream = connector.connect(domain, tcp).await?;
+            debug!("[{}] STARTTLS upgrade complete for {}", email.id, tls_domain);
+
+            // Extract leaf certificate before consuming the stream into Framed.
+            let peer_cert_der = tls_stream
+                .get_ref()
+                .1
+                .peer_certificates()
+                .and_then(|certs| certs.first())
+                .map(|cert| cert.to_vec());
+
+            let tls_framed: DynFramed =
+                Framed::new(Box::new(tls_stream) as DynStream, LinesCodec::new());
+            let (mut tls_sender, mut tls_reader) = tls_framed.split();
+
+            // RFC 3207 §4: client MUST re-issue EHLO after STARTTLS.
+            // RFC 8689 §4: sender MUST verify that the remote advertises
+            // REQUIRETLS in this post-STARTTLS EHLO before delivering a
+            // message with the REQUIRETLS flag.
+            tls_sender
+                .send(format!("EHLO {}", email.sender_domain))
+                .await?;
+            let mut requiretls_advertised = false;
+            loop {
+                let line = tls_reader
+                    .next()
+                    .await
+                    .ok_or("No EHLO response after STARTTLS")??;
+                debug!("[{}] Post-STARTTLS EHLO: {}", email.id, line);
+                if !line.starts_with("250") {
+                    return Err(format!("EHLO rejected after STARTTLS: {line}").into());
+                }
+                if line.len() > 4 && line[4..].eq_ignore_ascii_case("REQUIRETLS") {
+                    requiretls_advertised = true;
+                }
+                if line.len() > 3 && line.as_bytes()[3] == b' ' {
+                    break;
+                }
+            }
+
+            let tls_rejoined = tls_sender
+                .reunite(tls_reader)
+                .map_err(|e| -> Box<dyn Error + Send + Sync + 'static> {
+                    e.to_string().into()
+                })?;
+            return Ok(Port25Connection {
+                framed: tls_rejoined,
+                is_tls: true,
+                requiretls_advertised,
+                peer_cert_der,
+            });
+        }
+    }
+
+    // No STARTTLS or server declined — return the plain connection.
+    // REQUIRETLS cannot be satisfied on a plain connection.
+    let plain_framed = sender
+        .reunite(reader)
+        .map_err(|e| -> Box<dyn Error + Send + Sync + 'static> { e.to_string().into() })?;
+    let tcp = plain_framed.into_inner();
+    let boxed: DynFramed = Framed::new(Box::new(tcp) as DynStream, LinesCodec::new());
+    Ok(Port25Connection {
+        framed: boxed,
+        is_tls: false,
+        requiretls_advertised: false,
+        peer_cert_der: None,
+    })
+}
+
+/// Delivers a message to all recipients using a stream that is positioned
+/// immediately after the EHLO exchange (i.e. ready to accept MAIL FROM).
+#[instrument(skip(framed, email, to))]
+async fn smtp_deliver(
+    framed: DynFramed,
+    email: &EmailPayload,
+    to: &[String],
+) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+    let (mut sender, mut reader) = framed.split();
+
+    sender
         .send(format!("MAIL FROM:<{}>", email.from))
         .await?;
-    debug!(
-        "[{}] [{}] Sent MAIL FROM",
-        email.id,
-        if tls { "TLS" } else { "Plain" },
-    );
-    let line = lines_reader
+    let line = reader
         .next()
         .await
-        .ok_or("Server did not respond")??;
-    debug!(
-        "[{}] [{}] got {}",
-        email.id,
-        if tls { "TLS" } else { "Plain" },
-        line
-    );
+        .ok_or("No response to MAIL FROM")??;
+    debug!("[{}] MAIL FROM: {}", email.id, line);
     if !line.starts_with("250") {
-        lines_sender.send(String::from("RSET")).await?;
-        lines_sender.send(String::from("QUIT")).await?;
-        debug!(
-            "[{}] [{}] Got full {:?}",
-            email.id,
-            if tls { "TLS" } else { "Plain" },
-            lines_reader
-                .filter_map(|x| async move { x.ok() })
-                .collect::<Vec<String>>()
-                .await
-        );
-        return Err("Server did not accept MAIL FROM command".into());
+        sender.send(String::from("QUIT")).await?;
+        return Err(format!("MAIL FROM rejected: {line}").into());
     }
 
-    // We send RCPT TO
-    // TODO actually follow spec here. This may be garbage :P
-    for to in to {
-        lines_sender.send(format!("RCPT TO:<{to}>")).await?;
-        debug!(
-            "[{}] [{}] Sent RCPT TO",
-            email.id,
-            if tls { "TLS" } else { "Plain" },
-        );
-        let line = lines_reader
+    for addr in to {
+        sender.send(format!("RCPT TO:<{addr}>")).await?;
+        let line = reader
             .next()
             .await
-            .ok_or("Server did not respond")??;
-        debug!(
-            "[{}] [{}] Got {}",
-            email.id,
-            if tls { "TLS" } else { "Plain" },
-            line
-        );
-        if !line.starts_with("250") && !line.starts_with("550 No such user here") {
-            lines_sender.send(String::from("RSET")).await?;
-            lines_sender.send(String::from("QUIT")).await?;
-            debug!(
-                "[{}] [{}] Got full {:?}",
-                email.id,
-                if tls { "TLS" } else { "Plain" },
-                lines_reader
-                    .filter_map(|x| async move { x.ok() })
-                    .collect::<Vec<String>>()
-                    .await
-            );
-            return Err("Server did not accept RCPT TO command".into());
+            .ok_or("No response to RCPT TO")??;
+        debug!("[{}] RCPT TO <{}>: {}", email.id, addr, line);
+        // 251 = user not local, but will forward — still acceptable
+        if !line.starts_with("250") && !line.starts_with("251") {
+            sender.send(String::from("QUIT")).await?;
+            return Err(format!("RCPT TO rejected for {addr}: {line}").into());
         }
     }
 
-    // Send the body
-    lines_sender.send(String::from("DATA")).await?;
-    debug!(
-        "[{}] [{}] Sent DATA",
-        email.id,
-        if tls { "TLS" } else { "Plain" },
-    );
-
-    let line = lines_reader
+    sender.send(String::from("DATA")).await?;
+    let line = reader
         .next()
         .await
-        .ok_or("Server did not respond")??;
-    debug!(
-        "[{}] [{}] Got {}",
-        email.id,
-        if tls { "TLS" } else { "Plain" },
-        line
-    );
+        .ok_or("No response to DATA")??;
+    debug!("[{}] DATA: {}", email.id, line);
     if !line.starts_with("354") {
-        lines_sender.send(String::from("RSET")).await?;
-        lines_sender.send(String::from("QUIT")).await?;
-
-        debug!(
-            "[{}] [{}] Got full {:?}",
-            email.id,
-            if tls { "TLS" } else { "Plain" },
-            lines_reader
-                .filter_map(|x| async move { x.ok() })
-                .collect::<Vec<String>>()
-                .await
-        );
-        return Err("Server did not accept data start command".into());
+        sender.send(String::from("QUIT")).await?;
+        return Err(format!("DATA rejected: {line}").into());
     }
 
-    let signed_body = dkim_sign(
+    let signed = dkim_sign(
         &email.sender_domain,
         &email.body,
         &email.dkim_key_path,
         &email.dkim_key_selector,
     )?;
-    lines_sender.send(signed_body).await?;
-    lines_sender.send(String::from(".")).await?;
-    debug!(
-        "[{}] [{}] Sent body and ending",
-        email.id,
-        if tls { "TLS" } else { "Plain" },
-    );
+    sender.send(signed).await?;
+    sender.send(String::from(".")).await?;
 
-    let line = lines_reader
+    let line = reader
         .next()
         .await
-        .ok_or("Server did not respond")??;
-    debug!("[{}] Got {}", email.id, line);
+        .ok_or("No response after message body")??;
+    debug!("[{}] Message accepted: {}", email.id, line);
     if !line.starts_with("250") {
-        lines_sender.send(String::from("RSET")).await?;
-        lines_sender.send(String::from("QUIT")).await?;
-        debug!(
-            "[{}] [{}] Got full {:?}",
-            email.id,
-            if tls { "TLS" } else { "Plain" },
-            lines_reader
-                .filter_map(|x| async move { x.ok() })
-                .collect::<Vec<String>>()
-                .await
-        );
-        return Err("Server did not accept data command".into());
+        sender.send(String::from("QUIT")).await?;
+        return Err(format!("Message rejected by remote server: {line}").into());
     }
 
-    // QUIT after sending
-    lines_sender.send(String::from("QUIT")).await?;
+    sender.send(String::from("QUIT")).await?;
     Ok(())
 }
 
-// Note this is a hack to get max retries. Please fix this
+/// Looks up MX records for each destination domain (sorted by priority),
+/// negotiates STARTTLS, and delivers the message.  Tries each MX host in
+/// priority order before giving up on a domain.
 #[allow(clippy::too_many_lines)]
 #[instrument(skip(email))]
 pub async fn send_email_job(
     email: &EmailPayload,
 ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
-    debug!("[{}] Starting to send email job: {}", email.id, email.id);
-    // Decode a JSON payload
-    debug!("[{}] Found payload", email.id);
-    let resolver = TokioAsyncResolver::tokio_from_system_conf()?;
+    debug!("[{}] Starting email delivery", email.id);
+    let resolver = TokioResolver::builder_tokio()?.build()?;
 
-    debug!("[{}] Setup for tls connection done", email.id);
     for (target, to) in &email.to {
-        debug!("[{}] Looking up mx records for {}", email.id, target);
-        let mx_record_resp = resolver.mx_lookup(target.clone()).await;
+        debug!("[{}] Resolving delivery path for {}", email.id, target);
 
-        debug!("[{}] Looking up IP records for {}", email.id, target);
-        let mut address: Option<IpAddr> = None;
-        let mut tls_domain: String = target.to_string();
-        let response = resolver.ipv6_lookup(target.clone()).await;
-        if let Ok(response) = response {
-            address = Some(IpAddr::V6(
-                response.iter().next().ok_or("No address found")?.0,
-            ));
-            debug!("[{}] Got {:?} for {}", email.id, address, target);
-        } else {
-            debug!("[{}] Looking up A records for {}", email.id, target);
-            let response = resolver.ipv4_lookup(target.clone()).await;
-            if let Ok(response) = response {
-                address = Some(IpAddr::V4(
-                    response.iter().next().ok_or("No address found")?.0,
-                ));
-                debug!("[{}] Got {:?} for {}", email.id, address, target);
-            }
-        }
-
-        debug!("[{}] Checking mx record results for {}", email.id, target);
-        if let Ok(mx_record_resp) = mx_record_resp {
-            for record in mx_record_resp {
-                debug!(
-                    "[{}] Found MX: {} {}",
-                    email.id,
-                    record.preference(),
-                    record.exchange()
-                );
-                let response = resolver.ipv6_lookup(record.exchange().clone()).await;
-                if let Ok(response) = response {
-                    address = Some(IpAddr::V6(
-                        response.iter().next().ok_or("No address found")?.0,
-                    ));
-                    let exchange_record = record.exchange().to_utf8();
-                    tls_domain = if let Some(record) = exchange_record.strip_suffix('.') {
-                        record.to_string()
+        // Collect MX records and sort by preference (lower value = higher priority)
+        let mut mx_hosts: Vec<(u16, String)> = Vec::new();
+        if let Ok(mx_resp) = resolver.mx_lookup(target.as_str()).await {
+            let mut records: Vec<(u16, String)> = mx_resp
+                .answers()
+                .iter()
+                .filter_map(|record| {
+                    if let RData::MX(mx) = &record.data {
+                        let exchange = mx.exchange.to_string();
+                        let host =
+                            exchange.strip_suffix('.').unwrap_or(&exchange).to_string();
+                        Some((mx.preference, host))
                     } else {
-                        exchange_record
-                    };
-                    debug!("[{}] Got {:?} for {}", email.id, address, target);
-                    break;
-                }
+                        None
+                    }
+                })
+                .collect();
+            records.sort_by_key(|(pref, _)| *pref);
+            mx_hosts = records;
+        }
 
-                debug!("[{}] Looking up A records for {}", email.id, target);
-                let response = resolver.ipv4_lookup(record.exchange().clone()).await;
-                if let Ok(response) = response {
-                    address = Some(IpAddr::V4(
-                        response.iter().next().ok_or("No address found")?.0,
-                    ));
-                    let exchange_record = record.exchange().to_utf8();
-                    tls_domain = if let Some(record) = exchange_record.strip_suffix('.') {
-                        record.to_string()
+        // No MX records — fall back to treating the domain as the mail server
+        if mx_hosts.is_empty() {
+            debug!(
+                "[{}] No MX records for {}, attempting A/AAAA fallback",
+                email.id, target
+            );
+            mx_hosts.push((0, target.clone()));
+        }
+
+        // Fetch MTA-STS policy for this destination domain (RFC 8461).
+        let sts_policy = fetch_mta_sts_policy(target, &resolver).await;
+        if let Some(ref policy) = sts_policy {
+            debug!(
+                "[{}] MTA-STS policy for {}: mode={:?}",
+                email.id, target, policy.mode
+            );
+        }
+
+        let mut delivered = false;
+        'mx: for (_, host) in &mx_hosts {
+            debug!("[{}] Trying MX host {}", email.id, host);
+            let ip = match resolver.lookup_ip(host.as_str()).await {
+                Ok(r) => {
+                    if let Some(ip) = r.iter().next() {
+                        ip
                     } else {
-                        exchange_record
-                    };
-                    debug!("[{}] Got {:?} for {}", email.id, address, target);
-                    break;
+                        warn!("[{}] No IP address for MX host {}", email.id, host);
+                        continue 'mx;
+                    }
                 }
-            }
-        }
-
-        if address.is_none() {
-            debug!("[{}] No address found for {}", email.id, target);
-            continue;
-        }
-        let Some(address) = address else { continue };
-
-        match get_secure_connection(address, email, target, &tls_domain).await {
-            Ok(secure_con) => {
-                if let Err(e) = send_email(secure_con, email, to, true).await {
+                Err(e) => {
                     warn!(
-                        "[{}] Error sending email via tls on port 465 to {}: {}",
-                        email.id, target, e
+                        "[{}] IP lookup failed for MX host {}: {}",
+                        email.id, host, e
                     );
-                    // TODO try starttls first
-                    match get_unsecure_connection(address, email, target).await {
-                        Ok(unsecure_con) => {
-                            if let Err(e) = send_email(unsecure_con, email, to, false).await {
-                                return Err(From::from(format!(
-                                    "[{}] Error sending email via tcp on port 25 to {}: {}",
-                                    email.id, target, e
-                                )));
-                            }
-                        }
-                        Err(e) => {
-                            return Err(From::from(format!(
-                                "[{}] Error sending email via tcp on port 25 to {}: {}",
-                                email.id, target, e
-                            )));
-                        }
+                    continue 'mx;
+                }
+            };
+
+            // MTA-STS: in enforce mode the MX host must match the policy's mx list.
+            if let Some(ref policy) = sts_policy {
+                if policy.mode == MtaStsMode::Enforce
+                    && !mx_allowed_by_policy(host, policy)
+                {
+                    warn!(
+                        "[{}] MTA-STS enforce: MX host {} is not in the policy mx \
+                         list for {}; skipping",
+                        email.id, host, target
+                    );
+                    continue 'mx;
+                }
+            }
+
+            // Port 25 is the correct relay port for MTA-to-MTA delivery (RFC 5321).
+            // Ports 465/587 are submission ports for mail clients and MUST NOT be
+            // used for server-to-server relay (RFC 8314).
+            // Try STARTTLS first; fall back to plain when STARTTLS is not offered.
+            let conn = match connect_with_starttls(ip, email, host).await {
+                Ok(c) => c,
+                Err(e) => {
+                    warn!(
+                        "[{}] Port 25 connection to {} ({}) failed: {}",
+                        email.id, host, ip, e
+                    );
+                    continue 'mx;
+                }
+            };
+
+            // MTA-STS enforce: TLS is mandatory (RFC 8461 §4.2).
+            if let Some(ref policy) = sts_policy {
+                if policy.mode == MtaStsMode::Enforce && !conn.is_tls {
+                    warn!(
+                        "[{}] MTA-STS enforce: {} did not offer STARTTLS; \
+                         refusing plain delivery to {}",
+                        email.id, host, target
+                    );
+                    continue 'mx;
+                }
+            }
+
+            // RFC 8689 §4: when REQUIRETLS is set, the remote MUST support TLS
+            // AND advertise REQUIRETLS in its post-STARTTLS EHLO.
+            if email.require_tls {
+                if !conn.is_tls {
+                    warn!(
+                        "[{}] REQUIRETLS: {} does not support STARTTLS; skipping",
+                        email.id, host
+                    );
+                    continue 'mx;
+                }
+                if !conn.requiretls_advertised {
+                    warn!(
+                        "[{}] REQUIRETLS: {} did not advertise REQUIRETLS after \
+                         STARTTLS (RFC 8689 §4); skipping",
+                        email.id, host
+                    );
+                    continue 'mx;
+                }
+            }
+
+            // DANE TLSA validation (RFC 7672): only when TLS was negotiated.
+            // If no TLSA records exist, validation is a no-op (returns true).
+            // If records exist but the cert does not match, skip this MX host.
+            if conn.is_tls {
+                let tlsa_records = fetch_tlsa_records(host, &resolver).await;
+                if !tlsa_records.is_empty() {
+                    let valid = conn
+                        .peer_cert_der
+                        .as_deref()
+                        .is_some_and(|cert| validate_cert_against_tlsa(cert, &tlsa_records));
+                    if valid {
+                        debug!("[{}] DANE: cert for {} passed TLSA validation", email.id, host);
+                    } else {
+                        warn!(
+                            "[{}] DANE: cert for {} failed TLSA validation; skipping MX host",
+                            email.id, host
+                        );
+                        continue 'mx;
                     }
                 }
             }
-            Err(e) => {
-                error!(
-                    "[{}] Error sending email via tls on port 465 to {}: {}",
-                    email.id, target, e
-                );
-                // TODO try starttls first
-                let unsecure_con = get_unsecure_connection(address, email, target).await?;
-                if let Err(e) = send_email(unsecure_con, email, to, false).await {
-                    return Err(From::from(format!(
-                        "[{}] Error sending email via tcp on port 25 to {}: {}",
-                        email.id, target, e
-                    )));
+
+            let tls_label = if conn.is_tls { "STARTTLS" } else { "plain" };
+            match smtp_deliver(conn.framed, email, to).await {
+                Ok(()) => {
+                    debug!(
+                        "[{}] Delivered to {} via {} ({}) on port 25",
+                        email.id, target, host, tls_label
+                    );
+                    delivered = true;
+                    break 'mx;
+                }
+                Err(e) => {
+                    warn!(
+                        "[{}] Delivery to {} via {} ({}) on port 25 failed: {}",
+                        email.id, target, host, tls_label, e
+                    );
                 }
             }
         }
-    }
-    debug!("[{}] Finished sending email job: {}", email.id, email.id);
 
+        if !delivered {
+            return Err(
+                format!("Failed to deliver message to {target}: all MX hosts exhausted")
+                    .into(),
+            );
+        }
+    }
+
+    debug!("[{}] Email delivery complete", email.id);
     Ok(())
-}
-
-#[instrument(skip(addr, email, target))]
-async fn get_unsecure_connection(
-    addr: IpAddr,
-    email: &EmailPayload,
-    target: &String,
-) -> Result<
-    impl Stream<Item = Result<String, LinesCodecError>> + Sink<String, Error = LinesCodecError>,
-    Box<dyn Error + Send + Sync + 'static>,
-> {
-    match timeout(Duration::from_secs(5), TcpStream::connect(&(addr, 25))).await {
-        Ok(Ok(stream)) => {
-            debug!(
-                "[{}] Connected to {} via tcp as {:?}",
-                email.id,
-                target,
-                stream.local_addr()?
-            );
-
-            Ok(Framed::new(stream, LinesCodec::new()))
-        }
-        Ok(Err(e)) => Err(format!(
-            "[{}] Error connecting to {} via tcp: {}",
-            email.id, target, e
-        )
-        .into()),
-        Err(e) => Err(format!(
-            "[{}] Error connecting to {} via tcp: {}",
-            email.id, target, e
-        )
-        .into()),
-    }
-}
-
-#[instrument(skip(addr, target, email, tls_domain))]
-async fn get_secure_connection(
-    addr: IpAddr,
-    email: &EmailPayload,
-    target: &str,
-    tls_domain: &str,
-) -> Result<
-    impl Stream<Item = Result<String, LinesCodecError>> + Sink<String, Error = LinesCodecError>,
-    Box<dyn Error + Send + Sync + 'static>,
-> {
-    let mut roots = rustls::RootCertStore::empty();
-    roots.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.iter().map(|ta| {
-        OwnedTrustAnchor::from_subject_spki_name_constraints(
-            ta.subject,
-            ta.spki,
-            ta.name_constraints,
-        )
-    }));
-    let config = rustls::ClientConfig::builder()
-        .with_safe_defaults()
-        .with_root_certificates(roots)
-        .with_no_client_auth();
-    let connector = TlsConnector::from(std::sync::Arc::new(config));
-    debug!("[{}] Trying tls", email.id,);
-    match timeout(Duration::from_secs(5), TcpStream::connect(&(addr, 465))).await {
-        Ok(Ok(stream)) => {
-            debug!(
-                "[{}] Connected to {} via tcp {:?} waiting for tls magic",
-                email.id,
-                target,
-                stream.local_addr()?
-            );
-
-            let domain = rustls::ServerName::try_from(tls_domain)
-                .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid dnsname"))?;
-
-            let stream = connector.connect(domain, stream).await?;
-            debug!("[{}] Connected to {} via tls", email.id, target);
-
-            Ok(Framed::new(stream, LinesCodec::new()))
-        }
-        Ok(Err(e)) => Err(format!(
-            "[{}] Error connecting to {} via tls: {}",
-            email.id, target, e
-        )
-        .into()),
-        Err(e) => Err(format!(
-            "[{}] Error connecting to {} via tls after {}",
-            email.id, target, e
-        )
-        .into()),
-    }
 }

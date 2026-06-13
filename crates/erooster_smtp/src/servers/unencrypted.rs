@@ -16,13 +16,13 @@ use erooster_core::{
     line_codec::LinesCodec,
     LINE_LIMIT,
 };
-use erooster_deps::{
+use {
     color_eyre::{self, eyre::Context, Result},
     futures::{SinkExt, StreamExt},
     tokio::{self, net::TcpListener, task::JoinHandle},
     tokio_stream::wrappers::TcpListenerStream,
     tokio_util::{codec::Framed, sync::CancellationToken},
-    tracing::{self, debug, error, info, instrument},
+    tracing::{debug, error, info, instrument},
 };
 use std::net::SocketAddr;
 /// An unencrypted smtp Server
@@ -82,7 +82,8 @@ async fn listen(
             break;
         }
         let peer = tcp_stream.peer_addr().expect("[SMTP] peer addr to exist");
-        debug!("[SMTP] Got new peer: {}", peer);
+        let is_submission = peer.port() == 587;
+        debug!("[SMTP] Got new peer: {} (submission={})", peer, is_submission);
 
         let database = database.clone();
         let storage = storage.clone();
@@ -92,7 +93,7 @@ async fn listen(
             let lines = Framed::new(tcp_stream, LinesCodec::new_with_max_length(LINE_LIMIT));
             let (mut lines_sender, mut lines_reader) = lines.split();
 
-            let state = Connection::new(false, peer.ip().to_string());
+            let state = Connection::new(false, is_submission, peer.ip().to_string());
 
             // Greet the client with the capabilities we provide
             send_capabilities(&config, &mut lines_sender)

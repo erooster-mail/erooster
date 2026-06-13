@@ -5,5 +5,8 @@
 /// The database logic of the server
 pub mod database;
 
+/// Persistent outbound mail queue
+pub mod queue;
+
 /// The logic for the mail storages
 pub mod storage;

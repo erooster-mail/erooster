@@ -9,10 +9,10 @@ use crate::{
     },
     config::Config,
 };
-use erooster_deps::{
-    async_trait, color_eyre,
+use {
+    color_eyre,
     mailparse::{MailHeader, ParsedMail},
-    tracing::{self, instrument},
+    tracing::instrument,
 };
 use std::path::{Path, PathBuf};
 
@@ -38,7 +38,6 @@ pub enum MailState {
 }
 
 /// Representation of a Mail entry
-#[async_trait::async_trait]
 pub trait MailEntry {
     /// The uid of the mail entry
     fn uid(&self) -> u32;
@@ -51,9 +50,9 @@ pub trait MailEntry {
     /// The id of the email
     fn id(&self) -> &str;
     /// The parsed form of the email
-    fn parsed(&mut self) -> color_eyre::eyre::Result<ParsedMail>;
+    fn parsed(&mut self) -> color_eyre::eyre::Result<ParsedMail<'_>>;
     /// The parsed headers of the email
-    fn headers(&mut self) -> color_eyre::eyre::Result<Vec<MailHeader>>;
+    fn headers(&mut self) -> color_eyre::eyre::Result<Vec<MailHeader<'_>>>;
     /// The received time of the email
     fn received(&mut self) -> color_eyre::eyre::Result<i64>;
     /// The sent time of the email
@@ -86,7 +85,7 @@ pub trait MailEntry {
 //
 // Note for future readers:
 // These are methods as other storage types may need to store some state in the struct
-#[async_trait::async_trait]
+#[allow(async_fn_in_trait)]
 pub trait MailStorage<M: MailEntry> {
     /// Get the current UID for the folder
     fn get_uid_for_folder(&self, path: &Path) -> color_eyre::eyre::Result<u32>;

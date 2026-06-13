@@ -7,10 +7,10 @@ use crate::{
     servers::state::State,
 };
 use erooster_core::backend::storage::{MailStorage, Storage};
-use erooster_deps::{
+use {
     color_eyre::{self, eyre::ContextCompat},
     futures::{Sink, SinkExt},
-    tracing::{self, instrument},
+    tracing::instrument,
 };
 
 pub struct Noop<'a> {
@@ -29,7 +29,6 @@ impl Noop<'_> {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        // TODO: return status as suggested in https://www.rfc-editor.org/rfc/rfc9051.html#name-noop-command
         if let State::Selected(folder, _) = &self.data.con_state.state {
             let folder = folder.replace('/', ".");
             let mailbox_path = storage.to_ondisk_path(
@@ -55,8 +54,8 @@ mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};
     use crate::servers::state::{Access, Connection, State};
-    use erooster_deps::futures::{channel::mpsc, StreamExt};
-    use erooster_deps::tokio;
+    use futures::{channel::mpsc, StreamExt};
+    use tokio;
 
     #[allow(clippy::unwrap_used)]
     #[cfg_attr(coverage_nightly, coverage(off))]
@@ -76,13 +75,9 @@ mod tests {
             command: Commands::Noop,
             arguments: &[],
         };
-        let config = erooster_core::get_config(String::from("./config.yml"))
+        let (_config, storage) = erooster_core::test_helpers::setup_test_storage()
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(&config)
-            .await
-            .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok(), "{:?}", res);
@@ -107,13 +102,9 @@ mod tests {
             command: Commands::Noop,
             arguments: &[],
         };
-        let config = erooster_core::get_config(String::from("./config.yml"))
+        let (_config, storage) = erooster_core::test_helpers::setup_test_storage()
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(&config)
-            .await
-            .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok(), "{:?}", res);

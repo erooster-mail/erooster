@@ -3,15 +3,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{backend::database::Database, config::Config};
-use erooster_deps::{
+use {
     argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier},
-    async_trait,
     color_eyre::{self, Result},
     rand_core::OsRng,
     secrecy::{ExposeSecret, SecretString},
-    tracing::{self, debug, debug_span, error, instrument},
+    tracing::{debug, debug_span, error, instrument},
 };
-use sqlx::{pool::PoolOptions, SqlitePool};
+use sqlx::{pool::PoolOptions, sqlite::SqliteConnectOptions, SqlitePool};
+use std::str::FromStr;
 
 /// Postgres specific database implementation
 /// Holds data to connect to the database
@@ -20,14 +20,16 @@ pub struct Sqlite {
     pool: SqlitePool,
 }
 
-#[async_trait::async_trait]
 impl Database<sqlx::Sqlite> for Sqlite {
     #[instrument(skip(config))]
     async fn new(config: &Config) -> Result<Self> {
+        let opts = SqliteConnectOptions::from_str(&config.database.url)
+            .map_err(|e| color_eyre::eyre::eyre!("Invalid SQLite URL: {e}"))?
+            .create_if_missing(true);
         let pool = PoolOptions::new()
             .min_connections(2)
             .max_connections(10)
-            .connect(&config.database.url)
+            .connect_with(opts)
             .await?;
         sqlx::migrate!("./sqlite_migrations").run(&pool).await?;
         Ok(Self { pool })

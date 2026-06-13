@@ -5,7 +5,7 @@
 use crate::{
     commands::{
         auth::Auth, data::DataCommand, ehlo::Ehlo, mail::Mail, noop::Noop, quit::Quit, rcpt::Rcpt,
-        rset::Rset,
+        rset::Rset, vrfy::Vrfy,
     },
     servers::state::{AuthState, Connection, State},
 };
@@ -13,7 +13,7 @@ use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
 };
-use erooster_deps::{
+use {
     color_eyre,
     futures::{Sink, SinkExt},
     nom::{
@@ -25,7 +25,7 @@ use erooster_deps::{
         sequence::{terminated, tuple},
         Finish, IResult,
     },
-    tracing::{self, debug, error, instrument, warn},
+    tracing::{debug, error, instrument, warn},
 };
 
 #[cfg(test)]
@@ -40,6 +40,7 @@ mod parsers;
 mod quit;
 mod rcpt;
 mod rset;
+mod vrfy;
 
 #[derive(Debug, Clone)]
 pub struct Data {
@@ -75,6 +76,7 @@ pub enum Commands {
     RCPTTO,
     RSET,
     STARTTLS,
+    VRFY,
 }
 
 impl TryFrom<&str> for Commands {
@@ -92,6 +94,7 @@ impl TryFrom<&str> for Commands {
             "noop" => Ok(Commands::NOOP),
             "rset" => Ok(Commands::RSET),
             "starttls" => Ok(Commands::STARTTLS),
+            "vrfy" => Ok(Commands::VRFY),
             _ => {
                 warn!("[SMTP⦘ Got unknown command: {}", i);
                 Err(String::from("no other commands supported"))
@@ -104,7 +107,7 @@ type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
 
 /// Gets the command
 #[instrument(skip(input))]
-fn command(input: &str) -> Res<Result<Commands, String>> {
+fn command(input: &str) -> Res<'_, Result<Commands, String>> {
     context(
         "command",
         alt((
@@ -121,7 +124,7 @@ fn command(input: &str) -> Res<Result<Commands, String>> {
 
 /// Gets the input arguments
 #[instrument(skip(input))]
-fn arguments(input: &str) -> Res<Vec<&str>> {
+fn arguments(input: &str) -> Res<'_, Vec<&str>> {
     context(
         "arguments",
         many0(alt((
@@ -129,7 +132,6 @@ fn arguments(input: &str) -> Res<Vec<&str>> {
             take_while1(|c: char| c != ' '),
         ))),
     )(input)
-    .map(|(x, y)| (x, y))
 }
 
 #[allow(clippy::upper_case_acronyms)]
@@ -141,7 +143,7 @@ pub enum Response {
 
 impl Data {
     #[instrument(skip(line))]
-    fn parse_internal(line: &str) -> Res<(Result<Commands, String>, Vec<&str>)> {
+    fn parse_internal(line: &str) -> Res<'_, (Result<Commands, String>, Vec<&str>)> {
         context("parse_internal", tuple((command, arguments)))(line)
     }
 
@@ -165,7 +167,7 @@ impl Data {
         let state = { self.con_state.state.clone() };
         if matches!(state, State::ReceivingData(_)) {
             DataCommand { data: self }
-                .receive(config, lines, &line, storage)
+                .receive(config, lines, &line, storage, database)
                 .await?;
             // We are done here
             return Ok(Response::Continue);
@@ -183,7 +185,7 @@ impl Data {
             }
             // We are done here
             return Ok(Response::Continue);
-        };
+        }
         let line_borrow: &str = &line;
         match Data::parse_internal(line_borrow).finish() {
             Ok((_, (command, arguments))) => {
@@ -212,7 +214,12 @@ impl Data {
                     }
                     Commands::EHLO => {
                         Ehlo { data: self }
-                            .exec(&config.mail.hostname, lines, &command_data)
+                            .exec(
+                                &config.mail.hostname,
+                                config.mail.max_message_size.as_bytes(),
+                                lines,
+                                &command_data,
+                            )
                             .await?;
                     }
                     Commands::QUIT => {
@@ -222,7 +229,7 @@ impl Data {
                     }
                     Commands::MAILFROM => {
                         Mail { data: self }
-                            .exec(&config.mail.hostname, lines, &command_data)
+                            .exec(config, lines, &command_data)
                             .await?;
                     }
                     Commands::RCPTTO => {
@@ -240,6 +247,11 @@ impl Data {
                     }
                     Commands::NOOP => {
                         Noop.exec(lines).await?;
+                    }
+                    Commands::VRFY => {
+                        Vrfy { data: self }
+                            .exec(lines, database, &command_data)
+                            .await?;
                     }
                 }
             }

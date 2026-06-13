@@ -3,14 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{backend::database::Database, config::Config};
-use erooster_deps::{
+use std::sync::OnceLock;
+use {
     argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier},
-    async_trait,
     color_eyre::{self, Result},
-    once_cell::sync::OnceCell,
     rand_core::OsRng,
     secrecy::{ExposeSecret, SecretString},
-    tracing::{self, debug, debug_span, error, instrument},
+    tracing::{debug, debug_span, error, instrument},
 };
 use sqlx::{pool::PoolOptions, PgPool};
 
@@ -21,11 +20,10 @@ pub struct Postgres {
     pool: PgPool,
 }
 
-#[async_trait::async_trait]
 impl Database<sqlx::Postgres> for Postgres {
     #[instrument(skip(config))]
     async fn new(config: &Config) -> Result<Self> {
-        static INSTANCE: OnceCell<Postgres> = OnceCell::new();
+        static INSTANCE: OnceLock<Postgres> = OnceLock::new();
 
         let pool = INSTANCE.get();
 

@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::commands::CommandData;
-use erooster_deps::{
+use {
     color_eyre,
     futures::{Sink, SinkExt},
-    tracing::{self, instrument},
+    tracing::instrument,
 };
 
 pub struct Login;

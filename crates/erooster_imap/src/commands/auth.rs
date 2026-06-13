@@ -10,15 +10,14 @@ use erooster_core::{
     backend::database::{Database, DB},
     BASE64_DECODER,
 };
-use erooster_deps::{
+use {
     base64::Engine,
     color_eyre,
     futures::{Sink, SinkExt},
     secrecy::SecretString,
     simdutf8::compat::from_utf8,
-    tracing::{self, debug, error, instrument},
+    tracing::{debug, error, instrument},
 };
-use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum AuthenticationMethod {
@@ -61,7 +60,7 @@ impl Authenticate<'_> {
 
                 if auth_data_vec.len() == 2 {
                     let username = auth_data_vec[0];
-                    let password = SecretString::from_str(auth_data_vec[1])?;
+                    let password = SecretString::new(Box::from(auth_data_vec[1]));
 
                     debug!("[IMAP] Making sure user exists");
                     if database.user_exists(username).await {
@@ -140,7 +139,6 @@ impl Authenticate<'_> {
     {
         if self.data.con_state.state == State::NotAuthenticated {
             let args = &command_data.arguments;
-            assert!(args.len() == 1);
             if args.len() == 1 {
                 if args[0].to_lowercase() == "plain" {
                     debug!("[IMAP] Update state to Authenticating");

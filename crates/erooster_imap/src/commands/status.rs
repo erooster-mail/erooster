@@ -2,14 +2,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::commands::select::get_or_create_uidvalidity;
 use crate::commands::{CommandData, Data};
 use erooster_core::backend::storage::{MailEntry, MailStorage, Storage};
-use erooster_deps::{
+use {
     color_eyre::{self, eyre::ContextCompat},
     futures::{Sink, SinkExt},
-    tracing::{self, instrument},
+    tracing::instrument,
 };
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct Status<'a> {
     pub data: &'a Data,
@@ -40,10 +40,11 @@ impl Status<'_> {
         let mailbox_path =
             storage.to_ondisk_path((*folder_on_disk).to_string(), username.clone())?;
 
-        let mut values = String::new();
+        let mut parts: Vec<String> = Vec::new();
+
         if responses.contains(&"MESSAGES") {
             let count = storage.count_cur(&mailbox_path) + storage.count_new(&mailbox_path);
-            values.push_str(&format!("MESSAGES {count}"));
+            parts.push(format!("MESSAGES {count}"));
         }
         if responses.contains(&"UNSEEN") {
             let count = storage
@@ -53,34 +54,22 @@ impl Status<'_> {
                 .filter(|mail| !mail.is_seen())
                 .count()
                 + storage.count_new(&mailbox_path);
-            values.push_str(&format!("UNSEEN {count}"));
+            parts.push(format!("UNSEEN {count}"));
         }
         if responses.contains(&"UIDNEXT") {
             let current_uid = storage.get_uid_for_folder(&mailbox_path)?;
-            values.push_str(&format!("UIDNEXT {}", current_uid + 1));
+            parts.push(format!("UIDNEXT {}", current_uid + 1));
         }
         if responses.contains(&"UIDVALIDITY") {
-            let current_time = SystemTime::now();
-            let unix_timestamp = current_time.duration_since(UNIX_EPOCH)?;
-            #[allow(clippy::cast_possible_truncation)]
-            let timestamp = unix_timestamp.as_millis() as u32;
-
-            values.push_str(&format!("UIDVALIDITY {timestamp}"));
-        }
-        if responses.contains(&"UNSEEN") {
-            let mails = storage
-                .list_cur(format!("{username}/{folder_on_disk}"), &mailbox_path)
-                .await;
-            let count =
-                mails.iter().filter(|m| !m.is_seen()).count() + storage.count_new(&mailbox_path);
-            values.push_str(&format!("UNSEEN {count}"));
+            let uidvalidity = get_or_create_uidvalidity(&mailbox_path).await?;
+            parts.push(format!("UIDVALIDITY {uidvalidity}"));
         }
         if responses.contains(&"DELETED") {
             let mails = storage
                 .list_cur(format!("{username}/{folder_on_disk}"), &mailbox_path)
                 .await;
             let count = mails.iter().filter(|m| m.is_trashed()).count();
-            values.push_str(&format!("DELETED {count}"));
+            parts.push(format!("DELETED {count}"));
         }
         if responses.contains(&"SIZE") {
             let size: usize = storage
@@ -95,8 +84,10 @@ impl Status<'_> {
                     }
                 })
                 .sum();
-            values.push_str(&format!("SIZE {size}"));
+            parts.push(format!("SIZE {size}"));
         }
+
+        let values = parts.join(" ");
         lines
             .feed(format!("* STATUS {folder_on_disk} ({values})"))
             .await?;
@@ -105,5 +96,93 @@ impl Status<'_> {
             .await?;
         lines.flush().await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use crate::commands::{CommandData, Commands};
+    use crate::servers::state::{Access, Connection, State};
+    use futures::{channel::mpsc, StreamExt};
+    use tokio;
+
+    #[cfg_attr(coverage_nightly, coverage(off))]
+    #[tokio::test]
+    async fn test_status_messages_and_unseen() {
+        let data = Data {
+            con_state: Connection {
+                state: State::Selected("INBOX".to_string(), Access::ReadWrite),
+                secure: true,
+                username: Some(String::from("test_status_user")),
+                active_capabilities: vec![],
+            },
+        };
+        let cmd_data = CommandData {
+            tag: "a1",
+            command: Commands::Status,
+            arguments: &["INBOX", "(MESSAGES UNSEEN UIDNEXT)"],
+        };
+        let (_config, storage) = erooster_core::test_helpers::setup_test_storage()
+            .await
+            .unwrap();
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = Status { data: &data }.exec(&mut tx, &storage, &cmd_data).await;
+        assert!(res.is_ok(), "{:?}", res);
+
+        let untagged = rx.next().await.unwrap_or_default();
+        // Response must include all three items with spaces between them and no duplicates
+        assert!(
+            untagged.starts_with("* STATUS INBOX ("),
+            "unexpected response: {untagged}"
+        );
+        assert!(untagged.contains("MESSAGES "), "MESSAGES missing: {untagged}");
+        assert!(untagged.contains("UNSEEN "), "UNSEEN missing: {untagged}");
+        assert!(untagged.contains("UIDNEXT "), "UIDNEXT missing: {untagged}");
+        // Ensure items are space-separated (no two keywords directly adjacent)
+        let inner = untagged
+            .trim_start_matches("* STATUS INBOX (")
+            .trim_end_matches(')');
+        let parts: Vec<_> = inner.split_whitespace().collect();
+        // parts should alternate keyword/value: ["MESSAGES","0","UNSEEN","0","UIDNEXT","1"]
+        assert_eq!(parts.len(), 6, "wrong item count: {inner}");
+
+        let tagged = rx.next().await.unwrap_or_default();
+        assert_eq!(tagged, "a1 OK STATUS completed");
+    }
+
+    #[cfg_attr(coverage_nightly, coverage(off))]
+    #[tokio::test]
+    async fn test_status_uidvalidity_stable() {
+        let data = Data {
+            con_state: Connection {
+                state: State::Selected("INBOX".to_string(), Access::ReadWrite),
+                secure: true,
+                username: Some(String::from("test_status_uid_user")),
+                active_capabilities: vec![],
+            },
+        };
+        let cmd_data = CommandData {
+            tag: "b1",
+            command: Commands::Status,
+            arguments: &["INBOX", "(UIDVALIDITY)"],
+        };
+        let (_config, storage) = erooster_core::test_helpers::setup_test_storage()
+            .await
+            .unwrap();
+
+        // Call STATUS twice — UIDVALIDITY must be the same both times.
+        let (mut tx, mut rx) = mpsc::unbounded();
+        let res = Status { data: &data }.exec(&mut tx, &storage, &cmd_data).await;
+        assert!(res.is_ok(), "{:?}", res);
+        let first = rx.next().await.unwrap_or_default();
+
+        let (mut tx2, mut rx2) = mpsc::unbounded();
+        let res = Status { data: &data }.exec(&mut tx2, &storage, &cmd_data).await;
+        assert!(res.is_ok(), "{:?}", res);
+        let second = rx2.next().await.unwrap_or_default();
+
+        assert_eq!(first, second, "UIDVALIDITY must be stable across calls");
     }
 }

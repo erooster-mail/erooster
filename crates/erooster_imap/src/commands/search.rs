@@ -4,14 +4,14 @@
 
 use crate::{
     commands::{parsers::search_arguments, CommandData, Data},
-    servers::state::State,
+    servers::state::{Capabilities, State},
 };
 use erooster_core::backend::storage::{maildir::MaildirMailEntry, MailEntry, MailStorage, Storage};
-use erooster_deps::{
+use {
     color_eyre::{self, eyre::ContextCompat},
     futures::{Sink, SinkExt},
     nom::{error::convert_error, Finish},
-    tracing::{self, debug, error, instrument},
+    tracing::{debug, error, instrument},
 };
 
 use super::parsers::{parse_search_date, SearchProgram, SearchReturnOption};
@@ -21,6 +21,7 @@ pub struct Search<'a> {
 }
 
 impl Search<'_> {
+    #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
         &self,
@@ -56,10 +57,45 @@ impl Search<'_> {
                         args
                     );
 
-                    let mails = storage
+                    let mut mails = storage
                         .list_all(format!("{username}/{folder}"), &mailbox_path)
                         .await;
+                    // Assign sequence numbers (1-based, sorted by UID) before searching
+                    mails.sort_by_key(MaildirMailEntry::uid);
+                    for (idx, mail) in mails.iter_mut().enumerate() {
+                        mail.sequence_number = Some(
+                            u32::try_from(idx).expect("mail index fits u32") + 1,
+                        );
+                    }
+
+                    let is_rev2 = self
+                        .data
+                        .con_state
+                        .active_capabilities
+                        .contains(&Capabilities::Other(String::from("IMAP4rev2")));
+                    // Use ESEARCH when: client is in rev2 mode OR explicitly sent RETURN (...)
+                    let use_esearch = is_rev2 || args.explicit_return;
+
                     let mut results = parse_search_program(mails, &args.program, is_uid);
+
+                    if !use_esearch {
+                        // IMAP4rev1 compat: send legacy * SEARCH response
+                        lines
+                            .feed(format!(
+                                "* SEARCH {}",
+                                results
+                                    .iter()
+                                    .map(ToString::to_string)
+                                    .collect::<Vec<String>>()
+                                    .join(" ")
+                            ))
+                            .await?;
+                        lines
+                            .feed(format!("{} OK SEARCH completed", command_data.tag))
+                            .await?;
+                        lines.flush().await?;
+                        return Ok(());
+                    }
 
                     let esearch_return_string = if results.is_empty() {
                         if is_uid {
@@ -203,24 +239,11 @@ impl Search<'_> {
                             }
                         }
                     };
-                    if !results.is_empty() {
-                        lines
-                            .feed(format!(
-                                "* SEARCH {}",
-                                results
-                                    .iter()
-                                    .map(ToString::to_string)
-                                    .collect::<Vec<String>>()
-                                    .join(" ")
-                            ))
-                            .await?;
-                    }
 
-                    debug!("return_string: {:#?}", esearch_return_string);
-
+                    debug!("esearch return_string: {:#?}", esearch_return_string);
                     lines.feed(esearch_return_string).await?;
                     lines
-                        .feed(format!("{} OK SEARCH completed", command_data.tag,))
+                        .feed(format!("{} OK SEARCH completed", command_data.tag))
                         .await?;
                     lines.flush().await?;
                 }
@@ -256,23 +279,20 @@ fn parse_search_program(
     program: &SearchProgram,
     is_uid: bool,
 ) -> Vec<u32> {
-    let results: Vec<_> = mails
+    mails
         .iter_mut()
         .filter_map(|entry| {
-            // This applies the rules given by the search program
-            check_search_condition(program, entry, is_uid).then_some(entry)
-        })
-        .map(|x| {
-            if is_uid {
-                x.uid()
+            if check_search_condition(program, entry, is_uid) {
+                if is_uid {
+                    Some(entry.uid())
+                } else {
+                    entry.sequence_number()
+                }
             } else {
-                //TODO: This will crash currently because we dont actually build the sequence numbers yet
-                x.sequence_number().expect("Sequence number not set")
+                None
             }
         })
-        .collect();
-
-    results
+        .collect()
 }
 
 /// Generates a string where continuous numbers are represented in a string as `<start>:<end>`.
@@ -296,7 +316,7 @@ fn generate_ranges(results: &mut Vec<u32>) -> String {
             current_range.1 = *result;
         } else {
             ranges.push(current_range);
-            current_range = (0, 0);
+            current_range = (*result, *result);
         }
     }
     ranges.push(current_range);
@@ -369,7 +389,7 @@ fn check_search_condition(
                 header.get_key_ref().to_lowercase() == header_query.to_lowercase()
                     && header.get_value().contains(value)
             }),
-        SearchProgram::KEYWORD(ref keyword) => todo!(),
+        SearchProgram::KEYWORD(_keyword) => false, // keyword flags not yet implemented
         SearchProgram::LARGER(ref size) => entry.body_size() > *size,
         SearchProgram::NOT(program) => !check_search_condition(program, entry, is_uid),
         SearchProgram::ON(ref date) => {
@@ -447,7 +467,7 @@ fn check_search_condition(
         SearchProgram::UNDELETED => !entry.is_trashed(),
         SearchProgram::UNDRAFT => !entry.is_draft(),
         SearchProgram::UNFLAGGED => !entry.is_flagged(),
-        SearchProgram::UNKEYWORD(ref keyword) => todo!(),
+        SearchProgram::UNKEYWORD(_keyword) => true, // keyword flags not yet implemented
         SearchProgram::UNSEEN => !entry.is_seen(),
         SearchProgram::OR(a, b) => {
             check_search_condition(a, entry, is_uid) || check_search_condition(b, entry, is_uid)
@@ -466,5 +486,51 @@ fn check_search_condition(
                 )
             }
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use crate::commands::parsers::search_arguments;
+    use nom::Finish;
+
+    #[test]
+    fn test_generate_ranges_single() {
+        assert_eq!(generate_ranges(&mut vec![5]), "5");
+    }
+
+    #[test]
+    fn test_generate_ranges_contiguous() {
+        assert_eq!(generate_ranges(&mut vec![1, 2, 3]), "1:3");
+    }
+
+    #[test]
+    fn test_generate_ranges_gap() {
+        assert_eq!(generate_ranges(&mut vec![1, 3, 5]), "1,3,5");
+    }
+
+    #[test]
+    fn test_generate_ranges_mixed() {
+        assert_eq!(generate_ranges(&mut vec![1, 2, 3, 5, 7, 8, 9]), "1:3,5,7:9");
+    }
+
+    #[test]
+    fn test_search_without_return_is_implicit() {
+        let (_, args) = search_arguments("ALL").finish().unwrap();
+        assert!(!args.explicit_return);
+    }
+
+    #[test]
+    fn test_search_with_return_is_explicit() {
+        let (_, args) = search_arguments("RETURN (ALL) ALL").finish().unwrap();
+        assert!(args.explicit_return);
+    }
+
+    #[test]
+    fn test_search_return_min_is_explicit() {
+        let (_, args) = search_arguments("RETURN (MIN) ALL").finish().unwrap();
+        assert!(args.explicit_return);
     }
 }

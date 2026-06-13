@@ -21,10 +21,19 @@ bench = false
 
 [dependencies]
 erooster_core = { version = "0.1.0", path = "../erooster_core" }
-erooster_deps = { version = "0.1.0", path = "../erooster_deps" }
-askama = "0.12.0"
+tracing = { workspace = true }
+askama = "0.16.0"
+axum = { workspace = true }
+axum-server = { workspace = true }
+color-eyre = { workspace = true }
+mime = { workspace = true }
+tokio = { workspace = true }
+tower-http = { workspace = true }
 
 [features]
 default = []
 postgres = ["erooster_core/postgres"]
 sqlite = ["erooster_core/sqlite"]
+
+[lints]
+workspace = true

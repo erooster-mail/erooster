@@ -4,10 +4,10 @@
 
 use crate::commands::{CommandData, Data};
 use erooster_core::backend::storage::{MailStorage, Storage};
-use erooster_deps::{
+use {
     color_eyre::{self, eyre::ContextCompat},
     futures::{Sink, SinkExt},
-    tracing::{self, debug, instrument},
+    tracing::{debug, instrument},
 };
 
 pub struct Subscribe<'a> {

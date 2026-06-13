@@ -7,10 +7,10 @@ use crate::{
     servers::state::State,
 };
 use erooster_core::backend::storage::{MailEntryType, MailStorage, Storage};
-use erooster_deps::{
+use {
     color_eyre,
     futures::{Sink, SinkExt},
-    tracing::{self, instrument},
+    tracing::instrument,
 };
 
 pub struct Check<'a> {
@@ -69,8 +69,8 @@ mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};
     use crate::servers::state::{Access, Connection};
-    use erooster_deps::futures::{channel::mpsc, StreamExt};
-    use erooster_deps::tokio;
+    use futures::{channel::mpsc, StreamExt};
+    use tokio;
 
     #[cfg_attr(coverage_nightly, coverage(off))]
     #[tokio::test]
@@ -90,13 +90,9 @@ mod tests {
             command: Commands::Check,
             arguments: &[],
         };
-        let config = erooster_core::get_config(String::from("./config.yml"))
+        let (_config, storage) = erooster_core::test_helpers::setup_test_storage()
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(&config)
-            .await
-            .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok(), "{:?}", res);
@@ -121,13 +117,9 @@ mod tests {
             command: Commands::Check,
             arguments: &[],
         };
-        let config = erooster_core::get_config(String::from("./config.yml"))
+        let (_config, storage) = erooster_core::test_helpers::setup_test_storage()
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(&config)
-            .await
-            .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok(), "{:?}", res);

@@ -21,7 +21,16 @@ path = "src/main.rs"
 
 [dependencies]
 erooster_core = { version = "0.1.0", path = "../erooster_core" }
-erooster_deps = { version = "0.1.0", path = "../erooster_deps" }
+clap = { workspace = true }
+clearscreen = { workspace = true }
+color-eyre = { workspace = true }
+indicatif = { workspace = true }
+owo-colors = { workspace = true }
+rpassword = { workspace = true }
+secrecy = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 [build-dependencies]
 vergen = { version = "8.2.4", features = ["git", "gitoxide"] }
@@ -30,3 +39,6 @@ vergen = { version = "8.2.4", features = ["git", "gitoxide"] }
 default = ["postgres"]
 postgres = ["erooster_core/postgres"]
 sqlite = ["erooster_core/sqlite"]
+
+[lints]
+workspace = true

@@ -6,31 +6,34 @@ use crate::{
     commands::{Data, Response},
     servers::{
         encrypted::{get_tls_acceptor, listen_tls},
-        state::Connection,
+        state::{Connection, State},
     },
     Server, CAPABILITY_UNENCRYPTED_HELLO,
 };
 use erooster_core::{
-    backend::{database::DB, storage::Storage},
+    backend::{
+        database::DB,
+        storage::{MailStorage, Storage},
+    },
     config::Config,
     line_codec::LinesCodec,
     LINE_LIMIT,
 };
-use erooster_deps::{
-    async_trait::async_trait,
+use notify;
+use {
     color_eyre::{self, Result},
     futures::{SinkExt, StreamExt},
-    tokio::{self, net::TcpListener, task::JoinHandle},
+    notify::{recommended_watcher, RecursiveMode, Watcher},
+    tokio::{self, net::TcpListener, sync::mpsc, task::JoinHandle},
     tokio_stream::wrappers::TcpListenerStream,
     tokio_util::codec::Framed,
-    tracing::{self, debug, error, info, instrument},
+    tracing::{debug, error, info, instrument},
 };
 use std::net::SocketAddr;
 
 /// An unencrypted imap Server
 pub struct Unencrypted;
 
-#[async_trait]
 impl Server for Unencrypted {
     #[instrument(skip(config, database, storage))]
     async fn run(config: Config, database: &DB, storage: &Storage) -> color_eyre::eyre::Result<()> {
@@ -60,6 +63,7 @@ impl Server for Unencrypted {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 #[instrument(skip(stream, config, database, storage))]
 async fn listen(mut stream: TcpListenerStream, config: &Config, database: &DB, storage: &Storage) {
     while let Some(Ok(tcp_stream)) = stream.next().await {
@@ -89,32 +93,76 @@ async fn listen(mut stream: TcpListenerStream, config: &Config, database: &DB, s
             while let Some(Ok(line)) = lines_reader.next().await {
                 debug!("[IMAP] [{}] Got Command: {}", peer, line);
 
-                // TODO make sure to handle IDLE different as it needs us to stream lines
-                // TODO pass lines and make it possible to not need new lines in responds but instead directly use `lines.send`
                 let response = data
                     .parse(&mut lines_sender, &config, &database, &storage, line)
                     .await;
 
                 match response {
-                    Ok(response) => {
-                        // Cleanup timeout managers
-                        match response {
-                            Response::Exit => {
-                                // Used for later session timer management
-                                debug!("[IMAP] Closing connection");
-                                break;
+                    Ok(Response::Exit) => {
+                        debug!("[IMAP] Closing connection");
+                        break;
+                    }
+                    Ok(Response::STARTTLS(tag)) => {
+                        debug!("[IMAP] Switching context");
+                        do_starttls = true;
+                        lines_sender
+                            .send(format!("{tag} OK Begin TLS negotiation now"))
+                            .await?;
+                        break;
+                    }
+                    Ok(Response::Idle { ref tag }) => {
+                        let tag = tag.clone();
+                        let idle_info = if let State::Selected(f, _) = &data.con_state.state {
+                            data.con_state.username.clone().map(|u| (f.replace('/', "."), u))
+                        } else {
+                            None
+                        };
+                        if let Some((folder, username)) = idle_info {
+                            match storage.to_ondisk_path(folder, username) {
+                                Ok(mailbox_path) => {
+                                    let (tx, mut rx) = mpsc::channel::<notify::Result<notify::Event>>(16);
+                                    match recommended_watcher(move |res| {
+                                        let _ = tx.blocking_send(res);
+                                    }) {
+                                        Ok(mut watcher) => {
+                                            if let Err(e) = watcher.watch(&mailbox_path, RecursiveMode::NonRecursive) {
+                                                error!("[IMAP] IDLE: failed to watch mailbox: {e}");
+                                            } else {
+                                                loop {
+                                                    tokio::select! {
+                                                        Some(_) = rx.recv() => {
+                                                            let count = storage.count_cur(&mailbox_path)
+                                                                + storage.count_new(&mailbox_path);
+                                                            if let Err(e) = lines_sender.send(format!("* {count} EXISTS")).await {
+                                                                error!("[IMAP] IDLE: send EXISTS failed: {e}");
+                                                                break;
+                                                            }
+                                                        }
+                                                        line = lines_reader.next() => {
+                                                            match line {
+                                                                Some(Ok(l)) if l.trim().eq_ignore_ascii_case("done") => {
+                                                                    if let Err(e) = lines_sender.send(format!("{tag} OK IDLE terminated")).await {
+                                                                        error!("[IMAP] IDLE: send termination failed: {e}");
+                                                                    }
+                                                                    break;
+                                                                }
+                                                                None => break,
+                                                                _ => {}
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            drop(watcher);
+                                        }
+                                        Err(e) => error!("[IMAP] IDLE: failed to create watcher: {e}"),
+                                    }
+                                }
+                                Err(e) => error!("[IMAP] IDLE: bad mailbox path: {e}"),
                             }
-                            Response::STARTTLS(tag) => {
-                                debug!("[IMAP] Switching context");
-                                do_starttls = true;
-                                lines_sender
-                                    .send(format!("{tag} OK Begin TLS negotiation now"))
-                                    .await?;
-                                break;
-                            }
-                            Response::Continue => {}
                         }
                     }
+                    Ok(Response::Continue) => {}
                     // We try a last time to do a graceful shutdown before closing
                     Err(e) => {
                         if let Err(e) = lines_sender

@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::commands::{CommandData, Data};
-use erooster_deps::{
+use {
     color_eyre::{self, eyre::bail},
     futures::{Sink, SinkExt},
-    mail_auth::{Resolver, SpfResult},
-    tracing::{self, instrument},
+    mail_auth::{spf::verify::SpfParameters, MessageAuthenticator, SpfResult},
+    tracing::instrument,
 };
 
 pub struct Ehlo<'a> {
@@ -15,10 +15,11 @@ pub struct Ehlo<'a> {
 }
 
 impl Ehlo<'_> {
-    #[instrument(skip(self, hostname, lines, command_data))]
+    #[instrument(skip(self, hostname, max_message_bytes, lines, command_data))]
     pub async fn exec<S, E>(
         &mut self,
         hostname: &str,
+        max_message_bytes: u64,
         lines: &mut S,
         command_data: &CommandData<'_>,
     ) -> color_eyre::eyre::Result<()>
@@ -31,14 +32,14 @@ impl Ehlo<'_> {
         }
 
         // Create a resolver using Quad9 DNS
-        let resolver = Resolver::new_quad9_tls()?;
+        let resolver = MessageAuthenticator::new_quad9_tls()?;
         // Verify EHLO identity
         let result = resolver
-            .verify_spf_helo(
+            .verify_spf(SpfParameters::verify_ehlo(
                 self.data.con_state.peer_addr.parse()?,
                 command_data.arguments[0],
                 hostname,
-            )
+            ))
             .await;
         if result.result() == SpfResult::Fail {
             lines
@@ -57,10 +58,16 @@ impl Ehlo<'_> {
             return Ok(());
         }
         self.data.con_state.spf_result = Some(result);
-
         self.data.con_state.ehlo = Some(command_data.arguments[0].to_string());
+
         lines.feed(format!("250-{hostname}")).await?;
         lines.feed(String::from("250-ENHANCEDSTATUSCODES")).await?;
+        lines.feed(String::from("250-PIPELINING")).await?;
+        lines
+            .feed(format!("250-SIZE {max_message_bytes}"))
+            .await?;
+        lines.feed(String::from("250-8BITMIME")).await?;
+        lines.feed(String::from("250-SMTPUTF8")).await?;
         if !self.data.con_state.secure {
             lines.feed(String::from("250-STARTTLS")).await?;
         }
@@ -68,7 +75,7 @@ impl Ehlo<'_> {
             lines.feed(String::from("250-AUTH LOGIN PLAIN")).await?;
             lines.feed(String::from("250-REQUIRETLS")).await?;
         }
-        lines.feed(String::from("250 SMTPUTF8")).await?;
+        lines.feed(String::from("250 VRFY")).await?;
         lines.flush().await?;
         Ok(())
     }

@@ -2,18 +2,15 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use std::fs;
+//! Build script for `erooster_core`: emits vergen git metadata and migration rerun triggers.
 
 use vergen::EmitBuilder;
 
 fn main() -> std::io::Result<()> {
-    let paths = fs::read_dir("./").unwrap();
-
-    for path in paths {
-        println!("Name: {}", path.unwrap().path().display())
-    }
-
-    EmitBuilder::builder().git_sha(true).emit().unwrap();
+    EmitBuilder::builder()
+        .git_sha(true)
+        .emit()
+        .map_err(std::io::Error::other)?;
 
     // For migrations
     println!("cargo:rerun-if-changed=migrations");

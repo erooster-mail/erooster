@@ -7,10 +7,10 @@ use crate::{
     servers::state::State,
 };
 use erooster_core::backend::database::{Database, DB};
-use erooster_deps::{
+use {
     color_eyre::{self, eyre::bail},
     futures::{Sink, SinkExt},
-    tracing::{self, info, instrument},
+    tracing::{info, instrument},
 };
 
 pub struct Rcpt<'a> {

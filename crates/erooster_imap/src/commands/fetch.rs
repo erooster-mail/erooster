@@ -14,7 +14,7 @@ use crate::{
 use erooster_core::backend::storage::{
     maildir::MaildirMailEntry, MailEntry, MailEntryType, MailStorage, Storage,
 };
-use erooster_deps::{
+use {
     color_eyre::{
         self,
         eyre::{eyre, Context, ContextCompat},
@@ -22,8 +22,9 @@ use erooster_deps::{
     },
     futures::{Sink, SinkExt},
     nom::{error::convert_error, Finish},
-    tracing::{self, debug, error, instrument, warn},
+    tracing::{debug, error, instrument, warn},
 };
+use time::{format_description::well_known::Rfc2822, OffsetDateTime};
 
 pub struct Fetch<'a> {
     pub data: &'a Data,
@@ -97,13 +98,7 @@ impl Fetch<'_> {
                     }
                     let fetch_args = fetch_args.as_str();
 
-                    filtered_mails.sort_by_key(|x| {
-                        if let Some(number) = x.sequence_number() {
-                            number
-                        } else {
-                            0
-                        }
-                    });
+                    filtered_mails.sort_by_key(|x| x.sequence_number().unwrap_or_default());
                     match fetch_arguments(fetch_args).finish() {
                         Ok((_, args)) => {
                             for mail in filtered_mails {
@@ -111,21 +106,15 @@ impl Fetch<'_> {
                                 let sequence =
                                     mail.sequence_number().context("Sequence number missing")?;
                                 if let Some(resp) = generate_response(args.clone(), mail)? {
-                                    if is_uid {
-                                        // This deduplicates the UID command if needed
-                                        if resp.contains("UID") {
-                                            lines
-                                                .feed(format!("* {sequence} FETCH ({resp})"))
-                                                .await?;
-                                        } else {
-                                            lines
-                                                .feed(format!(
-                                                    "* {sequence} FETCH (UID {uid} {resp})"
-                                                ))
-                                                .await?;
-                                        }
+                                    // RFC 9051 Appendix E.21: all FETCH responses MUST include UID
+                                    if resp.contains("UID") {
+                                        lines
+                                            .feed(format!("* {sequence} FETCH ({resp})"))
+                                            .await?;
                                     } else {
-                                        lines.feed(format!("* {sequence} FETCH ({resp})")).await?;
+                                        lines
+                                            .feed(format!("* {sequence} FETCH (UID {uid} {resp})"))
+                                            .await?;
                                     }
                                 }
                             }
@@ -203,7 +192,7 @@ pub fn generate_response(arg: FetchArguments, mail: &mut MailEntryType) -> Resul
     }
 }
 
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 #[instrument(skip(attr, mail))]
 fn generate_response_for_attributes(
     attr: FetchAttributes,
@@ -217,14 +206,16 @@ fn generate_response_for_attributes(
                     .map(|header| format!("{}: {}", header.get_key(), header.get_value()))
                     .collect::<Vec<_>>()
                     .join("\r\n");
-
-                Ok(Some(format!("RFC822.HEADER{headers}")))
+                let literal = format!("{headers}\r\n\r\n");
+                Ok(Some(format!("RFC822.HEADER {{{}}}\r\n{literal}", literal.len())))
             } else {
-                Ok(Some(String::from("RFC822.HEADER\r\n")))
+                Ok(Some(String::from("RFC822.HEADER {2}\r\n\r\n")))
             }
         }
         FetchAttributes::Flags => {
-            let mut flags = String::new();
+            let mut flag_parts: Vec<&str> = Vec::new();
+            // \Recent is deprecated in IMAP4rev2 but kept for IMAP4rev1 client compatibility
+            // (we serve both from the same connection until per-session version negotiation lands)
             if mail
                 .path()
                 .clone()
@@ -234,45 +225,24 @@ fn generate_response_for_attributes(
                 .wrap_err("Failed to convert OS String into String type")?
                 .contains("new")
             {
-                flags.push_str("\\Recent");
+                flag_parts.push("\\Recent");
             }
             if mail.is_draft() {
-                if flags.is_empty() {
-                    flags = String::from("\\Draft");
-                } else {
-                    flags.push_str(" \\Draft");
-                }
+                flag_parts.push("\\Draft");
             }
             if mail.is_flagged() {
-                if flags.is_empty() {
-                    flags = String::from("\\Flagged");
-                } else {
-                    flags.push_str(" \\Flagged");
-                }
+                flag_parts.push("\\Flagged");
             }
             if mail.is_seen() {
-                if flags.is_empty() {
-                    flags = String::from("\\Seen");
-                } else {
-                    flags.push_str(" \\Seen");
-                }
+                flag_parts.push("\\Seen");
             }
             if mail.is_replied() {
-                if flags.is_empty() {
-                    flags = String::from("\\Answered");
-                } else {
-                    flags.push_str(" \\Answered");
-                }
+                flag_parts.push("\\Answered");
             }
             if mail.is_trashed() {
-                if flags.is_empty() {
-                    flags = String::from("\\Deleted");
-                } else {
-                    flags.push_str(" \\Deleted");
-                }
+                flag_parts.push("\\Deleted");
             }
-
-            Ok(Some(format!("FLAGS ({flags})")))
+            Ok(Some(format!("FLAGS ({})", flag_parts.join(" "))))
         }
         FetchAttributes::RFC822Size => {
             if let Ok(parsed) = mail.parsed() {
@@ -283,6 +253,25 @@ fn generate_response_for_attributes(
             }
         }
         FetchAttributes::Uid => Ok(Some(format!("UID {}", mail.uid()))),
+        FetchAttributes::InternalDate => {
+            match mail.received() {
+                Ok(ts) => {
+                    let dt = OffsetDateTime::from_unix_timestamp(ts)
+                        .unwrap_or(OffsetDateTime::UNIX_EPOCH);
+                    match dt.format(&Rfc2822) {
+                        Ok(s) => Ok(Some(format!("INTERNALDATE \"{s}\""))),
+                        Err(e) => {
+                            warn!("Failed to format INTERNALDATE: {e}");
+                            Ok(Some(String::from("INTERNALDATE NIL")))
+                        }
+                    }
+                }
+                Err(e) => {
+                    warn!("Failed to get received timestamp: {e}");
+                    Ok(Some(String::from("INTERNALDATE NIL")))
+                }
+            }
+        }
         FetchAttributes::BodySection(section_text, range) => {
             Ok(Some(body(section_text, range, mail)))
         }
@@ -315,7 +304,7 @@ fn body(
                             };
                             let body_text = body_text.get((start as usize)..end).unwrap_or(&[]);
                             let body_text = String::from_utf8_lossy(body_text);
-                            format!("BODY[] {{{}}}\r\n{body_text}", body_text.as_bytes().len())
+                            format!("BODY[] {{{}}}\r\n{body_text}", body_text.len())
                         } else {
                             String::from("BODY[TEXT] NIL\r\n")
                         }
@@ -325,7 +314,7 @@ fn body(
                 } else if let Ok(body) = mail.parsed() {
                     if let Ok(body_text) = body.get_body_raw() {
                         let body_text = String::from_utf8_lossy(&body_text);
-                        format!("BODY[] {{{}}}\r\n{body_text}", body_text.as_bytes().len())
+                        format!("BODY[] {{{}}}\r\n{body_text}", body_text.len())
                     } else {
                         String::from("BODY[TEXT] NIL\r\n")
                     }
@@ -350,7 +339,7 @@ fn body(
                     format!(
                         "BODY[HEADER.FIELDS ({})] {{{}}}\r\n{}\r\n",
                         headers_requested_vec.join(" "),
-                        headers.as_bytes().len() + 2,
+                        headers.len() + 2,
                         headers
                     )
                 } else {
@@ -376,7 +365,7 @@ fn body(
                         .collect::<Vec<_>>()
                         .join("\r\n");
                     let data = format!("{headers}\r\n");
-                    format!("BODY[HEADER] {{{}}}\r\n{data}", data.as_bytes().len())
+                    format!("BODY[HEADER] {{{}}}\r\n{data}", data.len())
                 } else {
                     String::from("BODY[HEADER] NIL\r\n")
                 }
@@ -385,7 +374,7 @@ fn body(
     } else if let Ok(mail) = mail.parsed() {
         let mail = String::from_utf8_lossy(mail.raw_bytes);
 
-        format!("BODY[] {{{}}}\r\n{mail}", mail.as_bytes().len())
+        format!("BODY[] {{{}}}\r\n{mail}", mail.len())
     } else {
         String::from("BODY[] NIL\r\n")
     }

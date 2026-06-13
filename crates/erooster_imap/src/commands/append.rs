@@ -3,18 +3,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    commands::{parsers::append_arguments, CommandData, Data},
+    commands::{parsers::append_arguments, select::get_or_create_uidvalidity, CommandData, Data},
     servers::state::{AppendingState, State},
 };
 use erooster_core::{
     backend::storage::{MailStorage, Storage},
     config::Config,
 };
-use erooster_deps::{
+use {
     color_eyre::{self, eyre::ContextCompat},
     futures::{Sink, SinkExt},
     nom::{error::convert_error, Finish},
-    tracing::{self, debug, error, instrument},
+    tracing::{debug, error, instrument},
 };
 use std::{io::Write, path::Path};
 
@@ -88,7 +88,7 @@ impl Append<'_> {
                 Ok((left, (flags, datetime, literal))) => {
                     debug!("[Append] leftover: {}", left);
                     self.data.con_state.state = State::Appending(AppendingState {
-                        folder: folder.to_string(),
+                        folder: folder.clone(),
                         flags: flags.map(|x| x.iter().map(ToString::to_string).collect::<Vec<_>>()),
                         datetime,
                         data: None,
@@ -163,7 +163,13 @@ impl Append<'_> {
                         .await?;
                     debug!("Stored message via append: {}", message_id);
                     self.data.con_state.state = State::GotAppendData;
-                    lines.send(format!("{tag} OK APPEND completed")).await?;
+                    let uidvalidity = get_or_create_uidvalidity(&mailbox_path).await?;
+                    let uid = storage.get_uid_for_folder(&mailbox_path)?;
+                    lines
+                        .send(format!(
+                            "{tag} OK [APPENDUID {uidvalidity} {uid}] APPEND completed"
+                        ))
+                        .await?;
                 }
             } else {
                 let mut buffer = Vec::with_capacity(state.datalen);
@@ -183,8 +189,8 @@ mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};
     use crate::servers::state::{Access, Connection};
-    use erooster_deps::futures::{channel::mpsc, StreamExt};
-    use erooster_deps::tokio;
+    use futures::{channel::mpsc, StreamExt};
+    use tokio;
 
     #[allow(clippy::unwrap_used)]
     #[cfg_attr(coverage_nightly, coverage(off))]
@@ -205,13 +211,9 @@ mod tests {
             command: Commands::Append,
             arguments: &[],
         };
-        let config = erooster_core::get_config(String::from("./config.yml"))
+        let (_config, storage) = erooster_core::test_helpers::setup_test_storage()
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(&config)
-            .await
-            .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok(), "{:?}", res);
@@ -237,13 +239,9 @@ mod tests {
             command: Commands::Append,
             arguments: &[],
         };
-        let config = erooster_core::get_config(String::from("./config.yml"))
+        let (_config, storage) = erooster_core::test_helpers::setup_test_storage()
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(&config)
-            .await
-            .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok(), "{:?}", res);
@@ -273,13 +271,9 @@ mod tests {
             arguments: &["INBOX", "(\\Seen)", "{326}"],
         };
 
-        let config = erooster_core::get_config(String::from("./config.yml"))
+        let (_config, storage) = erooster_core::test_helpers::setup_test_storage()
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(&config)
-            .await
-            .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok(), "{:?}", res);
@@ -310,13 +304,9 @@ mod tests {
             arguments: &["INBOX", "(\\Seen)", "{326}"],
         };
 
-        let config = erooster_core::get_config(String::from("./config.yml"))
+        let (config, storage) = erooster_core::test_helpers::setup_test_storage()
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(&config)
-            .await
-            .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, config.clone());
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok(), "{:?}", res);
@@ -415,9 +405,10 @@ mod tests {
             .append(&mut tx, &storage, "", &config, cmd_data.tag.to_string())
             .await;
         assert!(res.is_ok(), "{:?}", res);
-        assert_eq!(
-            rx.next().await,
-            Some(String::from("a1 OK APPEND completed"))
+        let reply = rx.next().await.unwrap_or_default();
+        assert!(
+            reply.starts_with("a1 OK [APPENDUID "),
+            "expected APPENDUID reply, got: {reply}"
         );
     }
 }

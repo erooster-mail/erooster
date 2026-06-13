@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use erooster_deps::{
+use {
     color_eyre::section::PanicMessage,
     owo_colors::OwoColorize,
     sys_info::{os_release, os_type},

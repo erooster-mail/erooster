@@ -3,11 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::config::Config;
-use erooster_deps::{
-    async_trait,
+use {
     color_eyre::{self, Result},
     secrecy::SecretString,
-    tracing::{self, instrument},
+    tracing::instrument,
 };
 use sqlx::Pool;
 
@@ -26,7 +25,7 @@ pub type DB = postgres::Postgres;
 pub type DB = sqlite::Sqlite;
 
 /// A uniform interface for database access
-#[async_trait::async_trait]
+#[allow(async_fn_in_trait)]
 pub trait Database<S: sqlx::Database> {
     /// Creates the new database connection pool
     async fn new(config: &Config) -> Result<Self>

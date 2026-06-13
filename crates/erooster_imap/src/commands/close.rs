@@ -7,11 +7,11 @@ use crate::{
     servers::state::{Access, State},
 };
 use erooster_core::backend::storage::{MailEntry, MailStorage, Storage};
-use erooster_deps::{
+use {
     color_eyre::{self, eyre::ContextCompat},
     futures::{Sink, SinkExt},
     tokio::fs,
-    tracing::{self, instrument},
+    tracing::instrument,
 };
 
 pub struct Close<'a> {
@@ -85,8 +85,8 @@ mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};
     use crate::servers::state::{Access, Connection};
-    use erooster_deps::futures::{channel::mpsc, StreamExt};
-    use erooster_deps::tokio;
+    use futures::{channel::mpsc, StreamExt};
+    use tokio;
 
     // TODO: A test with data to delete is missing
 
@@ -108,13 +108,9 @@ mod tests {
             command: Commands::Close,
             arguments: &[],
         };
-        let config = erooster_core::get_config(String::from("./config.yml"))
+        let (_config, storage) = erooster_core::test_helpers::setup_test_storage()
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(&config)
-            .await
-            .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, config);
         let (mut tx, mut rx) = mpsc::unbounded();
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok(), "{:?}", res);
@@ -140,13 +136,9 @@ mod tests {
             arguments: &[],
         };
         let (mut tx, mut rx) = mpsc::unbounded();
-        let config = erooster_core::get_config(String::from("./config.yml"))
+        let (_config, storage) = erooster_core::test_helpers::setup_test_storage()
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(&config)
-            .await
-            .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, config);
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok(), "{:?}", res);
         assert_eq!(
@@ -174,13 +166,9 @@ mod tests {
             arguments: &[],
         };
         let (mut tx, mut rx) = mpsc::unbounded();
-        let config = erooster_core::get_config(String::from("./config.yml"))
+        let (_config, storage) = erooster_core::test_helpers::setup_test_storage()
             .await
             .unwrap();
-        let database = erooster_core::backend::database::get_database(&config)
-            .await
-            .unwrap();
-        let storage = erooster_core::backend::storage::get_storage(database, config);
         let res = caps.exec(&mut tx, &storage, &cmd_data).await;
         assert!(res.is_ok(), "{:?}", res);
         assert_eq!(rx.next().await, Some(String::from("1 NO invalid state")));

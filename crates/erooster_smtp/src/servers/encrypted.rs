@@ -12,22 +12,20 @@ use erooster_core::{
     line_codec::LinesCodec,
     LINE_LIMIT,
 };
-use erooster_deps::{
+use {
     color_eyre,
     color_eyre::eyre::Context,
     futures::{SinkExt, StreamExt},
+    rustls::pki_types::{CertificateDer, PrivateKeyDer},
     rustls_pemfile,
     tokio::{
         self,
         net::{TcpListener, TcpStream},
     },
-    tokio_rustls::{
-        rustls::{self, Certificate, PrivateKey},
-        TlsAcceptor,
-    },
+    tokio_rustls::{rustls, TlsAcceptor},
     tokio_stream::wrappers::TcpListenerStream,
     tokio_util::{codec::Framed, sync::CancellationToken},
-    tracing::{self, debug, error, info, instrument},
+    tracing::{debug, error, info, instrument},
 };
 use std::{
     fs,
@@ -40,33 +38,20 @@ pub struct Encrypted;
 
 // Loads the certfile from the filesystem
 #[instrument(skip(path))]
-fn load_certs(path: &Path) -> color_eyre::eyre::Result<Vec<Certificate>> {
+fn load_certs(path: &Path) -> color_eyre::eyre::Result<Vec<CertificateDer<'static>>> {
     let certfile = fs::File::open(path)?;
     let mut reader = BufReader::new(certfile);
-    Ok(rustls_pemfile::certs(&mut reader)?
-        .iter()
-        .map(|v| rustls::Certificate(v.clone()))
-        .collect())
+    rustls_pemfile::certs(&mut reader)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(Into::into)
 }
 
 #[instrument(skip(path))]
-fn load_key(path: &Path) -> color_eyre::eyre::Result<PrivateKey> {
+fn load_key(path: &Path) -> color_eyre::eyre::Result<PrivateKeyDer<'static>> {
     let keyfile = fs::File::open(path)?;
     let mut reader = BufReader::new(keyfile);
-
-    loop {
-        match rustls_pemfile::read_one(&mut reader)? {
-            Some(
-                rustls_pemfile::Item::RSAKey(key)
-                | rustls_pemfile::Item::PKCS8Key(key)
-                | rustls_pemfile::Item::ECKey(key),
-            ) => return Ok(rustls::PrivateKey(key)),
-            None => break,
-            _ => {}
-        }
-    }
-
-    color_eyre::eyre::bail!("no keys found in {:?} (encrypted keys not supported)", path)
+    rustls_pemfile::private_key(&mut reader)?
+        .ok_or_else(|| color_eyre::eyre::eyre!("no keys found in {:?} (encrypted keys not supported)", path))
 }
 
 pub fn get_tls_acceptor(config: &Config) -> color_eyre::eyre::Result<TlsAcceptor> {
@@ -76,7 +61,6 @@ pub fn get_tls_acceptor(config: &Config) -> color_eyre::eyre::Result<TlsAcceptor
 
     // Sets up the TLS acceptor.
     let server_config = rustls::ServerConfig::builder()
-        .with_safe_defaults()
         .with_no_client_auth()
         .with_single_cert(certs, key)
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
@@ -202,8 +186,8 @@ pub fn listen_tls(
                 // We split these as we handle the sink in a broadcast instead to be able to push non linear data over the socket
                 let (mut lines_sender, mut lines_reader) = lines.split();
 
-                // Create our Connection
-                let connection = Connection::new(true, peer.ip().to_string());
+                // Port 465 is always a submission port (SMTPS).
+                let connection = Connection::new(true, true, peer.ip().to_string());
                 if !starttls {
                     // Greet the client with the capabilities we provide
                     if let Err(e) = send_capabilities(&config, &mut lines_sender).await {

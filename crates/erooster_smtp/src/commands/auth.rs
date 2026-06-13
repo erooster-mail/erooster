@@ -10,15 +10,14 @@ use erooster_core::{
     backend::database::{Database, DB},
     BASE64_DECODER,
 };
-use erooster_deps::{
+use {
     base64::Engine,
     color_eyre,
     futures::{Sink, SinkExt},
-    secrecy::{ExposeSecret, SecretString, SecretVec},
+    secrecy::{ExposeSecret, SecretBox, SecretString},
     simdutf8::compat::from_utf8,
-    tracing::{self, debug, error, instrument},
+    tracing::{debug, error, instrument},
 };
-use std::str::FromStr;
 
 pub struct Auth<'a> {
     pub data: &'a mut Data,
@@ -36,8 +35,7 @@ impl Auth<'_> {
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
         S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
-        //let secure = self.data.con_state.read().await.secure;
-        let secure = true;
+        let secure = self.data.con_state.secure;
         if secure {
             if command_data.arguments.is_empty() {
                 lines
@@ -135,7 +133,7 @@ impl Auth<'_> {
 
                 if auth_data_vec.len() == 2 {
                     let username = auth_data_vec[0];
-                    let password = SecretString::from_str(auth_data_vec[1])?;
+                    let password = SecretString::new(Box::from(auth_data_vec[1]));
 
                     debug!("[SMTP] Making sure user exists");
                     if database.user_exists(username).await {
@@ -213,7 +211,9 @@ impl Auth<'_> {
         match bytes {
             Ok(bytes) => {
                 let password =
-                    SecretString::from_str(from_utf8(SecretVec::new(bytes).expose_secret())?)?;
+                    SecretString::new(Box::from(from_utf8(
+                        SecretBox::<[u8]>::new(bytes.into_boxed_slice()).expose_secret(),
+                    )?));
 
                 {
                     if let State::Authenticating(AuthState::Password(username)) =
@@ -247,7 +247,7 @@ impl Auth<'_> {
                     if let State::Authenticating(AuthState::Password(username)) =
                         &self.data.con_state.state
                     {
-                        self.data.con_state.state = State::Authenticated(username.to_string());
+                        self.data.con_state.state = State::Authenticated(username.clone());
                     }
                 };
                 lines

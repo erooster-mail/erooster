@@ -7,16 +7,17 @@ use crate::{
     servers::state::State,
 };
 use erooster_core::backend::storage::{MailEntry, MailEntryType, MailStorage, Storage};
-use erooster_deps::{
+use {
     color_eyre::{self, eyre::ContextCompat},
     futures::{Sink, SinkExt},
-    tracing::{self, debug, error, instrument},
+    tracing::{debug, error, instrument},
 };
 
 pub struct Store<'a> {
     pub data: &'a Data,
 }
 impl Store<'_> {
+    #[allow(clippy::too_many_lines)]
     #[instrument(skip(self, lines, storage, command_data))]
     pub async fn exec<S, E>(
         &self,
@@ -53,7 +54,7 @@ impl Store<'_> {
                             .collect::<Vec<_>>();
                         let start = range[0].parse::<u32>().unwrap_or(1);
                         let end = range[1];
-                        let end_int = end.parse::<u32>().unwrap_or(u32::max_value());
+                        let end_int = end.parse::<u32>().unwrap_or(u32::MAX);
                         if end == "*" {
                             mails
                                 .into_iter()
@@ -250,7 +251,6 @@ impl Store<'_> {
                         .feed(format!("{} Ok STORE completed", command_data.tag))
                         .await?;
                 }
-                lines.flush().await?;
             } else {
                 lines
                     .feed(format!(
@@ -258,8 +258,8 @@ impl Store<'_> {
                         command_data.tag
                     ))
                     .await?;
-                lines.flush().await?;
             }
+            lines.flush().await?;
         } else {
             lines
                 .send(format!(

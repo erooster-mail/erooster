@@ -4,34 +4,37 @@
 
 use crate::{
     commands::{Data, Response},
-    servers::state::Connection,
+    servers::state::{Connection, State},
     Server, CAPABILITY_HELLO,
 };
 use erooster_core::{
-    backend::{database::DB, storage::Storage},
+    backend::{
+        database::DB,
+        storage::{MailStorage, Storage},
+    },
     config::Config,
     line_codec::LinesCodec,
     LINE_LIMIT,
 };
-use erooster_deps::{
-    async_trait::async_trait,
+use notify;
+use {
     color_eyre::{self, eyre::Context},
     futures::{SinkExt, StreamExt},
+    notify::{recommended_watcher, RecursiveMode, Watcher},
+    rustls::pki_types::{CertificateDer, PrivateKeyDer},
     rustls_pemfile,
     tokio::{
         self,
         net::{TcpListener, TcpStream},
+        sync::mpsc,
     },
-    tokio_rustls::{
-        rustls::{self, Certificate, PrivateKey},
-        TlsAcceptor,
-    },
+    tokio_rustls::{rustls, TlsAcceptor},
     tokio_stream::wrappers::TcpListenerStream,
     tokio_util::codec::Framed,
-    tracing::{self, debug, error, info, instrument},
+    tracing::{debug, error, info, instrument},
 };
 use std::{
-    fs::{self},
+    fs,
     io::{self, BufReader},
     net::SocketAddr,
     path::Path,
@@ -48,7 +51,6 @@ pub fn get_tls_acceptor(config: &Config) -> color_eyre::eyre::Result<TlsAcceptor
 
     // Sets up the TLS acceptor.
     let server_config = rustls::ServerConfig::builder()
-        .with_safe_defaults()
         .with_no_client_auth()
         .with_single_cert(certs, key)
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
@@ -59,38 +61,22 @@ pub fn get_tls_acceptor(config: &Config) -> color_eyre::eyre::Result<TlsAcceptor
 
 // Loads the certfile from the filesystem
 #[instrument(skip(path))]
-fn load_certs(path: &Path) -> color_eyre::eyre::Result<Vec<Certificate>> {
+fn load_certs(path: &Path) -> color_eyre::eyre::Result<Vec<CertificateDer<'static>>> {
     let certfile = fs::File::open(path)?;
     let mut reader = BufReader::new(certfile);
-    Ok(rustls_pemfile::certs(&mut reader)?
-        .iter()
-        .map(|v| rustls::Certificate(v.clone()))
-        .collect())
+    rustls_pemfile::certs(&mut reader)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(Into::into)
 }
+
 #[instrument(skip(path))]
-fn load_key(path: &Path) -> color_eyre::eyre::Result<PrivateKey> {
+fn load_key(path: &Path) -> color_eyre::eyre::Result<PrivateKeyDer<'static>> {
     let keyfile = fs::File::open(path)?;
     let mut reader = BufReader::new(keyfile);
-
-    loop {
-        match rustls_pemfile::read_one(&mut reader)? {
-            Some(
-                rustls_pemfile::Item::RSAKey(key)
-                | rustls_pemfile::Item::PKCS8Key(key)
-                | rustls_pemfile::Item::ECKey(key),
-            ) => return Ok(rustls::PrivateKey(key)),
-            None => break,
-            _ => {}
-        }
-    }
-
-    Err(color_eyre::eyre::eyre!(
-        "no keys found in {:?} (encrypted keys not supported)",
-        path
-    ))
+    rustls_pemfile::private_key(&mut reader)?
+        .ok_or_else(|| color_eyre::eyre::eyre!("no keys found in {:?} (encrypted keys not supported)", path))
 }
 
-#[async_trait]
 impl Server for Encrypted {
     /// Starts a TLS server
     ///
@@ -156,6 +142,7 @@ async fn listen(
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn listen_tls(
     tcp_stream: TcpStream,
     config: &Config,
@@ -216,35 +203,81 @@ pub fn listen_tls(
                 // Read lines from the stream
                 while let Some(Ok(line)) = lines_reader.next().await {
                     debug!("[IMAP] [{}] Got Command: {}", peer, line);
-                    // TODO make sure to handle IDLE different as it needs us to stream lines
 
-                    {
-                        let response = data
-                            .parse(&mut lines_sender, &config, &database, &storage, line)
-                            .await;
-                        match response {
-                            Ok(response) => {
-                                // Cleanup timeout managers
-                                if let Response::Exit = response {
-                                    // Used for later session timer management
-                                    debug!("[IMAP] Closing TLS connection");
-                                    break;
+                    let response = data
+                        .parse(&mut lines_sender, &config, &database, &storage, line)
+                        .await;
+                    match response {
+                        Ok(Response::Exit) => {
+                            debug!("[IMAP] Closing TLS connection");
+                            break;
+                        }
+                        Ok(Response::Idle { ref tag }) => {
+                            let tag = tag.clone();
+                            let idle_info = if let State::Selected(f, _) = &data.con_state.state {
+                                data.con_state.username.clone().map(|u| (f.replace('/', "."), u))
+                            } else {
+                                None
+                            };
+                            if let Some((folder, username)) = idle_info {
+                                match storage.to_ondisk_path(folder, username) {
+                                    Ok(mailbox_path) => {
+                                        let (tx, mut rx) = mpsc::channel::<notify::Result<notify::Event>>(16);
+                                        match recommended_watcher(move |res| {
+                                            let _ = tx.blocking_send(res);
+                                        }) {
+                                            Ok(mut watcher) => {
+                                                if let Err(e) = watcher.watch(&mailbox_path, RecursiveMode::NonRecursive) {
+                                                    error!("[IMAP] IDLE: failed to watch mailbox: {e}");
+                                                } else {
+                                                    loop {
+                                                        tokio::select! {
+                                                            Some(_) = rx.recv() => {
+                                                                let count = storage.count_cur(&mailbox_path)
+                                                                    + storage.count_new(&mailbox_path);
+                                                                if let Err(e) = lines_sender.send(format!("* {count} EXISTS")).await {
+                                                                    error!("[IMAP] IDLE: send EXISTS failed: {e}");
+                                                                    break;
+                                                                }
+                                                            }
+                                                            line = lines_reader.next() => {
+                                                                match line {
+                                                                    Some(Ok(l)) if l.trim().eq_ignore_ascii_case("done") => {
+                                                                        if let Err(e) = lines_sender.send(format!("{tag} OK IDLE terminated")).await {
+                                                                            error!("[IMAP] IDLE: send termination failed: {e}");
+                                                                        }
+                                                                        break;
+                                                                    }
+                                                                    None => break,
+                                                                    _ => {}
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                drop(watcher);
+                                            }
+                                            Err(e) => error!("[IMAP] IDLE: failed to create watcher: {e}"),
+                                        }
+                                    }
+                                    Err(e) => error!("[IMAP] IDLE: bad mailbox path: {e}"),
                                 }
-                            }
-                            // We try a last time to do a graceful shutdown before closing
-                            Err(e) => {
-                                if let Err(e) = lines_sender
-                                    .send(format!("* BAD [SERVERBUG] This should not happen: {e}"))
-                                    .await
-                                {
-                                    error!("Unable to send error response: {}", e);
-                                }
-                                error!("[IMAP] Failure happened: {}", e);
-                                debug!("[IMAP] Closing TLS connection");
-                                break;
                             }
                         }
-                    };
+                        Ok(_) => {}
+                        // We try a last time to do a graceful shutdown before closing
+                        Err(e) => {
+                            if let Err(e) = lines_sender
+                                .send(format!("* BAD [SERVERBUG] This should not happen: {e}"))
+                                .await
+                            {
+                                error!("Unable to send error response: {}", e);
+                            }
+                            error!("[IMAP] Failure happened: {}", e);
+                            debug!("[IMAP] Closing TLS connection");
+                            break;
+                        }
+                    }
                 }
             }
             Err(e) => error!("[IMAP] Got error while accepting TLS: {}", e),

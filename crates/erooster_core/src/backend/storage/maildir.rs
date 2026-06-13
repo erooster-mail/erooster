@@ -11,8 +11,8 @@ use crate::{
 };
 use std::path::{Path, PathBuf};
 
-use erooster_deps::{
-    async_trait, color_eyre,
+use {
+    color_eyre,
     futures::{StreamExt, TryStreamExt},
     maildir::{self, Maildir},
     mailparse::{self, ParsedMail},
@@ -23,7 +23,7 @@ use erooster_deps::{
         io::{AsyncBufReadExt, BufReader},
     },
     tokio_stream::wrappers::LinesStream,
-    tracing::{self, debug, error, instrument},
+    tracing::{debug, error, instrument},
 };
 
 /// The Storage handler for the maildir format
@@ -42,7 +42,6 @@ impl MaildirStorage {
     }
 }
 
-#[async_trait::async_trait]
 impl MailStorage<MaildirMailEntry> for MaildirStorage {
     #[instrument(skip(self, mailbox_path))]
     fn get_uid_for_folder(&self, mailbox_path: &Path) -> color_eyre::eyre::Result<u32> {
@@ -112,7 +111,8 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .create(true)
             .open(flags_file)
             .await?;
-        file.write_all(flag.as_bytes()).await?;
+        let line = format!("{flag}\n");
+        file.write_all(line.as_bytes()).await?;
         Ok(())
     }
 
@@ -126,6 +126,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let mut file = OpenOptions::new()
             .write(true)
             .create(true)
+            .truncate(true)
             .open(flags_file)
             .await?;
 
@@ -352,7 +353,6 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         let mails: Vec<MaildirMailEntry> = maildir
             .list_new()
             .chain(maildir.list_cur())
-            .filter(std::result::Result::is_ok)
             .filter_map(|x| match x {
                 Ok(entry) => {
                     let maildir_id = entry.id();
@@ -533,7 +533,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     fn to_ondisk_path_name(&self, path: String) -> color_eyre::eyre::Result<String> {
         let mut folder = path.replace('/', ".");
         folder.insert(0, '.');
-        folder.remove_matches('"');
+        folder.retain(|c| c != '"');
         folder = folder.replace(".INBOX", "INBOX");
         Ok(folder)
     }
@@ -561,7 +561,6 @@ pub struct MaildirMailEntry {
     mail_state: MailState,
 }
 
-#[async_trait::async_trait]
 impl MailEntry for MaildirMailEntry {
     #[instrument(skip(self))]
     fn uid(&self) -> u32 {
@@ -589,12 +588,12 @@ impl MailEntry for MaildirMailEntry {
     }
 
     #[instrument(skip(self))]
-    fn parsed(&mut self) -> color_eyre::eyre::Result<ParsedMail> {
+    fn parsed(&mut self) -> color_eyre::eyre::Result<ParsedMail<'_>> {
         self.entry.parsed().map_err(Into::into)
     }
 
     #[instrument(skip(self))]
-    fn headers(&mut self) -> color_eyre::eyre::Result<Vec<mailparse::MailHeader>> {
+    fn headers(&mut self) -> color_eyre::eyre::Result<Vec<mailparse::MailHeader<'_>>> {
         self.entry.headers().map_err(Into::into)
     }
 

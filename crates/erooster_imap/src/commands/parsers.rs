@@ -4,24 +4,24 @@
 
 use std::ops::Bound;
 
-use erooster_deps::{
+use {
     nom::{
         branch::alt,
         bytes::complete::{tag_no_case, take_while1},
         character::complete::{char, digit1, space1},
-        combinator::{map, opt, recognize},
+        combinator::{map, opt},
         error::{context, VerboseError},
         multi::{many0, separated_list0, separated_list1},
-        sequence::{delimited, pair, separated_pair, terminated, tuple},
+        sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
         IResult,
     },
-    tracing::{self, instrument},
+    tracing::instrument,
 };
 
 type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
 
 #[instrument(skip(input))]
-fn header_list(input: &str) -> Res<Vec<&str>> {
+fn header_list(input: &str) -> Res<'_, Vec<&str>> {
     context(
         "header_list",
         delimited(
@@ -44,7 +44,7 @@ pub enum SectionText {
 }
 
 #[instrument(skip(input))]
-fn section_text(input: &str) -> Res<SectionText> {
+fn section_text(input: &str) -> Res<'_, SectionText> {
     context(
         "section_text",
         alt((
@@ -63,7 +63,7 @@ fn section_text(input: &str) -> Res<SectionText> {
 }
 
 #[instrument(skip(input))]
-fn section(input: &str) -> Res<Option<SectionText>> {
+fn section(input: &str) -> Res<'_, Option<SectionText>> {
     context(
         "section",
         delimited(char('['), opt(section_text), char(']')),
@@ -71,6 +71,7 @@ fn section(input: &str) -> Res<Option<SectionText>> {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum FetchAttributes {
     Envelope,
     Flags,
@@ -89,7 +90,7 @@ pub enum FetchAttributes {
 
 #[allow(clippy::too_many_lines)]
 #[instrument(skip(input))]
-fn fetch_attributes(input: &str) -> Res<FetchAttributes> {
+fn fetch_attributes(input: &str) -> Res<'_, FetchAttributes> {
     context(
         "fetch_attributes",
         alt((
@@ -270,7 +271,7 @@ pub enum FetchArguments {
 }
 
 #[instrument(skip(input))]
-fn inner_fetch_arguments(input: &str) -> Res<FetchArguments> {
+fn inner_fetch_arguments(input: &str) -> Res<'_, FetchArguments> {
     context(
         "inner_fetch_arguments",
         alt((
@@ -295,7 +296,7 @@ fn inner_fetch_arguments(input: &str) -> Res<FetchArguments> {
 }
 
 #[instrument(skip(input))]
-pub fn fetch_arguments(input: &str) -> Res<FetchArguments> {
+pub fn fetch_arguments(input: &str) -> Res<'_, FetchArguments> {
     context("fetch_arguments", inner_fetch_arguments)(input)
 }
 
@@ -354,15 +355,20 @@ pub enum SearchProgram {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct SearchArguments {
     pub return_opts: SearchReturnOption,
+    /// `true` when the client explicitly sent `RETURN (...)` in the command.
+    /// Used to decide whether to respond with ESEARCH (explicit or rev2) vs
+    /// legacy SEARCH (rev1 compat, no explicit RETURN).
+    pub explicit_return: bool,
     // TODO: Consider using an enum with supported values plus unknown
     pub charset: Option<String>,
     pub program: SearchProgram,
 }
 
 #[instrument(skip(input))]
-pub fn search_arguments(input: &str) -> Res<SearchArguments> {
+pub fn search_arguments(input: &str) -> Res<'_, SearchArguments> {
     context("search_arguments", inner_search_arguments)(input)
 }
 
@@ -372,7 +378,7 @@ enum ProgramWithOrWithoutCharset {
 }
 
 #[instrument(skip(input))]
-fn inner_search_arguments(input: &str) -> Res<SearchArguments> {
+fn inner_search_arguments(input: &str) -> Res<'_, SearchArguments> {
     context(
         "inner_search_arguments",
         alt((
@@ -404,11 +410,13 @@ fn inner_search_arguments(input: &str) -> Res<SearchArguments> {
                 |(return_opts, program)| match program {
                     ProgramWithOrWithoutCharset::With(charset, program) => SearchArguments {
                         return_opts,
+                        explicit_return: true,
                         program,
                         charset: Some(charset),
                     },
                     ProgramWithOrWithoutCharset::Without(program) => SearchArguments {
                         return_opts,
+                        explicit_return: true,
                         program,
                         charset: None,
                     },
@@ -438,11 +446,13 @@ fn inner_search_arguments(input: &str) -> Res<SearchArguments> {
                 |program| match program {
                     ProgramWithOrWithoutCharset::With(charset, program) => SearchArguments {
                         return_opts: SearchReturnOption::ALL,
+                        explicit_return: false,
                         program,
                         charset: Some(charset),
                     },
                     ProgramWithOrWithoutCharset::Without(program) => SearchArguments {
                         return_opts: SearchReturnOption::ALL,
+                        explicit_return: false,
                         program,
                         charset: None,
                     },
@@ -453,7 +463,7 @@ fn inner_search_arguments(input: &str) -> Res<SearchArguments> {
 }
 
 #[instrument(skip(input))]
-fn search_program(input: &str) -> Res<SearchProgram> {
+fn search_program(input: &str) -> Res<'_, SearchProgram> {
     context(
         "search_program",
         map(separated_list1(space1, search_key), |a| {
@@ -467,8 +477,9 @@ fn search_program(input: &str) -> Res<SearchProgram> {
     )(input)
 }
 
+#[allow(clippy::too_many_lines)]
 #[instrument(skip(input))]
-fn search_key(input: &str) -> Res<SearchProgram> {
+fn search_key(input: &str) -> Res<'_, SearchProgram> {
     context(
         "search_key",
         alt((
@@ -713,27 +724,29 @@ fn search_key(input: &str) -> Res<SearchProgram> {
 }
 
 #[instrument(skip(input))]
-fn search_return_opts(input: &str) -> Res<SearchReturnOption> {
+fn search_return_opts(input: &str) -> Res<'_, SearchReturnOption> {
     context(
         "search_return_opts",
         map(
             tuple((
-                space1,
                 tag_no_case("RETURN"),
                 space1,
                 delimited(
                     char('('),
-                    many0(alt((
-                        map(tag_no_case("MIN"), |_| SearchReturnOption::MIN),
-                        map(tag_no_case("MAX"), |_| SearchReturnOption::MAX),
-                        map(tag_no_case("ALL"), |_| SearchReturnOption::ALL),
-                        map(tag_no_case("COUNT"), |_| SearchReturnOption::COUNT),
-                        map(tag_no_case("SAVE"), |_| SearchReturnOption::SAVE),
-                    ))),
+                    many0(preceded(
+                        opt(space1),
+                        alt((
+                            map(tag_no_case("MIN"), |_| SearchReturnOption::MIN),
+                            map(tag_no_case("MAX"), |_| SearchReturnOption::MAX),
+                            map(tag_no_case("ALL"), |_| SearchReturnOption::ALL),
+                            map(tag_no_case("COUNT"), |_| SearchReturnOption::COUNT),
+                            map(tag_no_case("SAVE"), |_| SearchReturnOption::SAVE),
+                        )),
+                    )),
                     char(')'),
                 ),
             )),
-            |(_, _, _, list)| {
+            |(_, _, list)| {
                 if list.is_empty() {
                     SearchReturnOption::ALL
                 } else if list.len() == 1 {
@@ -784,7 +797,7 @@ impl Range {
 }
 
 #[instrument(skip(input))]
-pub fn parse_selected_range_inner(input: &str) -> Res<Range> {
+pub fn parse_selected_range_inner(input: &str) -> Res<'_, Range> {
     context(
         "parse_selected_range_inner",
         alt((
@@ -809,7 +822,7 @@ pub fn parse_selected_range_inner(input: &str) -> Res<Range> {
 }
 
 #[instrument(skip(input))]
-pub fn parse_selected_range(input: &str) -> Res<Vec<Range>> {
+pub fn parse_selected_range(input: &str) -> Res<'_, Vec<Range>> {
     context(
         "parse_selected_range",
         separated_list0(char(','), parse_selected_range_inner),
@@ -817,7 +830,7 @@ pub fn parse_selected_range(input: &str) -> Res<Vec<Range>> {
 }
 
 #[instrument(skip(input))]
-fn day_of_week(input: &str) -> Res<&str> {
+fn day_of_week(input: &str) -> Res<'_, &str> {
     context(
         "day_of_week",
         alt((
@@ -833,7 +846,7 @@ fn day_of_week(input: &str) -> Res<&str> {
 }
 
 #[instrument(skip(input))]
-fn month(input: &str) -> Res<&str> {
+fn month(input: &str) -> Res<'_, &str> {
     context(
         "month",
         alt((
@@ -856,7 +869,7 @@ fn month(input: &str) -> Res<&str> {
 struct Time(String);
 
 #[instrument(skip(input))]
-fn time(input: &str) -> Res<Time> {
+fn time(input: &str) -> Res<'_, Time> {
     context(
         "time",
         map(
@@ -884,7 +897,7 @@ pub enum DateTime {
 }
 
 #[instrument(skip(input))]
-fn date_time(input: &str) -> Res<DateTime> {
+fn date_time(input: &str) -> Res<'_, DateTime> {
     context(
         "date_time",
         map(
@@ -925,7 +938,7 @@ pub struct LiteralSize {
 pub type AppendArgs<'a> = (Option<Vec<&'a str>>, Option<DateTime>, LiteralSize);
 
 #[instrument(skip(input))]
-pub fn append_arguments(input: &str) -> Res<AppendArgs> {
+pub fn append_arguments(input: &str) -> Res<'_, AppendArgs<'_>> {
     context(
         "append_arguments",
         map(
@@ -982,7 +995,7 @@ pub fn append_arguments(input: &str) -> Res<AppendArgs> {
 //
 // date-year       = 4DIGIT
 #[instrument(skip(input))]
-pub fn parse_search_date(input: &str) -> Res<time::Date> {
+pub fn parse_search_date(input: &str) -> Res<'_, time::Date> {
     context(
         "parse_search_date",
         map(
@@ -1009,7 +1022,7 @@ pub fn parse_search_date(input: &str) -> Res<time::Date> {
                 opt(char('"')),
             )),
             |(_, day, _, month, _, year, _)| {
-                let date = format!("{}-{}-{}", day, month, year);
+                let date = format!("{day}-{month}-{year}");
                 time::Date::parse(
                     &date,
                     time::macros::format_description!(
@@ -1027,21 +1040,11 @@ pub fn parse_search_date(input: &str) -> Res<time::Date> {
 // ("+" / "-") 4DIGIT
 //
 // Signed four-digit value of hhmm representing hours and minutes east of
-// Greenwich (that is, the amount that the given time differs from
-// Universal Time).  Subtracting the timezone from the given time will give
-// the UT form. The Universal Time zone is "+0000".
-#[instrument(skip(input))]
-fn zone(input: &str) -> Res<&str> {
-    context(
-        "zone",
-        recognize(tuple((alt((tag_no_case("+"), tag_no_case("-"))), digit1))),
-    )(input)
-}
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
-    use erooster_deps::tokio;
+    use tokio;
 
     use super::*;
 

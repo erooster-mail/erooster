@@ -4,30 +4,6 @@
 
 //! Core logic for the webserver for the erooster mail server
 //!
-#![feature(string_remove_matches)]
-#![deny(unsafe_code, clippy::unwrap_used)]
-#![warn(
-    clippy::cognitive_complexity,
-    clippy::branches_sharing_code,
-    clippy::imprecise_flops,
-    clippy::missing_const_for_fn,
-    clippy::mutex_integer,
-    clippy::path_buf_push_overwrite,
-    clippy::redundant_pub_crate,
-    clippy::pedantic,
-    clippy::dbg_macro,
-    clippy::todo,
-    clippy::fallible_impl_from,
-    clippy::filetype_is_file,
-    clippy::suboptimal_flops,
-    clippy::fn_to_numeric_cast_any,
-    clippy::if_then_some_else_none,
-    clippy::imprecise_flops,
-    clippy::lossy_float_literal,
-    clippy::panic_in_result_fn,
-    clippy::clone_on_ref_ptr
-)]
-#![warn(missing_docs)]
 #![allow(
     clippy::missing_panics_doc,
     clippy::missing_errors_doc,
@@ -36,14 +12,14 @@
 
 use askama::Template;
 use erooster_core::config::Config;
-use erooster_deps::{
+use {
     axum::{
+        extract::Extension,
         http::{header, HeaderValue, StatusCode},
         response::{Html, IntoResponse, Response},
         routing::get,
-        Extension, Router,
+        Router,
     },
-    axum_opentelemetry_middleware,
     axum_server::{self, tls_rustls::RustlsConfig},
     color_eyre, mime, tokio,
     tower_http::trace::TraceLayer,
@@ -54,10 +30,6 @@ use std::net::SocketAddr;
 /// Starts the webserver used for the admin page and metrics
 #[tracing::instrument(skip(config))]
 pub async fn start(config: &Config) -> color_eyre::eyre::Result<()> {
-    let metrics_middleware =
-        axum_opentelemetry_middleware::RecorderMiddlewareBuilder::new(env!("CARGO_PKG_NAME"));
-    let metrics_middleware = metrics_middleware.build();
-
     let addrs: Vec<SocketAddr> = if let Some(listen_ips) = &config.listen_ips {
         listen_ips
             .iter()
@@ -69,7 +41,6 @@ pub async fn start(config: &Config) -> color_eyre::eyre::Result<()> {
     };
     for addr in addrs {
         let config = config.clone();
-        let metrics_middleware = metrics_middleware.clone();
         tokio::spawn(async move {
             let app = Router::new()
                 .route("/", get(handler))
@@ -77,12 +48,7 @@ pub async fn start(config: &Config) -> color_eyre::eyre::Result<()> {
                     "/.well-known/autoconfig/mail/config-v1.1.xml",
                     get(autoconfig),
                 )
-                .route(
-                    "/metrics",
-                    get(axum_opentelemetry_middleware::metrics_endpoint),
-                )
                 .layer(Extension(std::sync::Arc::new(config.clone())))
-                .layer(metrics_middleware.clone())
                 .layer(TraceLayer::new_for_http());
 
             if config.webserver.tls {
@@ -105,12 +71,12 @@ pub async fn start(config: &Config) -> color_eyre::eyre::Result<()> {
                     .await
                 {
                     error!(?e, "Failed to bind to {}", addr);
-                };
+                }
             } else {
                 info!("[Webserver] Listening on {}", addr);
                 if let Err(e) = axum_server::bind(addr).serve(app.into_make_service()).await {
                     error!(?e, "Failed to bind to {}", addr);
-                };
+                }
             }
         });
     }

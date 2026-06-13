@@ -4,7 +4,7 @@
 
 use std::collections::BTreeMap;
 
-use erooster_deps::{
+use {
     serde::{self, Deserialize, Serialize},
     serde_json,
 };

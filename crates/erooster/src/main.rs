@@ -8,53 +8,23 @@
 //! The goal being easy to setup, use and maintain for smaller mail servers
 //! while being also fast and efficient.
 //!
-#![feature(string_remove_matches)]
-#![deny(unsafe_code, clippy::unwrap_used)]
-#![warn(
-    clippy::cognitive_complexity,
-    clippy::branches_sharing_code,
-    clippy::imprecise_flops,
-    clippy::missing_const_for_fn,
-    clippy::mutex_integer,
-    clippy::path_buf_push_overwrite,
-    clippy::redundant_pub_crate,
-    clippy::pedantic,
-    clippy::dbg_macro,
-    clippy::todo,
-    clippy::fallible_impl_from,
-    clippy::filetype_is_file,
-    clippy::suboptimal_flops,
-    clippy::fn_to_numeric_cast_any,
-    clippy::if_then_some_else_none,
-    clippy::imprecise_flops,
-    clippy::lossy_float_literal,
-    clippy::panic_in_result_fn,
-    clippy::clone_on_ref_ptr
-)]
-#![warn(missing_docs)]
-#![allow(clippy::missing_panics_doc)]
-#![allow(clippy::items_after_statements)]
-
-use std::sync::Arc;
+#![allow(clippy::missing_panics_doc, clippy::items_after_statements)]
 
 use erooster_core::{
     backend::{database::get_database, storage::get_storage},
     panic_handler::EroosterPanicMessage,
 };
-use erooster_deps::{
+use {
     cfg_if::cfg_if,
     clap::{self, Parser},
     color_eyre::{self, eyre::Result},
-    opentelemetry,
     tokio::{
         self,
         signal::unix::{signal, SignalKind},
-        sync::Mutex,
     },
     tokio_util::sync::CancellationToken,
-    tracing::{error, info, warn},
+    tracing::{error, info},
     tracing_error, tracing_subscriber,
-    yaque::{recovery::recover, Receiver, ReceiverBuilder},
 };
 
 #[derive(Parser, Debug)]
@@ -110,89 +80,50 @@ async fn main() -> Result<()> {
     let next = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |panic_info| {
         let report = panic_hook.panic_report(panic_info);
-        if report
-            .to_string()
-            .contains("Job `erooster_core::smtp_servers::sending::send_email_job` failed")
-        {
-            error!("Job `erooster_core::smtp_servers::sending::send_email_job` failed");
-        } else {
-            eprintln!("{report}");
-            next(panic_info);
-        }
+        eprintln!("{report}");
+        next(panic_info);
     }));
 
     // Continue loading database and storage
     let database = get_database(&config).await?;
     let storage = get_storage(database.clone(), config.clone());
 
-    // Start listening for tasks
-    let mut receiver = ReceiverBuilder::default()
-        .save_every_nth(None)
-        .open(config.task_folder.clone());
-    if let Err(e) = receiver {
-        warn!("Unable to open receiver: {:?}. Trying to recover.", e);
-        recover(&config.task_folder)?;
-        receiver = ReceiverBuilder::default()
-            .save_every_nth(None)
-            .open(config.task_folder.clone());
-        info!("Recovered queue successfully");
-    }
-
     // Get SIGTERMs
     let mut sigterms = signal(SignalKind::terminate())?;
     let shutdown_flag = CancellationToken::new();
 
-    match receiver {
-        Ok(receiver) => {
-            let receiver = Arc::new(Mutex::const_new(receiver));
+    // Startup servers
+    erooster_imap::start(&config, &database, &storage)?;
 
-            // Startup servers
-            erooster_imap::start(config.clone(), &database, &storage)?;
-
-            let config_clone = config.clone();
-            tokio::spawn(async move {
-                erooster_web::start(&config_clone)
-                    .await
-                    .expect("Unable to start webserver");
-            });
-
-            let receiver_clone: Arc<Mutex<Receiver>> = Arc::clone(&receiver);
-            let shutdown_flag_clone = shutdown_flag.clone();
-            // We do need the let here to make sure that the runner is bound to the lifetime of main.
-            erooster_smtp::servers::start(
-                config.clone(),
-                &database,
-                &storage,
-                shutdown_flag_clone,
-                receiver,
-            )
-                .await?;
-
-            tokio::select! {
-                _ = tokio::signal::ctrl_c() => {
-                    cleanup(&receiver_clone, &shutdown_flag).await;
-                }
-                _ = sigterms.recv() => {
-                    cleanup(&receiver_clone, &shutdown_flag).await;
-                }
-            }
+    let config_clone = config.clone();
+    tokio::spawn(async move {
+        if let Err(e) = erooster_web::start(&config_clone).await {
+            error!("Unable to start webserver: {e:?}");
         }
-        Err(e) => {
-            error!("Unable to open receiver: {:?}. Giving up.", e);
+    });
+
+    let shutdown_flag_clone = shutdown_flag.clone();
+    erooster_smtp::servers::start(config.clone(), &database, &storage, shutdown_flag_clone).await?;
+
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {
+            cleanup(&shutdown_flag);
+        }
+        _ = sigterms.recv() => {
+            cleanup(&shutdown_flag);
         }
     }
+
     Ok(())
 }
 
-async fn cleanup(receiver: &Arc<Mutex<Receiver>>, shutdown_flag: &CancellationToken) {
-    info!("Received ctr-c. Cleaning up");
+fn cleanup(shutdown_flag: &CancellationToken) {
+    info!("Received shutdown signal. Cleaning up");
     shutdown_flag.cancel();
-    opentelemetry::global::shutdown_tracer_provider();
-    {
-        let mut lock = receiver.lock().await;
-
-        info!("Gained lock. Saving queue");
-        lock.save().expect("Unable to save queue");
-        info!("Saved queue. Exiting");
-    };
+    cfg_if! {
+        if #[cfg(feature = "jaeger")] {
+            opentelemetry::global::shutdown_tracer_provider();
+        }
+    }
+    info!("Shutdown complete");
 }

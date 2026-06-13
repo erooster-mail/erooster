@@ -10,31 +10,6 @@
 //!
 //! This crate is containing the imap logic of the erooster mail server.
 //!
-#![feature(string_remove_matches)]
-#![feature(box_into_inner)]
-#![deny(unsafe_code, clippy::unwrap_used)]
-#![warn(
-    clippy::cognitive_complexity,
-    clippy::branches_sharing_code,
-    clippy::imprecise_flops,
-    clippy::missing_const_for_fn,
-    clippy::mutex_integer,
-    clippy::path_buf_push_overwrite,
-    clippy::redundant_pub_crate,
-    clippy::pedantic,
-    clippy::dbg_macro,
-    clippy::todo,
-    clippy::fallible_impl_from,
-    clippy::filetype_is_file,
-    clippy::suboptimal_flops,
-    clippy::fn_to_numeric_cast_any,
-    clippy::if_then_some_else_none,
-    clippy::imprecise_flops,
-    clippy::lossy_float_literal,
-    clippy::panic_in_result_fn,
-    clippy::clone_on_ref_ptr
-)]
-#![warn(missing_docs)]
 #![allow(
     clippy::missing_panics_doc,
     clippy::missing_errors_doc,
@@ -48,12 +23,11 @@ use erooster_core::{
     backend::{database::DB, storage::Storage},
     config::Config,
 };
-use erooster_deps::{
-    async_trait::async_trait,
+use {
     color_eyre,
     const_format::formatcp,
     tokio,
-    tracing::instrument,
+    tracing::{error, instrument},
 };
 
 pub(crate) mod commands;
@@ -72,7 +46,7 @@ pub const CAPABILITY_UNENCRYPTED_HELLO: &str = formatcp!(
 );
 
 /// An implementation of a imap server
-#[async_trait]
+#[allow(async_fn_in_trait)]
 pub trait Server {
     /// Start the server
     async fn run(config: Config, database: &DB, storage: &Storage) -> color_eyre::eyre::Result<()>;
@@ -84,7 +58,7 @@ pub trait Server {
 ///
 /// Returns an error if the server startup fails
 #[instrument(skip(config, database, storage))]
-pub fn start(config: Config, database: &DB, storage: &Storage) -> color_eyre::eyre::Result<()> {
+pub fn start(config: &Config, database: &DB, storage: &Storage) -> color_eyre::eyre::Result<()> {
     std::fs::create_dir_all(&config.mail.maildir_folders)?;
 
     let db_clone = database.clone();
@@ -94,7 +68,7 @@ pub fn start(config: Config, database: &DB, storage: &Storage) -> color_eyre::ey
         if let Err(e) =
             servers::unencrypted::Unencrypted::run(config_clone, &db_clone, &storage_clone).await
         {
-            panic!("Unable to start server: {e:?}");
+            error!("IMAP server error: {e:?}");
         }
     });
     let db_clone = database.clone();
@@ -103,7 +77,7 @@ pub fn start(config: Config, database: &DB, storage: &Storage) -> color_eyre::ey
     tokio::spawn(async move {
         if let Err(e) = servers::encrypted::Encrypted::run(config, &db_clone, &storage_clone).await
         {
-            panic!("Unable to start TLS server: {e:?}");
+            error!("IMAP TLS server error: {e:?}");
         }
     });
     Ok(())

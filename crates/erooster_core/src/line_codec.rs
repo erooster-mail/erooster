@@ -3,12 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-use erooster_deps::{
+use {
     bytes::{Buf, BufMut, BytesMut},
     simdutf8::compat::from_utf8,
     tokio_util::codec::{Decoder, Encoder},
 };
-use std::{cmp, fmt, io, str, usize};
+use std::{cmp, fmt, io, str};
 
 /// A simple [`Decoder`] and [`Encoder`] implementation that splits up data into lines.
 ///
@@ -197,7 +197,6 @@ impl Encoder<String> for LinesCodec {
     type Error = LinesCodecError;
 
     fn encode(&mut self, line: String, buf: &mut BytesMut) -> Result<(), LinesCodecError> {
-        let line = line;
         buf.reserve(line.len() + 2);
         buf.put(line.as_bytes());
         buf.put_u8(b'\r');

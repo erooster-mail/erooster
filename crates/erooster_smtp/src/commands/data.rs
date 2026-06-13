@@ -4,23 +4,39 @@
 
 use crate::{
     commands::Data,
-    servers::{sending::EmailPayload, state::Data as StateData, state::State},
-    utils::rspamd::Response,
+    servers::{
+        sending::EmailPayload,
+        state::Data as StateData,
+        state::State,
+    },
+    utils::rspamd::{Action, Response},
 };
+
+enum RspamdDecision {
+    Accept(String),
+    TempReject,
+    PermReject,
+}
 use erooster_core::{
-    backend::storage::{MailStorage, Storage},
+    backend::{
+        database::{Database, DB},
+        queue,
+        storage::{MailStorage, Storage},
+    },
     config::{Config, Rspamd},
 };
-use erooster_deps::{
+use {
     cfg_if::cfg_if,
     color_eyre::{self, eyre::ContextCompat},
     futures::{Sink, SinkExt},
-    mail_auth::{AuthenticatedMessage, DkimResult, DmarcResult, Resolver},
-    reqwest, serde_json,
+    mail_auth::{
+        dmarc::verify::DmarcParameters, AuthenticatedMessage, DkimResult, DmarcResult,
+        MessageAuthenticator,
+    },
+    reqwest,
     simdutf8::compat::from_utf8,
-    tracing::{self, debug, instrument, warn},
+    tracing::{debug, instrument, warn},
     uuid,
-    yaque::Sender,
 };
 use std::{collections::BTreeMap, io::Write, path::Path, time::Duration};
 use time::{macros::format_description, OffsetDateTime};
@@ -52,13 +68,15 @@ impl DataCommand<'_> {
         Ok(())
     }
 
-    #[instrument(skip(self, config, lines, line, storage))]
+    #[allow(clippy::too_many_lines)]
+    #[instrument(skip(self, config, lines, line, storage, database))]
     pub async fn receive<S, E>(
         &mut self,
         config: &Config,
         lines: &mut S,
         line: &str,
         storage: &Storage,
+        database: &DB,
     ) -> color_eyre::eyre::Result<()>
     where
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
@@ -101,8 +119,9 @@ impl DataCommand<'_> {
                     let temp_data = [received_header.as_bytes(), &inner_data.0].concat();
                     let data = from_utf8(&temp_data)?;
 
+                    let data_owned: String;
                     let data = if let Some(rspamd_config) = &config.rspamd {
-                        self.call_rspamd(
+                        match self.call_rspamd(
                             rspamd_config,
                             data,
                             self.data.con_state.ehlo.as_ref().context("Missing ehlo")?,
@@ -113,38 +132,74 @@ impl DataCommand<'_> {
                                 .as_ref()
                                 .context("Missing sender")?,
                             address,
-                            Some(username.to_string()),
+                            Some(username.clone()),
                         )
                             .await?
+                        {
+                            RspamdDecision::Accept(modified) => {
+                                data_owned = modified;
+                                data_owned.as_str()
+                            }
+                            RspamdDecision::PermReject => {
+                                lines
+                                    .send(String::from(
+                                        "550 5.7.1 Message cannot be accepted.",
+                                    ))
+                                    .await?;
+                                self.data.con_state.receipts = None;
+                                self.data.con_state.sender = None;
+                                self.data.con_state.state =
+                                    State::Authenticated(username.clone());
+                                return Ok(());
+                            }
+                            RspamdDecision::TempReject => {
+                                lines
+                                    .send(String::from(
+                                        "451 4.7.1 Service temporarily unavailable, please try again later.",
+                                    ))
+                                    .await?;
+                                self.data.con_state.receipts = None;
+                                self.data.con_state.sender = None;
+                                self.data.con_state.state =
+                                    State::Authenticated(username.clone());
+                                return Ok(());
+                            }
+                        }
                     } else {
                         data
                     };
 
+                    let email_id = uuid::Uuid::new_v4();
+                    let from = self
+                        .data
+                        .con_state
+                        .sender
+                        .clone()
+                        .context("Missing sender in internal state")?;
+                    let to_addrs_str = to.values().flatten().cloned().collect::<Vec<_>>().join(", ");
                     let email_payload = EmailPayload {
-                        id: uuid::Uuid::new_v4(),
+                        id: email_id,
                         to,
-                        from: self
-                            .data
-                            .con_state
-                            .sender
-                            .clone()
-                            .context("Missing sender in internal state")?,
+                        from: from.clone(),
                         body: data.to_string(),
                         sender_domain: config.mail.hostname.clone(),
                         dkim_key_path: config.mail.dkim_key_path.clone(),
                         dkim_key_selector: config.mail.dkim_key_selector.clone(),
+                        require_tls: self.data.con_state.require_tls,
                     };
-                    let payload_as_json_bytes = serde_json::to_vec(&email_payload)?;
-                    Sender::open(config.task_folder.clone())?
-                        .send(&payload_as_json_bytes)
-                        .await?;
-
-                    debug!("Email added to queue");
+                    let payload_json = serde_json::to_string(&email_payload)?;
+                    queue::push(database.get_pool(), email_id, payload_json, &from, &to_addrs_str).await?;
+                    debug!("Email queued for outbound sending");
                 }
 
                 lines
                     .send(String::from("250 2.6.0 Message accepted"))
                     .await?;
+
+                // RFC 5321: reset envelope state after DATA so the client
+                // can send another message in this session without re-AUTH.
+                self.data.con_state.receipts = None;
+                self.data.con_state.sender = None;
 
                 State::Authenticated(username.clone())
             } else if let State::ReceivingData((None, data)) = &self.data.con_state.state {
@@ -154,7 +209,7 @@ impl DataCommand<'_> {
                     let mailbox_path = Path::new(&config.mail.maildir_folders)
                         .join(receipt.clone())
                         .join(folder.clone());
-                    let db_foldername = format!("{}/{}", receipt, folder, );
+                    let db_foldername = format!("{receipt}/{folder}");
                     if !mailbox_path.exists() {
                         storage.create_dirs(&mailbox_path)?;
                         storage.add_flag(&mailbox_path, "\\Subscribed").await?;
@@ -172,8 +227,9 @@ impl DataCommand<'_> {
                     let temp_data = [received_header.as_bytes(), &data.0].concat();
                     let data = from_utf8(&temp_data)?;
 
+                    let data_owned: String;
                     let data = if let Some(rspamd_config) = &config.rspamd {
-                        self.call_rspamd(
+                        match self.call_rspamd(
                             rspamd_config,
                             data,
                             self.data.con_state.ehlo.as_ref().context("Missing ehlo")?,
@@ -187,12 +243,40 @@ impl DataCommand<'_> {
                             None,
                         )
                             .await?
+                        {
+                            RspamdDecision::Accept(modified) => {
+                                data_owned = modified;
+                                data_owned.as_str()
+                            }
+                            RspamdDecision::PermReject => {
+                                lines
+                                    .send(String::from(
+                                        "550 5.7.1 Message rejected by spam filter",
+                                    ))
+                                    .await?;
+                                self.data.con_state.receipts = None;
+                                self.data.con_state.sender = None;
+                                self.data.con_state.state = State::NotAuthenticated;
+                                return Ok(());
+                            }
+                            RspamdDecision::TempReject => {
+                                lines
+                                    .send(String::from(
+                                        "451 4.7.1 Spam check inconclusive, please try again later",
+                                    ))
+                                    .await?;
+                                self.data.con_state.receipts = None;
+                                self.data.con_state.sender = None;
+                                self.data.con_state.state = State::NotAuthenticated;
+                                return Ok(());
+                            }
+                        }
                     } else {
                         data
                     };
 
                     // Create a resolver using System DNS
-                    let resolver = Resolver::new_system_conf()?;
+                    let resolver = MessageAuthenticator::new_system_conf()?;
                     // Parse message
                     let authenticated_message = AuthenticatedMessage::parse(data.as_bytes())
                         .context("Failed to parse email")?;
@@ -232,19 +316,22 @@ impl DataCommand<'_> {
                             }
 
                             // Verify DMARC
+                            let sender_str = self.data.con_state
+                                .sender
+                                .as_ref()
+                                .context("Missing a MAIL-FROM sender")?;
+                            let sender_domain = sender_str.rsplit_once('@').map_or(sender_str.as_str(), |(_, d)| d);
                             let dmarc_result = resolver
-                                .verify_dmarc(
-                                    &authenticated_message,
-                                    &dkim_result,
-                                    self.data.con_state
-                                        .sender
-                                        .as_ref()
-                                        .context("Missing a MAIL-FROM sender")?,
-                                    self.data.con_state
+                                .verify_dmarc(DmarcParameters {
+                                    message: &authenticated_message,
+                                    dkim_output: &dkim_result,
+                                    rfc5321_mail_from_domain: sender_domain,
+                                    spf_output: self.data.con_state
                                         .spf_result
                                         .as_ref()
                                         .context("Missing an SPF result")?,
-                                )
+                                    domain_suffix_fn: |domain| domain,
+                                })
                                 .await;
 
                             // These should pass at this point
@@ -277,10 +364,11 @@ impl DataCommand<'_> {
                         .await?;
                     debug!("Stored message: {}", message_id);
                 }
-                // TODO: cleanup after we are done
                 lines
                     .send(String::from("250 2.6.0 Message accepted"))
                     .await?;
+                self.data.con_state.receipts = None;
+                self.data.con_state.sender = None;
                 State::NotAuthenticated
             } else {
                 self.data.con_state.state = State::NotAuthenticated;
@@ -291,21 +379,21 @@ impl DataCommand<'_> {
             };
         } else if let State::ReceivingData((_, data)) = &mut self.data.con_state.state {
             write!(data.0, "{line}\r\n")?;
-        };
+        }
         Ok(())
     }
 
     #[allow(clippy::too_many_arguments)]
-    async fn call_rspamd<'a>(
+    async fn call_rspamd(
         &self,
         rspamd_config: &Rspamd,
-        data: &'a str,
+        data: &str,
         ehlo: &str,
         ip: &str,
         sender: &str,
         rcpt: &str,
         username: Option<String>,
-    ) -> color_eyre::Result<&'a str> {
+    ) -> color_eyre::Result<RspamdDecision> {
         let client = reqwest::Client::builder()
             .hickory_dns(true)
             .timeout(Duration::from_secs(30))
@@ -324,8 +412,18 @@ impl DataCommand<'_> {
         };
         let rspamd_res = req.send().await?.json::<Response>().await?;
         debug!("{:?}", rspamd_res);
-        // TODO apply rspamd actions
 
-        Ok(data)
+        let decision = match rspamd_res.action {
+            Action::Reject => RspamdDecision::PermReject,
+            Action::SoftReject | Action::Greylist => RspamdDecision::TempReject,
+            Action::AddHeader | Action::RewriteSubject => {
+                // X-Spam-Flag is the SpamAssassin-originated header that mail clients
+                // and sieve filters universally recognise as the spam marker.
+                let modified = format!("X-Spam-Flag: YES\r\n{data}");
+                RspamdDecision::Accept(modified)
+            }
+            Action::NoAction => RspamdDecision::Accept(data.to_string()),
+        };
+        Ok(decision)
     }
 }

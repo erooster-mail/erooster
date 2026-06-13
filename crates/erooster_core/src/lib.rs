@@ -4,30 +4,6 @@
 
 //! Core logic for the erooster mail server
 //!
-#![feature(string_remove_matches)]
-#![deny(unsafe_code, clippy::unwrap_used)]
-#![warn(
-    clippy::cognitive_complexity,
-    clippy::branches_sharing_code,
-    clippy::imprecise_flops,
-    clippy::missing_const_for_fn,
-    clippy::mutex_integer,
-    clippy::path_buf_push_overwrite,
-    clippy::redundant_pub_crate,
-    clippy::pedantic,
-    clippy::dbg_macro,
-    clippy::todo,
-    clippy::fallible_impl_from,
-    clippy::filetype_is_file,
-    clippy::suboptimal_flops,
-    clippy::fn_to_numeric_cast_any,
-    clippy::if_then_some_else_none,
-    clippy::imprecise_flops,
-    clippy::lossy_float_literal,
-    clippy::panic_in_result_fn,
-    clippy::clone_on_ref_ptr
-)]
-#![warn(missing_docs)]
 #![allow(
     clippy::missing_panics_doc,
     clippy::missing_errors_doc,
@@ -36,15 +12,15 @@
     clippy::panic_in_result_fn
 )]
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use erooster_deps::{
+use {
     base64::{
         alphabet,
         engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig},
     },
     color_eyre::{self, Result},
-    tracing::{self, error, instrument},
+    tracing::{error, instrument},
 };
 
 // TODO make this only pub for benches and tests
@@ -55,6 +31,10 @@ pub mod panic_handler;
 
 /// The backend logic of the server
 pub mod backend;
+
+/// Helpers for writing isolated unit tests with per-test SQLite storage.
+#[cfg(feature = "test-helpers")]
+pub mod test_helpers;
 
 /// The configuration file for the server
 pub mod config;
@@ -68,11 +48,31 @@ pub async fn get_config(config_path: String) -> Result<config::Config> {
         config::Config::load("/etc/erooster/config.yml").await?
     } else if Path::new("/etc/erooster/config.yaml").exists() {
         config::Config::load("/etc/erooster/config.yaml").await?
+    } else if let Some(path) = find_config_in_ancestors() {
+        config::Config::load(path).await?
     } else {
         error!("No config file found. Please follow the readme.");
         color_eyre::eyre::bail!("No config file found");
     };
     Ok(config)
+}
+
+/// Walks ancestor directories from `CARGO_MANIFEST_DIR` (set by Cargo during tests)
+/// looking for a `config.yml` or `config.yaml` file. Returns the first match.
+fn find_config_in_ancestors() -> Option<PathBuf> {
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").ok()?;
+    let mut dir = PathBuf::from(manifest_dir);
+    loop {
+        for name in ["config.yml", "config.yaml"] {
+            let candidate = dir.join(name);
+            if candidate.exists() {
+                return Some(candidate);
+            }
+        }
+        if !dir.pop() {
+            return None;
+        }
+    }
 }
 
 /// The maximum size of a line in bytes

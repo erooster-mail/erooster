@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use erooster_deps::{
+use {
     nom::{
         bytes::complete::take_while1,
         character::complete::char,
@@ -11,26 +11,24 @@ use erooster_deps::{
         sequence::delimited,
         IResult,
     },
-    tracing::{self, instrument},
+    tracing::instrument,
 };
 
 type Res<'a, U> = IResult<&'a str, U, VerboseError<&'a str>>;
 
 // TODO parse relay vs no relay
 #[instrument(skip(input))]
-fn localpart(input: &str) -> Res<Vec<&str>> {
+fn localpart(input: &str) -> Res<'_, Vec<&str>> {
     context(
         "localpart",
         many0(take_while1(|c: char| c != ',' && c != '>')),
     )(input)
-    .map(|(x, y)| (x, y))
 }
 
 #[instrument(skip(input))]
-pub fn localpart_arguments(input: &str) -> Res<Vec<&str>> {
+pub fn localpart_arguments(input: &str) -> Res<'_, Vec<&str>> {
     context(
         "localpart_arguments",
         delimited(char('<'), localpart, char('>')),
     )(input)
-    .map(|(x, y)| (x, y))
 }

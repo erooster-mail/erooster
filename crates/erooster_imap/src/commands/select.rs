@@ -7,10 +7,11 @@ use crate::{
     servers::state::{Access, State},
 };
 use erooster_core::backend::storage::{MailStorage, Storage};
-use erooster_deps::{
+use {
     color_eyre::{self, eyre::ContextCompat},
     futures::{Sink, SinkExt},
-    tracing::{self, instrument},
+    tokio::fs,
+    tracing::instrument,
 };
 use std::{
     path::PathBuf,
@@ -19,6 +20,34 @@ use std::{
 
 pub struct Select<'a> {
     pub data: &'a mut Data,
+}
+
+/// Returns a stable UIDVALIDITY value for a mailbox.
+///
+/// Reads `.uidvalidity` from the mailbox directory, creating it with the
+/// current Unix timestamp (seconds) if it doesn't exist yet. This ensures
+/// the value survives across server restarts and SELECT calls.
+pub async fn get_or_create_uidvalidity(mailbox_path: &std::path::Path) -> color_eyre::eyre::Result<u32> {
+    let validity_file = mailbox_path.join(".uidvalidity");
+    if validity_file.exists() {
+        let contents = fs::read_to_string(&validity_file).await?;
+        let value: u32 = contents
+            .trim()
+            .parse()
+            .unwrap_or(1);
+        return Ok(value);
+    }
+    // First time: seed from current Unix timestamp in seconds.
+    #[allow(clippy::cast_possible_truncation)]
+    let value = SystemTime::now()
+        .duration_since(UNIX_EPOCH)?
+        .as_secs() as u32;
+    let value = value.max(1); // UIDVALIDITY must be non-zero
+    if let Some(parent) = validity_file.parent() {
+        fs::create_dir_all(parent).await?;
+    }
+    fs::write(&validity_file, value.to_string()).await?;
+    Ok(value)
 }
 
 #[instrument(skip(data, lines, storage, rw, command_data))]
@@ -35,14 +64,30 @@ where
 {
     let args = &command_data.arguments;
 
-    assert!(args.len() == 1);
-    let folder_arg = args.first().expect("server selects a folder");
+    let Some(folder_arg) = args.first() else {
+        lines
+            .send(format!(
+                "{} BAD [PARSE] Expected exactly one argument (mailbox name)",
+                command_data.tag
+            ))
+            .await?;
+        return Ok(());
+    };
     let folder = folder_arg.replace('"', "");
     let access = if rw {
         Access::ReadWrite
     } else {
         Access::ReadOnly
     };
+
+    // RFC 9051 Appendix E.9: when deselecting a previously selected mailbox,
+    // send [CLOSED] before opening the new one.
+    if matches!(&data.con_state.state, State::Selected(_, _)) {
+        lines
+            .feed(String::from("* OK [CLOSED] Previous mailbox closed"))
+            .await?;
+    }
+
     {
         data.con_state.state = State::Selected(folder.clone(), access);
     };
@@ -80,15 +125,12 @@ where
 {
     let count = storage.count_cur(&mailbox_path) + storage.count_new(&mailbox_path);
     lines.feed(format!("* {count} EXISTS")).await?;
-    // TODO: Also send UNSEEN
-    // FIXME: This is fundamentally invalid and instead should refer to the timestamp a mailbox was created
-    let current_time = SystemTime::now();
-    let unix_timestamp = current_time.duration_since(UNIX_EPOCH)?;
-    #[allow(clippy::cast_possible_truncation)]
-    let timestamp = unix_timestamp.as_millis() as u32;
+
+    let uidvalidity = get_or_create_uidvalidity(&mailbox_path).await?;
     lines
-        .feed(format!("* OK [UIDVALIDITY {timestamp}] UIDs valid"))
+        .feed(format!("* OK [UIDVALIDITY {uidvalidity}] UIDs valid"))
         .await?;
+
     let current_uid = storage.get_uid_for_folder(&mailbox_path)?;
     lines
         .feed(format!(
@@ -106,16 +148,13 @@ where
             "* OK [PERMANENTFLAGS (\\Deleted \\Seen \\*)] Limited",
         ))
         .await?;
-    // TODO: generate proper list command
+
+    // RFC 9051 Appendix E.10: SELECT/EXAMINE must return an untagged LIST.
     lines.feed(format!("* LIST () \".\" \"{folder}\"")).await?;
     let sub_folders = storage.list_subdirs(&mailbox_path)?;
     for sub_folder in sub_folders {
         let flags_raw = storage.get_flags(&sub_folder).await;
-        let flags = if let Ok(flags_raw) = flags_raw {
-            flags_raw
-        } else {
-            vec![]
-        };
+        let flags = flags_raw.unwrap_or_default();
         let folder_name = sub_folder
             .file_name()
             .context("Unable to get file name")?

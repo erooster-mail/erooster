@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::commands::CommandData;
-use erooster_deps::{
+use {
     color_eyre,
     futures::{Sink, SinkExt},
-    tracing::{self, instrument},
+    tracing::instrument,
 };
 
 pub struct Capability;
@@ -38,7 +38,7 @@ impl Capability {
 }
 
 pub const fn get_capabilities() -> &'static str {
-    "CAPABILITY AUTH=PLAIN LOGINDISABLED UTF8=ONLY ENABLE IMAP4rev2 IMAP4rev1 ESEARCH"
+    "CAPABILITY AUTH=PLAIN LOGINDISABLED UTF8=ONLY ENABLE IMAP4rev2 IMAP4rev1 IDLE ESEARCH NAMESPACE UNSELECT MOVE"
 }
 
 pub const fn get_unencrypted_capabilities() -> &'static str {
@@ -49,7 +49,7 @@ pub const fn get_unencrypted_capabilities() -> &'static str {
 mod tests {
     use super::*;
     use crate::commands::{CommandData, Commands};
-    use erooster_deps::{
+    use {
         futures::{channel::mpsc, StreamExt},
         tokio,
     };
@@ -69,7 +69,7 @@ mod tests {
         assert_eq!(
             rx.next().await,
             Some(String::from(
-                "* CAPABILITY AUTH=PLAIN LOGINDISABLED UTF8=ONLY ENABLE IMAP4rev2 IMAP4rev1 ESEARCH"
+                "* CAPABILITY AUTH=PLAIN LOGINDISABLED UTF8=ONLY ENABLE IMAP4rev2 IMAP4rev1 IDLE ESEARCH NAMESPACE UNSELECT MOVE"
             ))
         );
         assert_eq!(

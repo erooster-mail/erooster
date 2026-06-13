@@ -24,11 +24,20 @@ erooster_core = { version = "0.1.0", path = "../erooster_core" }
 erooster_smtp = { version = "0.1.0", path = "../erooster_smtp" }
 erooster_imap = { version = "0.1.0", path = "../erooster_imap" }
 erooster_web = { version = "0.1.0", path = "../erooster_web" }
-erooster_deps = { version = "0.1.0", path = "../erooster_deps" }
+cfg-if = { workspace = true }
+clap = { workspace = true }
+color-eyre = { workspace = true }
+opentelemetry-otlp = { workspace = true, optional = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+tracing = { workspace = true }
+tracing-error = { workspace = true }
+tracing-opentelemetry = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true }
 
 [features]
 default = ["postgres"]
-jaeger = ["erooster_deps/jaeger"]
+jaeger = ["dep:opentelemetry-otlp", "dep:tracing-opentelemetry"]
 postgres = [
     "erooster_core/postgres",
     "erooster_smtp/postgres",
@@ -51,3 +60,6 @@ clap = { version = "4.1.6", features = [
 ] }
 clap_mangen = "0.2.13"
 vergen = { version = "8.2.4", features = ["git", "gitoxide"] }
+
+[lints]
+workspace = true

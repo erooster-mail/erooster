@@ -20,12 +20,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
         with:
           egress-policy: block
           allowed-endpoints: >
             github.com:443
             objects.githubusercontent.com:443
+            release-assets.githubusercontent.com:443
         env:
           USER: runner
       - name: Checkout Actions Repository

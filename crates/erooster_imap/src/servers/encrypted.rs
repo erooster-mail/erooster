@@ -21,8 +21,7 @@ use {
     color_eyre::{self, eyre::Context},
     futures::{SinkExt, StreamExt},
     notify::{recommended_watcher, RecursiveMode, Watcher},
-    rustls::pki_types::{CertificateDer, PrivateKeyDer},
-    rustls_pemfile,
+    rustls::pki_types::{pem::PemObject, CertificateDer, PrivateKeyDer},
     tokio::{
         self,
         net::{TcpListener, TcpStream},
@@ -34,8 +33,7 @@ use {
     tracing::{debug, error, info, instrument},
 };
 use std::{
-    fs,
-    io::{self, BufReader},
+    io,
     net::SocketAddr,
     path::Path,
     sync::Arc,
@@ -62,19 +60,16 @@ pub fn get_tls_acceptor(config: &Config) -> color_eyre::eyre::Result<TlsAcceptor
 // Loads the certfile from the filesystem
 #[instrument(skip(path))]
 fn load_certs(path: &Path) -> color_eyre::eyre::Result<Vec<CertificateDer<'static>>> {
-    let certfile = fs::File::open(path)?;
-    let mut reader = BufReader::new(certfile);
-    rustls_pemfile::certs(&mut reader)
+    CertificateDer::pem_file_iter(path)
+        .map_err(|e| color_eyre::eyre::eyre!("{e:?}"))?
         .collect::<Result<Vec<_>, _>>()
-        .map_err(Into::into)
+        .map_err(|e| color_eyre::eyre::eyre!("{e:?}"))
 }
 
 #[instrument(skip(path))]
 fn load_key(path: &Path) -> color_eyre::eyre::Result<PrivateKeyDer<'static>> {
-    let keyfile = fs::File::open(path)?;
-    let mut reader = BufReader::new(keyfile);
-    rustls_pemfile::private_key(&mut reader)?
-        .ok_or_else(|| color_eyre::eyre::eyre!("no keys found in {:?} (encrypted keys not supported)", path))
+    PrivateKeyDer::from_pem_file(path)
+        .map_err(|e| color_eyre::eyre::eyre!("no keys found in {:?} (encrypted keys not supported): {e:?}", path))
 }
 
 impl Server for Encrypted {

@@ -28,7 +28,6 @@ futures = { workspace = true }
 nom = { workspace = true }
 notify = { workspace = true }
 rustls = { workspace = true }
-rustls-pemfile = { workspace = true }
 secrecy = { workspace = true }
 simdutf8 = { workspace = true }
 tokio = { workspace = true }

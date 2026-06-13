@@ -33,7 +33,6 @@ mail-auth = { workspace = true }
 nom = { workspace = true }
 reqwest = { workspace = true }
 rustls = { workspace = true }
-rustls-pemfile = { workspace = true }
 secrecy = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

@@ -44,7 +44,6 @@ rand_core = { version = "0.6.4", features = ["std"] }
 reqwest = { version = "0.13.4", default-features = false, features = ["json", "rustls", "hickory-dns", "http2"] }
 rpassword = "7.2.0"
 rustls = "0.23.40"
-rustls-pemfile = "2.2.0"
 secrecy = "0.10.3"
 serde = { version = "1.0.228", features = ["derive"] }
 serde-saphyr = "0.0.27"

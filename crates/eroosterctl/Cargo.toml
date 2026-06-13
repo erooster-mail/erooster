@@ -33,7 +33,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
 [build-dependencies]
-vergen = { version = "8.2.4", features = ["git", "gitoxide"] }
+vergen-gix = "10.0.0"
 
 [features]
 default = ["postgres"]

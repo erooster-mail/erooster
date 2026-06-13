@@ -70,7 +70,7 @@ fn custom_url(location: &Location<'_>, message: &str) -> impl fmt::Display {
 ## More info
 ",
                     VERSION,
-                    option_env!("VERGEN_GIT_SHA_SHORT")
+                    option_env!("VERGEN_GIT_SHA")
                         .or_else(|| Some("unknown"))
                         .expect("Failed to get git commit or fallback"),
                     os_type().unwrap_or_else(|_| "unavailable".to_string()),

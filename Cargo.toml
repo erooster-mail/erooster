@@ -15,7 +15,7 @@ members = [
 ]
 
 [workspace.package]
-rust-version = "1.83"
+rust-version = "1.95"
 
 [workspace.dependencies]
 argon2 = { version = "0.5.3", features = ["std"] }
@@ -30,7 +30,7 @@ color-eyre = "0.6.2"
 const_format = "0.2.36"
 futures = { version = "0.3.32", features = ["thread-pool"] }
 hickory-resolver = { version = "0.26.1", features = ["tokio"] }
-indicatif = "0.17.7"
+indicatif = "0.18.4"
 mail-auth = { version = "0.9.0", features = ["ring"] }
 maildir = { version = "0.6.4", features = ["mmap"] }
 mailparse = "0.14.1"

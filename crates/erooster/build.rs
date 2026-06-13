@@ -4,11 +4,13 @@
 
 //! Build script for erooster: emits vergen git metadata and generates man pages.
 
-use vergen::EmitBuilder;
+use vergen_gix::{Emitter, Gix};
 
 fn main() -> std::io::Result<()> {
-    EmitBuilder::builder()
-        .git_sha(true)
+    let gix = Gix::builder().sha(true).build();
+    Emitter::default()
+        .add_instructions(&gix)
+        .map_err(std::io::Error::other)?
         .emit()
         .map_err(std::io::Error::other)?;
 

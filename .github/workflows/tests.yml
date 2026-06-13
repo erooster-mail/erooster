@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
         with:
           egress-policy: block
           allowed-endpoints: >
@@ -29,16 +29,12 @@ jobs:
             static.crates.io:443
             static.rust-lang.org:443
 
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-      - uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          command: check
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # stable
+      - uses: Swatinem/rust-cache@aa7c1c80a07a27a84c0aa76d0cef0aad3830e330 # v2.7.8
+      - run: cargo check
 
   test-pg:
     continue-on-error: true
@@ -68,14 +64,16 @@ jobs:
           - 5432:5432
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
         with:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install Rust
         run: rustup toolchain install nightly --component llvm-tools-preview
-      - uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b
+      - uses: Swatinem/rust-cache@aa7c1c80a07a27a84c0aa76d0cef0aad3830e330 # v2.7.8
       - name: Install opendkim
         run: apt update && apt install -y opendkim-tools
       - name: Generate dkim-key
@@ -102,7 +100,7 @@ jobs:
           echo '  port: 80' >> /etc/erooster/config.yml
           echo '  tls: false' >> /etc/erooster/config.yml
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+        uses: taiki-e/install-action@91534edaf9fd796a162759d80d49cdff574bff2c # cargo-llvm-cov
       - name: Generate code coverage
         run: |
           cargo +nightly llvm-cov --no-report --workspace
@@ -110,9 +108,9 @@ jobs:
           cargo +nightly llvm-cov report --html
         env:
           RUST_BACKTRACE: "1"
-      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: coverage-report
+          name: coverage-report-pg
           path: target/llvm-cov/html/
       - name: Generate code coverage for codecov
         run: |
@@ -120,7 +118,7 @@ jobs:
           cargo +nightly llvm-cov --no-report --features "jaeger" --workspace
           cargo +nightly llvm-cov report --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@4650159d642e33fdc30954ca22638caf0df6cac8 # v5.4.3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
@@ -134,14 +132,16 @@ jobs:
       options: --user root
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@8ca2b8b2ece13480cda6dacd3511b49857a23c09
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
         with:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install Rust
         run: rustup toolchain install nightly --component llvm-tools-preview
-      - uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b
+      - uses: Swatinem/rust-cache@aa7c1c80a07a27a84c0aa76d0cef0aad3830e330 # v2.7.8
       - name: Install opendkim and sqlite
         run: apt update && apt install -y opendkim-tools sqlite3
       - name: Generate dkim-key
@@ -168,7 +168,7 @@ jobs:
           echo '  port: 80' >> /etc/erooster/config.yml
           echo '  tls: false' >> /etc/erooster/config.yml
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+        uses: taiki-e/install-action@91534edaf9fd796a162759d80d49cdff574bff2c # cargo-llvm-cov
       - name: Generate code coverage
         run: |
           cargo +nightly llvm-cov --no-report --workspace --features sqlite --no-default-features 
@@ -176,17 +176,17 @@ jobs:
           cargo +nightly llvm-cov report --html
         env:
           RUST_BACKTRACE: "1"
-      - uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: coverage-report
+          name: coverage-report-sqlite
           path: target/llvm-cov/html/
       - name: Generate code coverage for codecov
         run: |
-          cargo +nightly llvm-cov --no-report --workspace --features sqlite --no-default-features 
-          cargo +nightly llvm-cov --no-report --features "jaeger" --workspace --features sqlite --no-default-features 
+          cargo +nightly llvm-cov --no-report --workspace --features sqlite --no-default-features
+          cargo +nightly llvm-cov --no-report --features "jaeger" --workspace --features sqlite --no-default-features
           cargo +nightly llvm-cov report --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@4650159d642e33fdc30954ca22638caf0df6cac8 # v5.4.3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
@@ -197,7 +197,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
         with:
           egress-policy: block
           allowed-endpoints: >
@@ -211,15 +211,11 @@ jobs:
             index.crates.io:443
             static.crates.io:443
 
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-      - run: rustup component add rustfmt
-      - uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # stable
         with:
-          command: fmt
-          args: --all -- --check
+          components: rustfmt
+      - uses: Swatinem/rust-cache@aa7c1c80a07a27a84c0aa76d0cef0aad3830e330 # v2.7.8
+      - run: cargo fmt --all -- --check

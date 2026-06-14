@@ -14,8 +14,8 @@ mail:
 database:
   url: "postgres://user:password@localhost/erooster"
 listen_ips:
-  - "[::1]"
-  - "127.0.0.1"
+  - "0.0.0.0"
+  - "[::]"
 webserver:
   port: 80
   tls: false

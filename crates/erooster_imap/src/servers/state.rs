@@ -46,8 +46,6 @@ pub enum State {
     /// - flags
     /// - datetime
     Appending(AppendingState),
-    /// We received all data for the email but there may be misc data coming
-    GotAppendData,
 }
 
 #[derive(PartialEq, Eq, Clone)]
@@ -58,6 +56,9 @@ pub struct AppendingState {
     pub data: Option<Vec<u8>>,
     pub datalen: usize,
     pub tag: String,
+    /// State to restore when APPEND completes (RFC 9051: APPEND does not change
+    /// the selected mailbox).
+    pub previous_state: Box<State>,
 }
 
 #[allow(clippy::missing_fields_in_debug)]

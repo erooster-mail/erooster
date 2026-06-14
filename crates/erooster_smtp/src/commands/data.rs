@@ -4,7 +4,11 @@
 
 use crate::{
     commands::Data,
-    servers::{sending::EmailPayload, state::Data as StateData, state::State},
+    servers::{
+        sending::{dkim_sign, EmailPayload},
+        state::Data as StateData,
+        state::State,
+    },
     utils::rspamd::{Action, Response},
 };
 
@@ -161,39 +165,93 @@ impl DataCommand<'_> {
                         data
                     };
 
-                    let email_id = uuid::Uuid::new_v4();
-                    let from = self
-                        .data
-                        .con_state
-                        .sender
-                        .clone()
-                        .context("Missing sender in internal state")?;
-                    let to_addrs_str = to
-                        .values()
-                        .flatten()
-                        .cloned()
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    let email_payload = EmailPayload {
-                        id: email_id,
-                        to,
-                        from: from.clone(),
-                        body: data.to_string(),
-                        sender_domain: config.mail.hostname.clone(),
-                        dkim_key_path: config.mail.dkim_key_path.clone(),
-                        dkim_key_selector: config.mail.dkim_key_selector.clone(),
-                        require_tls: self.data.con_state.require_tls,
-                    };
-                    let payload_json = serde_json::to_string(&email_payload)?;
-                    queue::push(
-                        database.get_pool(),
-                        email_id,
-                        payload_json,
-                        &from,
-                        &to_addrs_str,
-                    )
-                    .await?;
-                    debug!("Email queued for outbound sending");
+                    if domain == config.mail.hostname {
+                        // Local recipient — write directly to their maildir.
+                        let folder = "INBOX".to_string();
+                        let mailbox_path = Path::new(&config.mail.maildir_folders)
+                            .join(address.clone())
+                            .join(folder.clone());
+                        let db_foldername = format!("{address}/{folder}");
+                        let is_new = !mailbox_path.exists();
+                        storage.create_dirs(&mailbox_path)?;
+                        if is_new {
+                            storage.add_flag(&mailbox_path, "\\Subscribed").await?;
+                            storage.add_flag(&mailbox_path, "\\NoInferiors").await?;
+                        }
+                        let signed_data = match dkim_sign(
+                            &config.mail.hostname,
+                            data,
+                            &config.mail.dkim_key_path,
+                            &config.mail.dkim_key_selector,
+                        ) {
+                            Ok(s) => s,
+                            Err(e) => {
+                                tracing::warn!("DKIM signing failed for local delivery: {e}");
+                                data.to_string()
+                            }
+                        };
+                        let message_id = storage
+                            .store_new(db_foldername, &mailbox_path, signed_data.as_bytes())
+                            .await?;
+                        debug!("Stored local message: {}", message_id);
+                        // Record in audit queue so postmasters can inspect local deliveries.
+                        let audit_id = uuid::Uuid::new_v4();
+                        let from = self
+                            .data
+                            .con_state
+                            .sender
+                            .clone()
+                            .context("Missing sender in internal state")?;
+                        let audit_payload = serde_json::json!({
+                            "id": audit_id,
+                            "to": { domain: [address] },
+                            "from": from,
+                            "local_delivery": true,
+                        });
+                        queue::push_local(
+                            database.get_pool(),
+                            audit_id,
+                            audit_payload.to_string(),
+                            &from,
+                            &address,
+                        )
+                        .await?;
+                    } else {
+                        // Remote recipient — queue for outbound SMTP delivery.
+                        let email_id = uuid::Uuid::new_v4();
+                        let from = self
+                            .data
+                            .con_state
+                            .sender
+                            .clone()
+                            .context("Missing sender in internal state")?;
+                        let to_addrs_str = to
+                            .values()
+                            .flatten()
+                            .cloned()
+                            .collect::<Vec<_>>()
+                            .join(", ");
+                        let email_payload = EmailPayload {
+                            id: email_id,
+                            to,
+                            from: from.clone(),
+                            body: data.to_string(),
+                            sender_domain: config.mail.hostname.clone(),
+                            dkim_key_path: config.mail.dkim_key_path.clone(),
+                            dkim_key_selector: config.mail.dkim_key_selector.clone(),
+                            require_tls: self.data.con_state.require_tls,
+                        };
+                        let payload_json = serde_json::to_string(&email_payload)?;
+                        queue::push(
+                            database.get_pool(),
+                            email_id,
+                            payload_json,
+                            &from,
+                            &to_addrs_str,
+                        )
+                        .await?;
+                        debug!("Email queued for outbound sending");
+                    }
                 }
 
                 lines
@@ -214,8 +272,9 @@ impl DataCommand<'_> {
                         .join(receipt.clone())
                         .join(folder.clone());
                     let db_foldername = format!("{receipt}/{folder}");
-                    if !mailbox_path.exists() {
-                        storage.create_dirs(&mailbox_path)?;
+                    let is_new = !mailbox_path.exists();
+                    storage.create_dirs(&mailbox_path)?;
+                    if is_new {
                         storage.add_flag(&mailbox_path, "\\Subscribed").await?;
                         storage.add_flag(&mailbox_path, "\\NoInferiors").await?;
                     }

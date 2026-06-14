@@ -32,6 +32,8 @@ pub enum QueueStatus {
     Failed,
     /// Exceeded max attempts; no further delivery will be tried.
     Abandoned,
+    /// Delivered directly to local maildir (no outbound relay needed).
+    Delivered,
 }
 
 impl QueueStatus {
@@ -43,6 +45,7 @@ impl QueueStatus {
             Self::Delivering => "delivering",
             Self::Failed => "failed",
             Self::Abandoned => "abandoned",
+            Self::Delivered => "delivered",
         }
     }
 }
@@ -59,6 +62,7 @@ impl From<&str> for QueueStatus {
             "delivering" => Self::Delivering,
             "failed" => Self::Failed,
             "abandoned" => Self::Abandoned,
+            "delivered" => Self::Delivered,
             _ => Self::Pending,
         }
     }
@@ -172,6 +176,30 @@ pub mod postgres {
         sqlx::query(
             "INSERT INTO outbound_queue (id, payload, from_addr, to_addrs) \
              VALUES ($1, $2::jsonb, $3, $4)",
+        )
+        .bind(id)
+        .bind(payload_json)
+        .bind(from_addr)
+        .bind(to_addrs)
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
+
+    /// Record a locally-delivered message in the queue for audit purposes.
+    /// The entry is inserted with status `delivered` and will never be picked up by the worker.
+    #[instrument(skip(pool, payload_json))]
+    pub async fn push_local(
+        pool: &PgPool,
+        id: Uuid,
+        payload_json: String,
+        from_addr: &str,
+        to_addrs: &str,
+    ) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO outbound_queue \
+             (id, payload, status, attempts, next_retry_at, from_addr, to_addrs) \
+             VALUES ($1, $2::jsonb, 'delivered', 0, '9999-12-31T00:00:00Z'::timestamptz, $3, $4)",
         )
         .bind(id)
         .bind(payload_json)
@@ -407,6 +435,30 @@ pub mod sqlite {
         Ok(())
     }
 
+    /// Record a locally-delivered message in the queue for audit purposes.
+    /// The entry is inserted with status `delivered` and will never be picked up by the worker.
+    #[instrument(skip(pool, payload_json))]
+    pub async fn push_local(
+        pool: &SqlitePool,
+        id: Uuid,
+        payload_json: String,
+        from_addr: &str,
+        to_addrs: &str,
+    ) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO outbound_queue \
+             (id, payload, status, attempts, next_retry_at, from_addr, to_addrs) \
+             VALUES ($1, $2, 'delivered', 0, '9999-12-31T00:00:00', $3, $4)",
+        )
+        .bind(id.to_string())
+        .bind(payload_json)
+        .bind(from_addr)
+        .bind(to_addrs)
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
+
     /// Pop the next ready entry and mark it as `delivering`.
     #[instrument(skip(pool))]
     pub async fn pop(pool: &SqlitePool) -> Result<Option<QueueEntry>> {
@@ -587,7 +639,7 @@ pub mod sqlite {
 // ---------------------------------------------------------------------------
 
 #[cfg(feature = "postgres")]
-pub use postgres::{abandon, ack, force_retry, list_all, nack, pop, push};
+pub use postgres::{abandon, ack, force_retry, list_all, nack, pop, push, push_local};
 
 #[cfg(all(feature = "sqlite", not(feature = "postgres")))]
-pub use sqlite::{abandon, ack, force_retry, list_all, nack, pop, push};
+pub use sqlite::{abandon, ack, force_retry, list_all, nack, pop, push, push_local};

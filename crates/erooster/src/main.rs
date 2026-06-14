@@ -24,7 +24,7 @@ use {
     tokio_util::sync::CancellationToken,
     tracing::{error, info},
     tracing_error::ErrorLayer,
-    tracing_subscriber::{self, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter},
+    tracing_subscriber::{self, layer::SubscriberExt, util::SubscriberInitExt},
 };
 
 #[derive(Parser, Debug)]
@@ -37,30 +37,37 @@ struct Args {
 #[tokio::main]
 #[allow(clippy::too_many_lines, clippy::redundant_pub_crate)]
 async fn main() -> Result<()> {
-    // Setup logging and metrics
-    let builder = color_eyre::config::HookBuilder::default().panic_message(EroosterPanicMessage);
-    let (panic_hook, eyre_hook) = builder.into_hooks();
-    eyre_hook.install()?;
+    // Install the aws-lc-rs crypto provider for rustls before any TLS code runs.
+    // Required in rustls 0.23 when multiple provider crates may be present in the dep tree.
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
 
-    // Get arfs and config
-    let args = Args::parse();
-    info!("Starting ERooster Server");
-    let config = erooster_core::get_config(args.config).await?;
-
-    // Setup the rest of our logging
+    // Setup logging first so all subsequent steps are visible.
+    // RUST_LOG overrides the default; if unset, emit info from erooster crates only.
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("erooster=info,erooster_core=info,erooster_imap=info,erooster_smtp=info,erooster_web=info"));
     tracing_subscriber::Registry::default()
         .with(ErrorLayer::default())
         .with(tracing_subscriber::fmt::Layer::default())
-        .with(EnvFilter::from_default_env())
+        .with(env_filter)
         .init();
 
-    // Make panics pretty
+    // Setup error reporting and panic handler.
+    let builder = color_eyre::config::HookBuilder::default().panic_message(EroosterPanicMessage);
+    let (panic_hook, eyre_hook) = builder.into_hooks();
+    eyre_hook.install()?;
     let next = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |panic_info| {
         let report = panic_hook.panic_report(panic_info);
         eprintln!("{report}");
         next(panic_info);
     }));
+
+    // Get args and config
+    let args = Args::parse();
+    info!("Starting ERooster Server");
+    let config = erooster_core::get_config(args.config).await?;
 
     // Continue loading database and storage
     let database = get_database(&config).await?;
@@ -71,7 +78,7 @@ async fn main() -> Result<()> {
     let shutdown_flag = CancellationToken::new();
 
     // Startup servers
-    erooster_imap::start(&config, &database, &storage)?;
+    erooster_imap::start(&config, &database, &storage, shutdown_flag.clone())?;
 
     let config_clone = config.clone();
     tokio::spawn(async move {
@@ -89,6 +96,9 @@ async fn main() -> Result<()> {
         }
         _ = sigterms.recv() => {
             cleanup(&shutdown_flag);
+        }
+        _ = shutdown_flag.cancelled() => {
+            // A server task failed and cancelled the token — exit cleanly.
         }
     }
 

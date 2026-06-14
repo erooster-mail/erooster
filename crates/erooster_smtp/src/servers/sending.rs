@@ -19,7 +19,9 @@ use {
     },
     rustls::{
         self,
-        pki_types::{pem::PemObject, PrivateKeyDer, PrivatePkcs1KeyDer, ServerName},
+        pki_types::{
+            pem::PemObject, PrivateKeyDer, PrivatePkcs1KeyDer, PrivatePkcs8KeyDer, ServerName,
+        },
         RootCertStore,
     },
     serde::{self, Deserialize, Serialize},
@@ -57,18 +59,26 @@ impl<T: AsyncRead + AsyncWrite + Send> AsyncReadWrite for T {}
 type DynStream = Box<dyn AsyncReadWrite + Unpin>;
 type DynFramed = Framed<DynStream, LinesCodec>;
 
-fn dkim_sign(
+pub(crate) fn dkim_sign(
     domain: &str,
     raw_email: &str,
     dkim_key_path: &str,
     dkim_key_selector: &str,
 ) -> Result<String> {
     let private_key = std::fs::read_to_string(Path::new(&dkim_key_path))?;
-    let pk_rsa = RsaKey::<Sha256>::from_key_der(PrivateKeyDer::Pkcs1(
-        PrivatePkcs1KeyDer::from_pem_slice(private_key.as_bytes())
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to parse DKIM PEM: {e}"))?,
-    ))
-    .map_err(|e| color_eyre::eyre::eyre!("Failed to load DKIM private key: {e:?}"))?;
+    let key_der = if private_key.contains("BEGIN RSA PRIVATE KEY") {
+        PrivateKeyDer::Pkcs1(
+            PrivatePkcs1KeyDer::from_pem_slice(private_key.as_bytes())
+                .map_err(|e| color_eyre::eyre::eyre!("Failed to parse DKIM PEM: {e}"))?,
+        )
+    } else {
+        PrivateKeyDer::Pkcs8(
+            PrivatePkcs8KeyDer::from_pem_slice(private_key.as_bytes())
+                .map_err(|e| color_eyre::eyre::eyre!("Failed to parse DKIM PEM: {e}"))?,
+        )
+    };
+    let pk_rsa = RsaKey::<Sha256>::from_key_der(key_der)
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to load DKIM private key: {e:?}"))?;
     let signature_rsa = DkimSigner::from_key(pk_rsa)
         .domain(domain)
         .selector(dkim_key_selector)

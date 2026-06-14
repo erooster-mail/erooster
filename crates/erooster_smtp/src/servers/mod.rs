@@ -55,6 +55,7 @@ pub async fn start(
     let storage_clone = storage.clone();
     let config_clone = config.clone();
     let shutdown_flag_clone = shutdown_flag.clone();
+    let shutdown_on_err = shutdown_flag.clone();
     tokio::spawn(async move {
         if let Err(e) = unencrypted::Unencrypted::run(
             config_clone,
@@ -65,18 +66,21 @@ pub async fn start(
         .await
         {
             tracing::error!("Unable to start SMTP server: {e:?}");
+            shutdown_on_err.cancel();
         }
     });
     let db_clone = database.clone();
     let storage_clone = storage.clone();
     let config_clone = config.clone();
     let shutdown_flag_clone = shutdown_flag.clone();
+    let shutdown_on_err = shutdown_flag.clone();
     tokio::spawn(async move {
         if let Err(e) =
             encrypted::Encrypted::run(config_clone, &db_clone, &storage_clone, shutdown_flag_clone)
                 .await
         {
             tracing::error!("Unable to start TLS SMTP server: {e:?}");
+            shutdown_on_err.cancel();
         }
     });
 

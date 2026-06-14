@@ -57,7 +57,9 @@ impl Status<'_> {
             parts.push(format!("UNSEEN {count}"));
         }
         if responses.contains(&"UIDNEXT") {
-            let current_uid = storage.get_uid_for_folder(&mailbox_path)?;
+            let current_uid = storage
+                .get_uid_for_folder(&format!("{username}/{folder_on_disk}"))
+                .await?;
             parts.push(format!("UIDNEXT {}", current_uid + 1));
         }
         if responses.contains(&"UIDVALIDITY") {

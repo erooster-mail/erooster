@@ -141,7 +141,7 @@ impl Copy<'_> {
                 .await?;
 
             src_uids.push(mail.uid());
-            let dest_uid = storage.get_uid_for_folder(&dest_path)?;
+            let dest_uid = storage.get_uid_for_folder(&dest_db_name).await?;
             dest_uids.push(dest_uid);
         }
 

@@ -225,10 +225,15 @@ pub fn listen_tls(
                                             let _ = tx.blocking_send(res);
                                         }) {
                                             Ok(mut watcher) => {
-                                                if let Err(e) = watcher.watch(
-                                                    &mailbox_path,
-                                                    RecursiveMode::NonRecursive,
-                                                ) {
+                                                let new_path = mailbox_path.join("new");
+                                                let watch_path = if new_path.exists() {
+                                                    &new_path
+                                                } else {
+                                                    &mailbox_path
+                                                };
+                                                if let Err(e) = watcher
+                                                    .watch(watch_path, RecursiveMode::NonRecursive)
+                                                {
                                                     error!(
                                                         "[IMAP] IDLE: failed to watch mailbox: {e}"
                                                     );
@@ -266,6 +271,23 @@ pub fn listen_tls(
                                         }
                                     }
                                     Err(e) => error!("[IMAP] IDLE: bad mailbox path: {e}"),
+                                }
+                            } else {
+                                // No mailbox selected — just wait for DONE without sending updates.
+                                loop {
+                                    match lines_reader.next().await {
+                                        Some(Ok(l)) if l.trim().eq_ignore_ascii_case("done") => {
+                                            if let Err(e) = lines_sender
+                                                .send(format!("{tag} OK IDLE terminated"))
+                                                .await
+                                            {
+                                                error!("[IMAP] IDLE: send termination failed: {e}");
+                                            }
+                                            break;
+                                        }
+                                        None => break,
+                                        _ => {}
+                                    }
                                 }
                             }
                         }

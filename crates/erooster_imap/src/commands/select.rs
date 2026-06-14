@@ -89,28 +89,39 @@ where
         data.con_state.state = State::Selected(folder.clone(), access);
     };
 
+    let username = data
+        .con_state
+        .username
+        .clone()
+        .context("Username missing in internal State")?;
     let folder_on_disk = folder_arg;
-    let mailbox_path = storage.to_ondisk_path(
-        (*folder_on_disk).to_string(),
-        data.con_state
-            .username
-            .clone()
-            .context("Username missing in internal State")?,
-    )?;
+    let mailbox_path = storage.to_ondisk_path((*folder_on_disk).to_string(), username.clone())?;
+    let folder_ondisk_name = storage.to_ondisk_path_name(folder.clone())?;
+    let mailbox_id = format!("{username}/{folder_ondisk_name}");
     // Special INBOX check to make sure we have a mailbox
     if folder == "INBOX" && !mailbox_path.exists() {
         storage.create_dirs(&mailbox_path)?;
         storage.add_flag(&mailbox_path, "\\Subscribed").await?;
         storage.add_flag(&mailbox_path, "\\NoInferiors").await?;
     }
-    send_success(lines, folder, storage, mailbox_path, rw, command_data).await?;
+    send_success(
+        lines,
+        folder,
+        mailbox_id,
+        storage,
+        mailbox_path,
+        rw,
+        command_data,
+    )
+    .await?;
     Ok(())
 }
 
-#[instrument(skip(lines, folder, storage, mailbox_path, rw, command_data))]
+#[instrument(skip(lines, folder, mailbox_id, storage, mailbox_path, rw, command_data))]
 async fn send_success<S, E>(
     lines: &mut S,
     folder: String,
+    mailbox_id: String,
     storage: &Storage,
     mailbox_path: PathBuf,
     rw: bool,
@@ -128,7 +139,7 @@ where
         .feed(format!("* OK [UIDVALIDITY {uidvalidity}] UIDs valid"))
         .await?;
 
-    let current_uid = storage.get_uid_for_folder(&mailbox_path)?;
+    let current_uid = storage.get_uid_for_folder(&mailbox_id).await?;
     lines
         .feed(format!(
             "* OK [UIDNEXT {}] Predicted next UID",

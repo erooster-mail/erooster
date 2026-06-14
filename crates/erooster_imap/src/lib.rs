@@ -58,18 +58,25 @@ pub trait Server {
 /// # Errors
 ///
 /// Returns an error if the server startup fails
-#[instrument(skip(config, database, storage))]
-pub fn start(config: &Config, database: &DB, storage: &Storage) -> color_eyre::eyre::Result<()> {
+#[instrument(skip(config, database, storage, shutdown))]
+pub fn start(
+    config: &Config,
+    database: &DB,
+    storage: &Storage,
+    shutdown: tokio_util::sync::CancellationToken,
+) -> color_eyre::eyre::Result<()> {
     std::fs::create_dir_all(&config.mail.maildir_folders)?;
 
     let db_clone = database.clone();
     let storage_clone = storage.clone();
     let config_clone = config.clone();
+    let shutdown_clone = shutdown.clone();
     tokio::spawn(async move {
         if let Err(e) =
             servers::unencrypted::Unencrypted::run(config_clone, &db_clone, &storage_clone).await
         {
             error!("IMAP server error: {e:?}");
+            shutdown_clone.cancel();
         }
     });
     let db_clone = database.clone();
@@ -79,6 +86,7 @@ pub fn start(config: &Config, database: &DB, storage: &Storage) -> color_eyre::e
         if let Err(e) = servers::encrypted::Encrypted::run(config, &db_clone, &storage_clone).await
         {
             error!("IMAP TLS server error: {e:?}");
+            shutdown.cancel();
         }
     });
     Ok(())

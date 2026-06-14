@@ -26,6 +26,7 @@ erooster_imap = { version = "0.1.0", path = "../erooster_imap" }
 erooster_web = { version = "0.1.0", path = "../erooster_web" }
 clap = { workspace = true }
 color-eyre = { workspace = true }
+rustls = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
 tracing = { workspace = true }

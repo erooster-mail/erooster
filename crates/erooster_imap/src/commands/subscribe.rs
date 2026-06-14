@@ -38,20 +38,21 @@ impl Subscribe<'_> {
                     .clone()
                     .context("Username missing in internal State")?,
             )?;
+            let folder_ondisk = storage.to_ondisk_path_name(folder)?;
 
             // This is a spec violation. However we need to do this currently due to how the storage is set up
             debug!("mailbox_path: {:?}", &mailbox_path);
             if !mailbox_path.exists() {
                 storage.create_dirs(&mailbox_path)?;
-                if folder.to_lowercase() == ".sent" {
+                if folder_ondisk.to_lowercase() == ".sent" {
                     storage.add_flag(&mailbox_path, "\\Sent").await?;
-                } else if folder.to_lowercase() == ".junk" {
+                } else if folder_ondisk.to_lowercase() == ".junk" {
                     storage.add_flag(&mailbox_path, "\\Junk").await?;
-                } else if folder.to_lowercase() == ".drafts" {
+                } else if folder_ondisk.to_lowercase() == ".drafts" {
                     storage.add_flag(&mailbox_path, "\\Drafts").await?;
-                } else if folder.to_lowercase() == ".archive" {
+                } else if folder_ondisk.to_lowercase() == ".archive" {
                     storage.add_flag(&mailbox_path, "\\Archive").await?;
-                } else if folder.to_lowercase() == ".trash" {
+                } else if folder_ondisk.to_lowercase() == ".trash" {
                     storage.add_flag(&mailbox_path, "\\Trash").await?;
                 }
             }

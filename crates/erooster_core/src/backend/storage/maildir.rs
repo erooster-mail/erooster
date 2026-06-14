@@ -43,12 +43,15 @@ impl MaildirStorage {
 }
 
 impl MailStorage<MaildirMailEntry> for MaildirStorage {
-    #[instrument(skip(self, mailbox_path))]
-    fn get_uid_for_folder(&self, mailbox_path: &Path) -> color_eyre::eyre::Result<u32> {
-        let maildir = Maildir::from(mailbox_path.to_path_buf());
-        let current_last_id: u32 = maildir.count_cur().try_into()?;
-        let new_last_id: u32 = maildir.count_new().try_into()?;
-        Ok(current_last_id + new_last_id)
+    #[instrument(skip(self, mailbox))]
+    async fn get_uid_for_folder(&self, mailbox: &str) -> color_eyre::eyre::Result<u32> {
+        let max_uid: Option<i64> =
+            sqlx::query_scalar("SELECT MAX(uid) FROM mails WHERE mailbox = $1")
+                .bind(mailbox)
+                .fetch_optional(self.db.get_pool())
+                .await?
+                .flatten();
+        Ok(max_uid.unwrap_or(0) as u32)
     }
 
     async fn find(&self, path: &Path, id: &str) -> Option<MaildirMailEntry> {
@@ -105,6 +108,10 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
 
     #[instrument(skip(self, path))]
     async fn add_flag(&self, path: &Path, flag: &str) -> color_eyre::eyre::Result<()> {
+        let existing = self.get_flags(path).await.unwrap_or_default();
+        if existing.iter().any(|f| f == flag) {
+            return Ok(());
+        }
         let flags_file = path.join(".erooster_folder_flags");
         let mut file = OpenOptions::new()
             .append(true)
@@ -174,10 +181,16 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .collect::<Vec<_>>()
             .join("");
         let maildir_id = maildir.store_cur_with_flags(data, &maildir_flags)?;
-        sqlx::query("INSERT INTO mails (maildir_id, modseq, mailbox) VALUES ($1, $2, $3)")
+        let next_uid: i64 =
+            sqlx::query_scalar("SELECT COALESCE(MAX(uid), 0) + 1 FROM mails WHERE mailbox = $1")
+                .bind(mailbox.as_str())
+                .fetch_one(self.db.get_pool())
+                .await?;
+        sqlx::query("INSERT INTO mails (maildir_id, modseq, mailbox, uid) VALUES ($1, $2, $3, $4)")
             .bind(maildir_id.clone())
             .bind(1i64)
             .bind(mailbox)
+            .bind(next_uid)
             .execute(self.db.get_pool())
             .await?;
         Ok(maildir_id)
@@ -192,10 +205,16 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     ) -> color_eyre::eyre::Result<String> {
         let maildir = Maildir::from(path.to_path_buf());
         let maildir_id = maildir.store_new(data)?;
-        sqlx::query("INSERT INTO mails (maildir_id, modseq, mailbox) VALUES ($1, $2, $3)")
+        let next_uid: i64 =
+            sqlx::query_scalar("SELECT COALESCE(MAX(uid), 0) + 1 FROM mails WHERE mailbox = $1")
+                .bind(mailbox.as_str())
+                .fetch_one(self.db.get_pool())
+                .await?;
+        sqlx::query("INSERT INTO mails (maildir_id, modseq, mailbox, uid) VALUES ($1, $2, $3, $4)")
             .bind(maildir_id.clone())
             .bind(1i64)
             .bind(mailbox)
+            .bind(next_uid)
             .execute(self.db.get_pool())
             .await?;
         Ok(maildir_id)
@@ -228,19 +247,21 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     #[instrument(skip(self, mailbox, path))]
     async fn list_cur(&self, mailbox: String, path: &Path) -> Vec<MaildirMailEntry> {
         let maildir = Maildir::from(path.to_path_buf());
-        let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
-            .fetch(self.db.get_pool())
-            .filter_map(|x| async move {
-                match x {
-                    Err(e) => {
-                        error!("Failed to fetch row: {e}");
-                        None
+        let mail_rows: Vec<DbMails> =
+            sqlx::query_as::<_, DbMails>("SELECT * FROM mails WHERE mailbox = $1")
+                .bind(mailbox.as_str())
+                .fetch(self.db.get_pool())
+                .filter_map(|x| async move {
+                    match x {
+                        Err(e) => {
+                            error!("Failed to fetch row: {e}");
+                            None
+                        }
+                        Ok(x) => Some(x),
                     }
-                    Ok(x) => Some(x),
-                }
-            })
-            .collect()
-            .await;
+                })
+                .collect()
+                .await;
         let mails: Vec<_> = maildir
             .list_cur()
             .filter_map(|x| match x {
@@ -281,19 +302,21 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     #[instrument(skip(self, mailbox, path))]
     async fn list_new(&self, mailbox: String, path: &Path) -> Vec<MaildirMailEntry> {
         let maildir = Maildir::from(path.to_path_buf());
-        let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
-            .fetch(self.db.get_pool())
-            .filter_map(|x| async move {
-                match x {
-                    Err(e) => {
-                        error!("Failed to fetch row: {e}");
-                        None
+        let mail_rows: Vec<DbMails> =
+            sqlx::query_as::<_, DbMails>("SELECT * FROM mails WHERE mailbox = $1")
+                .bind(mailbox.as_str())
+                .fetch(self.db.get_pool())
+                .filter_map(|x| async move {
+                    match x {
+                        Err(e) => {
+                            error!("Failed to fetch row: {e}");
+                            None
+                        }
+                        Ok(x) => Some(x),
                     }
-                    Ok(x) => Some(x),
-                }
-            })
-            .collect()
-            .await;
+                })
+                .collect()
+                .await;
 
         let mails: Vec<_> = maildir
             .list_new()
@@ -336,19 +359,21 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     async fn list_all(&self, mailbox: String, path: &Path) -> Vec<MaildirMailEntry> {
         let pool = self.db.get_pool();
         let maildir = Maildir::from(path.to_path_buf());
-        let mail_rows: Vec<DbMails> = sqlx::query_as::<_, DbMails>("SELECT * FROM mails")
-            .fetch(pool)
-            .filter_map(|x| async move {
-                match x {
-                    Err(e) => {
-                        error!("Failed to fetch row: {e}");
-                        None
+        let mail_rows: Vec<DbMails> =
+            sqlx::query_as::<_, DbMails>("SELECT * FROM mails WHERE mailbox = $1")
+                .bind(mailbox.as_str())
+                .fetch(pool)
+                .filter_map(|x| async move {
+                    match x {
+                        Err(e) => {
+                            error!("Failed to fetch row: {e}");
+                            None
+                        }
+                        Ok(x) => Some(x),
                     }
-                    Ok(x) => Some(x),
-                }
-            })
-            .collect()
-            .await;
+                })
+                .collect()
+                .await;
 
         let mails: Vec<MaildirMailEntry> = maildir
             .list_new()
@@ -691,4 +716,175 @@ async fn lines_from_file(filename: impl AsRef<Path>) -> std::io::Result<Vec<Stri
     LinesStream::new(BufReader::new(File::open(filename).await?).lines())
         .try_collect::<Vec<String>>()
         .await
+}
+
+#[cfg(all(test, feature = "sqlite"))]
+mod tests {
+    use crate::{
+        backend::storage::{MailEntry, MailStorage},
+        test_helpers::setup_test_storage,
+    };
+
+    const MSG: &[u8] = b"From: a@localhost\r\nTo: b@localhost\r\nSubject: test\r\n\r\nHello\r\n";
+
+    #[tokio::test]
+    async fn uid_increments_per_message() {
+        let (config, storage) = setup_test_storage().await.unwrap();
+        let mailbox = "test@localhost/INBOX";
+        let path = std::path::Path::new(&config.mail.maildir_folders)
+            .join("test@localhost")
+            .join("INBOX");
+        storage.create_dirs(&path).unwrap();
+
+        storage
+            .store_new(mailbox.to_string(), &path, MSG)
+            .await
+            .unwrap();
+        let uid1 = storage.get_uid_for_folder(mailbox).await.unwrap();
+        assert_eq!(uid1, 1, "first message should get UID 1");
+
+        storage
+            .store_new(mailbox.to_string(), &path, MSG)
+            .await
+            .unwrap();
+        let uid2 = storage.get_uid_for_folder(mailbox).await.unwrap();
+        assert_eq!(uid2, 2, "second message should get UID 2");
+    }
+
+    #[tokio::test]
+    async fn uid_is_per_mailbox() {
+        let (config, storage) = setup_test_storage().await.unwrap();
+        let inbox = "test@localhost/INBOX";
+        let sent = "test@localhost/.Sent";
+        let inbox_path = std::path::Path::new(&config.mail.maildir_folders)
+            .join("test@localhost")
+            .join("INBOX");
+        let sent_path = std::path::Path::new(&config.mail.maildir_folders)
+            .join("test@localhost")
+            .join(".Sent");
+        storage.create_dirs(&inbox_path).unwrap();
+        storage.create_dirs(&sent_path).unwrap();
+
+        storage
+            .store_new(inbox.to_string(), &inbox_path, MSG)
+            .await
+            .unwrap();
+        storage
+            .store_new(inbox.to_string(), &inbox_path, MSG)
+            .await
+            .unwrap();
+        // INBOX has 2 messages, so max uid = 2
+        assert_eq!(storage.get_uid_for_folder(inbox).await.unwrap(), 2);
+
+        // Sent is independent — first message gets UID 1, not 3
+        storage
+            .store_new(sent.to_string(), &sent_path, MSG)
+            .await
+            .unwrap();
+        assert_eq!(storage.get_uid_for_folder(sent).await.unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn list_all_only_returns_own_mailbox() {
+        let (config, storage) = setup_test_storage().await.unwrap();
+        let inbox = "test@localhost/INBOX";
+        let sent = "test@localhost/.Sent";
+        let inbox_path = std::path::Path::new(&config.mail.maildir_folders)
+            .join("test@localhost")
+            .join("INBOX");
+        let sent_path = std::path::Path::new(&config.mail.maildir_folders)
+            .join("test@localhost")
+            .join(".Sent");
+        storage.create_dirs(&inbox_path).unwrap();
+        storage.create_dirs(&sent_path).unwrap();
+
+        storage
+            .store_new(inbox.to_string(), &inbox_path, MSG)
+            .await
+            .unwrap();
+        storage
+            .store_new(sent.to_string(), &sent_path, MSG)
+            .await
+            .unwrap();
+
+        let inbox_mails = storage.list_all(inbox.to_string(), &inbox_path).await;
+        assert_eq!(inbox_mails.len(), 1, "INBOX should have exactly 1 message");
+        assert_eq!(inbox_mails[0].uid(), 1);
+
+        let sent_mails = storage.list_all(sent.to_string(), &sent_path).await;
+        assert_eq!(sent_mails.len(), 1, "Sent should have exactly 1 message");
+        assert_eq!(sent_mails[0].uid(), 1);
+    }
+
+    #[tokio::test]
+    async fn uid_fetch_range_finds_messages() {
+        let (config, storage) = setup_test_storage().await.unwrap();
+        let mailbox = "test@localhost/INBOX";
+        let path = std::path::Path::new(&config.mail.maildir_folders)
+            .join("test@localhost")
+            .join("INBOX");
+        storage.create_dirs(&path).unwrap();
+
+        for _ in 0..3 {
+            storage
+                .store_new(mailbox.to_string(), &path, MSG)
+                .await
+                .unwrap();
+        }
+
+        let mails = storage.list_all(mailbox.to_string(), &path).await;
+        // All three messages must have non-zero UIDs
+        for mail in &mails {
+            assert!(
+                mail.uid() > 0,
+                "every stored message must have a non-zero UID"
+            );
+        }
+        // UIDs must be distinct
+        let uids: std::collections::HashSet<u32> = mails.iter().map(|m| m.uid()).collect();
+        assert_eq!(uids.len(), 3, "UIDs must be unique");
+    }
+
+    #[tokio::test]
+    async fn add_flag_is_idempotent() {
+        let (config, storage) = setup_test_storage().await.unwrap();
+        let path = std::path::Path::new(&config.mail.maildir_folders)
+            .join("test@localhost")
+            .join("INBOX");
+        storage.create_dirs(&path).unwrap();
+
+        storage.add_flag(&path, "\\Subscribed").await.unwrap();
+        storage.add_flag(&path, "\\Subscribed").await.unwrap();
+        storage.add_flag(&path, "\\Subscribed").await.unwrap();
+
+        let flags = storage.get_flags(&path).await.unwrap();
+        let subscribed_count = flags
+            .iter()
+            .filter(|f| f.as_str() == "\\Subscribed")
+            .count();
+        assert_eq!(
+            subscribed_count, 1,
+            "duplicate add_flag calls must not duplicate flags"
+        );
+    }
+
+    #[tokio::test]
+    async fn store_cur_with_flags_creates_dirs_if_missing() {
+        let (config, storage) = setup_test_storage().await.unwrap();
+        let mailbox = "test@localhost/.Sent";
+        let path = std::path::Path::new(&config.mail.maildir_folders)
+            .join("test@localhost")
+            .join(".Sent");
+
+        // create_dirs must be called before store_cur_with_flags
+        storage.create_dirs(&path).unwrap();
+
+        let id = storage
+            .store_cur_with_flags(mailbox.to_string(), &path, MSG, vec!["\\Seen".to_string()])
+            .await
+            .unwrap();
+        assert!(!id.is_empty(), "stored message should get an id");
+        let uid = storage.get_uid_for_folder(mailbox).await.unwrap();
+        assert_eq!(uid, 1, "first message in .Sent should get UID 1");
+    }
 }

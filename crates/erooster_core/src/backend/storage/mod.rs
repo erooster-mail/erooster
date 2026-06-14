@@ -2,6 +2,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+use std::path::{Path, PathBuf};
+use {
+    color_eyre,
+    mailparse::{MailHeader, ParsedMail},
+};
+
+#[cfg(feature = "maildir")]
 use crate::{
     backend::{
         database::DB,
@@ -9,12 +16,8 @@ use crate::{
     },
     config::Config,
 };
-use std::path::{Path, PathBuf};
-use {
-    color_eyre,
-    mailparse::{MailHeader, ParsedMail},
-    tracing::instrument,
-};
+#[cfg(feature = "maildir")]
+use tracing::instrument;
 
 /// The maildir format
 #[cfg(feature = "maildir")]
@@ -87,8 +90,8 @@ pub trait MailEntry {
 // These are methods as other storage types may need to store some state in the struct
 #[allow(async_fn_in_trait)]
 pub trait MailStorage<M: MailEntry> {
-    /// Get the current UID for the folder
-    fn get_uid_for_folder(&self, path: &Path) -> color_eyre::eyre::Result<u32>;
+    /// Get the highest assigned UID in the folder (or 0 if empty).
+    async fn get_uid_for_folder(&self, mailbox: &str) -> color_eyre::eyre::Result<u32>;
     /// Get the current flags for the folder
     async fn get_flags(&self, path: &Path) -> std::io::Result<Vec<String>>;
     /// Set a new flag for the folder

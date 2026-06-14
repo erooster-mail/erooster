@@ -1092,6 +1092,7 @@ dependencies = [
  "erooster_imap",
  "erooster_smtp",
  "erooster_web",
+ "rustls",
  "tokio",
  "tokio-util",
  "tracing",

@@ -62,8 +62,9 @@ impl Append<'_> {
             let folder = storage.to_ondisk_path_name(folder)?;
             debug!("Appending to folder: {:?}", mailbox_path);
             // Spec violation but thunderbird would prompt a user error otherwise :/
-            if !mailbox_path.exists() {
-                storage.create_dirs(&mailbox_path)?;
+            let is_new = !mailbox_path.exists();
+            storage.create_dirs(&mailbox_path)?;
+            if is_new {
                 if folder.to_lowercase() == ".sent" {
                     storage.add_flag(&mailbox_path, "\\Sent").await?;
                     storage.add_flag(&mailbox_path, "\\Subscribed").await?;
@@ -88,6 +89,7 @@ impl Append<'_> {
             match append_arguments(append_args_borrow).finish() {
                 Ok((left, (flags, datetime, literal))) => {
                     debug!("[Append] leftover: {}", left);
+                    let previous_state = self.data.con_state.state.clone();
                     self.data.con_state.state = State::Appending(AppendingState {
                         folder: folder.clone(),
                         flags: flags.map(|x| x.iter().map(ToString::to_string).collect::<Vec<_>>()),
@@ -95,6 +97,7 @@ impl Append<'_> {
                         data: None,
                         datalen: literal.length,
                         tag: command_data.tag.to_string(),
+                        previous_state: Box::new(previous_state),
                     });
                     if !literal.continuation {
                         lines.send(String::from("+ Ready for literal data")).await?;
@@ -140,46 +143,59 @@ impl Append<'_> {
             .username
             .clone()
             .context("Username missing in internal State")?;
-        if let State::Appending(state) = &mut self.data.con_state.state {
-            if let Some(buffer) = &mut state.data {
+        // Extract all needed data from Appending state before mutating.
+        let completion = if let State::Appending(ref mut state) = self.data.con_state.state {
+            if let Some(ref mut buffer) = state.data {
                 write!(buffer, "{append_data}\r\n")?;
                 debug!("Buffer length: {}", buffer.len());
                 debug!("expected: {}", state.datalen);
                 if buffer.len() >= state.datalen {
                     debug!("[Append] Saving data");
-                    let folder = &state.folder;
-                    let mailbox_path = Path::new(&config.mail.maildir_folders)
-                        .join(username.clone())
-                        .join(folder.clone());
-                    debug!("[Append] Mailbox path: {:?}", mailbox_path);
-                    // TODO: verify that we need this
-                    buffer.truncate(buffer.len() - 2);
-                    let message_id = storage
-                        .store_cur_with_flags(
-                            format!("{username}/{folder}"),
-                            &mailbox_path,
-                            buffer,
-                            state.flags.clone().unwrap_or_default(),
-                        )
-                        .await?;
-                    debug!("Stored message via append: {}", message_id);
-                    self.data.con_state.state = State::GotAppendData;
-                    let uidvalidity = get_or_create_uidvalidity(&mailbox_path).await?;
-                    let uid = storage.get_uid_for_folder(&mailbox_path)?;
-                    lines
-                        .send(format!(
-                            "{tag} OK [APPENDUID {uidvalidity} {uid}] APPEND completed"
-                        ))
-                        .await?;
+                    let folder = state.folder.clone();
+                    let imap_flags = state.flags.clone().unwrap_or_default();
+                    let previous_state = *state.previous_state.clone();
+                    let completion_tag = state.tag.clone();
+                    let mut buf = buffer.clone();
+                    buf.truncate(buf.len() - 2);
+                    Some((folder, imap_flags, previous_state, completion_tag, buf))
+                } else {
+                    None
                 }
             } else {
                 let mut buffer = Vec::with_capacity(state.datalen);
                 write!(buffer, "{append_data}\r\n")?;
-
                 state.data = Some(buffer);
+                return Ok(());
             }
         } else {
             lines.send(format!("{tag} NO invalid state")).await?;
+            return Ok(());
+        };
+
+        if let Some((folder, imap_flags, previous_state, completion_tag, buffer)) = completion {
+            let mailbox_path = Path::new(&config.mail.maildir_folders)
+                .join(username.clone())
+                .join(folder.clone());
+            debug!("[Append] Mailbox path: {:?}", mailbox_path);
+            storage.create_dirs(&mailbox_path)?;
+            // Use the IMAP folder name (no leading dot) as the DB key so it
+            // matches what SELECT/FETCH use (State::Selected stores "Sent", not ".Sent").
+            let db_folder = folder.trim_start_matches('.');
+            let mailbox_id = format!("{username}/{db_folder}");
+            let message_id = storage
+                .store_cur_with_flags(mailbox_id.clone(), &mailbox_path, &buffer, imap_flags)
+                .await?;
+            debug!("Stored message via append: {}", message_id);
+            // Restore the state we were in before APPEND (RFC 9051: APPEND does
+            // not change the selected mailbox).
+            self.data.con_state.state = previous_state;
+            let uidvalidity = get_or_create_uidvalidity(&mailbox_path).await?;
+            let uid = storage.get_uid_for_folder(&mailbox_id).await?;
+            lines
+                .send(format!(
+                    "{completion_tag} OK [APPENDUID {uidvalidity} {uid}] APPEND completed"
+                ))
+                .await?;
         }
         Ok(())
     }
@@ -410,6 +426,112 @@ mod tests {
         assert!(
             reply.starts_with("a1 OK [APPENDUID "),
             "expected APPENDUID reply, got: {reply}"
+        );
+    }
+
+    /// Regression: APPEND must restore the previously-selected mailbox state.
+    /// Before the fix, completing an APPEND unconditionally set state to
+    /// `Authenticated`, which broke all subsequent FETCH/IDLE commands.
+    #[allow(clippy::unwrap_used)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
+    #[tokio::test]
+    async fn test_append_restores_selected_state() {
+        // Start in Selected("INBOX") — simulates Thunderbird appending to Sent
+        // while the connection has INBOX selected.
+        let connection = Connection {
+            state: State::Selected(String::from("INBOX"), Access::ReadWrite),
+            secure: true,
+            username: Some(String::from("meow")),
+            active_capabilities: vec![],
+        };
+        let mut data = Data {
+            con_state: connection,
+        };
+        let mut caps = Append { data: &mut data };
+
+        // "From: a@b.com\r\n" (15) + "Subject: test\r\n" (15) + "\r\n" (2) +
+        // "test body\r\n" (11) = 43 bytes.
+        let cmd_data = CommandData {
+            tag: "t1",
+            command: Commands::Append,
+            arguments: &["INBOX", "(\\Seen)", "{43}"],
+        };
+        let (config, storage) = erooster_core::test_helpers::setup_test_storage()
+            .await
+            .unwrap();
+        let (mut tx, _rx) = mpsc::unbounded();
+        caps.exec(&mut tx, &storage, &cmd_data).await.unwrap();
+
+        let (mut tx, mut rx) = mpsc::unbounded();
+        for line in &["From: a@b.com", "Subject: test", "", "test body"] {
+            caps.append(&mut tx, &storage, line, &config, "t1".to_string())
+                .await
+                .unwrap();
+        }
+        let reply = rx.next().await.unwrap_or_default();
+        assert!(
+            reply.starts_with("t1 OK [APPENDUID "),
+            "expected APPENDUID reply, got: {reply}"
+        );
+        assert_eq!(
+            caps.data.con_state.state,
+            State::Selected(String::from("INBOX"), Access::ReadWrite),
+            "APPEND must restore the previously selected state, not drop to Authenticated"
+        );
+    }
+
+    /// Regression: APPEND must write the DB mailbox key without a leading dot
+    /// so that FETCH (which uses the IMAP folder name from Selected state) can
+    /// find the messages.  Before the fix, appending to "Sent" stored
+    /// mailbox_id as "meow/.Sent" while FETCH queried "meow/Sent".
+    #[allow(clippy::unwrap_used)]
+    #[cfg_attr(coverage_nightly, coverage(off))]
+    #[tokio::test]
+    async fn test_append_stores_imap_folder_name_in_db() {
+        let connection = Connection {
+            state: State::Authenticated,
+            secure: true,
+            username: Some(String::from("meow")),
+            active_capabilities: vec![],
+        };
+        let mut data = Data {
+            con_state: connection,
+        };
+        let mut caps = Append { data: &mut data };
+
+        let cmd_data = CommandData {
+            tag: "t2",
+            command: Commands::Append,
+            arguments: &["Sent", "(\\Seen)", "{43}"],
+        };
+        let (config, storage) = erooster_core::test_helpers::setup_test_storage()
+            .await
+            .unwrap();
+        let (mut tx, _rx) = mpsc::unbounded();
+        caps.exec(&mut tx, &storage, &cmd_data).await.unwrap();
+
+        let (mut tx, mut rx) = mpsc::unbounded();
+        for line in &["From: a@b.com", "Subject: test", "", "test body"] {
+            caps.append(&mut tx, &storage, line, &config, "t2".to_string())
+                .await
+                .unwrap();
+        }
+        let reply = rx.next().await.unwrap_or_default();
+        assert!(
+            reply.starts_with("t2 OK [APPENDUID "),
+            "expected APPENDUID reply, got: {reply}"
+        );
+        // Querying "meow/Sent" (no dot) must return UID=1, proving the message
+        // was stored under the IMAP name, not the ondisk ".Sent" name.
+        let uid = storage.get_uid_for_folder("meow/Sent").await.unwrap();
+        assert_eq!(
+            uid, 1,
+            "message should be findable via IMAP folder name meow/Sent"
+        );
+        let uid_dot = storage.get_uid_for_folder("meow/.Sent").await.unwrap();
+        assert_eq!(
+            uid_dot, 0,
+            "nothing should be stored under ondisk name meow/.Sent"
         );
     }
 }

@@ -294,12 +294,6 @@ impl Data {
                 .await?;
             // We are done here
             return Ok(Response::Continue);
-        } else if let State::GotAppendData = state {
-            if line == ")" {
-                self.con_state.state = State::Authenticated;
-                // We are done here
-                return Ok(Response::Continue);
-            }
         }
         debug!("Starting to parse");
         let line_borrow: &str = &line;
@@ -325,11 +319,12 @@ impl Data {
                         return Ok(Response::STARTTLS(tag.to_string()));
                     }
                     Commands::Idle => {
-                        if !matches!(self.con_state.state, State::Selected(..)) {
+                        if !matches!(
+                            self.con_state.state,
+                            State::Selected(..) | State::Authenticated
+                        ) {
                             lines
-                                .send(format!(
-                                    "{tag} BAD [CLIENTBUG] IDLE requires a selected mailbox"
-                                ))
+                                .send(format!("{tag} BAD IDLE not valid in current state"))
                                 .await?;
                             return Ok(Response::Continue);
                         }
@@ -475,6 +470,10 @@ impl Data {
                 }
             }
             Err(e) => {
+                // A bare ")" is the UTF8 APPEND wrapper close — not a command.
+                if line_borrow.trim() == ")" {
+                    return Ok(Response::Continue);
+                }
                 error!(
                     "[IMAP] Error parsing command: {}",
                     convert_error(line_borrow, e)
@@ -631,9 +630,7 @@ mod tests {
         assert_eq!(response.unwrap(), Response::Continue);
         assert_eq!(
             rx.next().await,
-            Some(String::from(
-                "a1 BAD [CLIENTBUG] IDLE requires a selected mailbox"
-            ))
+            Some(String::from("a1 BAD IDLE not valid in current state"))
         );
     }
 

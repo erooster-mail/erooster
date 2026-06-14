@@ -147,7 +147,7 @@ impl Move<'_> {
                 .await?;
 
             src_uids.push(mail.uid());
-            dest_uids.push(storage.get_uid_for_folder(&dest_path)?);
+            dest_uids.push(storage.get_uid_for_folder(&dest_db_name).await?);
             src_indices.push(seq);
             paths_to_remove.push(mail.path().clone());
         }

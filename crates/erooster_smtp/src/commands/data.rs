@@ -13,6 +13,8 @@ enum RspamdDecision {
     TempReject,
     PermReject,
 }
+use cfg_if::cfg_if;
+use color_eyre::{self, eyre::ContextCompat};
 use erooster_core::{
     backend::{
         database::{Database, DB},
@@ -21,16 +23,14 @@ use erooster_core::{
     },
     config::{Config, Rspamd},
 };
-use std::{collections::BTreeMap, io::Write, path::Path, time::Duration};
-use time::{macros::format_description, OffsetDateTime};
-use cfg_if::cfg_if;
-use color_eyre::{self, eyre::ContextCompat};
 use futures::{Sink, SinkExt};
-use mail_auth::{AuthenticatedMessage, MessageAuthenticator};
 #[cfg(not(feature = "benchmarking"))]
-use mail_auth::{DkimResult, DmarcResult, dmarc::verify::DmarcParameters};
+use mail_auth::{dmarc::verify::DmarcParameters, DkimResult, DmarcResult};
+use mail_auth::{AuthenticatedMessage, MessageAuthenticator};
 use reqwest;
 use simdutf8::compat::from_utf8;
+use std::{collections::BTreeMap, io::Write, path::Path, time::Duration};
+use time::{macros::format_description, OffsetDateTime};
 #[cfg(not(feature = "benchmarking"))]
 use tracing::warn;
 use tracing::{debug, instrument};

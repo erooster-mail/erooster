@@ -34,7 +34,10 @@ async fn receive_message() {
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("250-PIPELINING"));
     let resp = reader.next().await.unwrap().unwrap();
-    assert!(resp.starts_with("250-SIZE "), "expected SIZE capability, got: {resp}");
+    assert!(
+        resp.starts_with("250-SIZE "),
+        "expected SIZE capability, got: {resp}"
+    );
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("250-8BITMIME"));
     let resp = reader.next().await.unwrap().unwrap();

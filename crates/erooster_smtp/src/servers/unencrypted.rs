@@ -16,6 +16,7 @@ use erooster_core::{
     line_codec::LinesCodec,
     LINE_LIMIT,
 };
+use std::net::SocketAddr;
 use {
     color_eyre::{self, eyre::Context, Result},
     futures::{SinkExt, StreamExt},
@@ -24,7 +25,6 @@ use {
     tokio_util::{codec::Framed, sync::CancellationToken},
     tracing::{debug, error, info, instrument},
 };
-use std::net::SocketAddr;
 /// An unencrypted smtp Server
 pub struct Unencrypted;
 
@@ -83,7 +83,10 @@ async fn listen(
         }
         let peer = tcp_stream.peer_addr().expect("[SMTP] peer addr to exist");
         let is_submission = peer.port() == 587;
-        debug!("[SMTP] Got new peer: {} (submission={})", peer, is_submission);
+        debug!(
+            "[SMTP] Got new peer: {} (submission={})",
+            peer, is_submission
+        );
 
         let database = database.clone();
         let storage = storage.clone();

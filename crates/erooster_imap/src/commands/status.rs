@@ -128,7 +128,9 @@ mod tests {
             .await
             .unwrap();
         let (mut tx, mut rx) = mpsc::unbounded();
-        let res = Status { data: &data }.exec(&mut tx, &storage, &cmd_data).await;
+        let res = Status { data: &data }
+            .exec(&mut tx, &storage, &cmd_data)
+            .await;
         assert!(res.is_ok(), "{:?}", res);
 
         let untagged = rx.next().await.unwrap_or_default();
@@ -137,7 +139,10 @@ mod tests {
             untagged.starts_with("* STATUS INBOX ("),
             "unexpected response: {untagged}"
         );
-        assert!(untagged.contains("MESSAGES "), "MESSAGES missing: {untagged}");
+        assert!(
+            untagged.contains("MESSAGES "),
+            "MESSAGES missing: {untagged}"
+        );
         assert!(untagged.contains("UNSEEN "), "UNSEEN missing: {untagged}");
         assert!(untagged.contains("UIDNEXT "), "UIDNEXT missing: {untagged}");
         // Ensure items are space-separated (no two keywords directly adjacent)
@@ -174,12 +179,16 @@ mod tests {
 
         // Call STATUS twice — UIDVALIDITY must be the same both times.
         let (mut tx, mut rx) = mpsc::unbounded();
-        let res = Status { data: &data }.exec(&mut tx, &storage, &cmd_data).await;
+        let res = Status { data: &data }
+            .exec(&mut tx, &storage, &cmd_data)
+            .await;
         assert!(res.is_ok(), "{:?}", res);
         let first = rx.next().await.unwrap_or_default();
 
         let (mut tx2, mut rx2) = mpsc::unbounded();
-        let res = Status { data: &data }.exec(&mut tx2, &storage, &cmd_data).await;
+        let res = Status { data: &data }
+            .exec(&mut tx2, &storage, &cmd_data)
+            .await;
         assert!(res.is_ok(), "{:?}", res);
         let second = rx2.next().await.unwrap_or_default();
 

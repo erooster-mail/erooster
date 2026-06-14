@@ -3,11 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::commands::{
-    copy::Copy,
-    fetch::Fetch,
-    move_::Move,
-    parsers::parse_selected_range,
-    store::Store,
+    copy::Copy, fetch::Fetch, move_::Move, parsers::parse_selected_range, store::Store,
     CommandData, Data,
 };
 use erooster_core::backend::storage::{MailEntry, MailStorage, Storage};
@@ -18,8 +14,8 @@ use {
     tracing::instrument,
 };
 
-use crate::servers::state::{Access, State};
 use super::search::Search;
+use crate::servers::state::{Access, State};
 
 pub struct Uid<'a> {
     pub data: &'a Data,

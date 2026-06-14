@@ -12,6 +12,7 @@
 
 use askama::Template;
 use erooster_core::config::Config;
+use std::net::SocketAddr;
 use {
     axum::{
         extract::Extension,
@@ -25,7 +26,6 @@ use {
     tower_http::trace::TraceLayer,
     tracing::{self, error, info},
 };
-use std::net::SocketAddr;
 
 /// Starts the webserver used for the admin page and metrics
 #[tracing::instrument(skip(config))]
@@ -56,7 +56,7 @@ pub async fn start(config: &Config) -> color_eyre::eyre::Result<()> {
                     config.tls.cert_path.clone(),
                     config.tls.key_path.clone(),
                 )
-                    .await
+                .await
                 {
                     Ok(tls_config) => tls_config,
                     Err(e) => {

@@ -5,6 +5,7 @@
 use super::dane::{fetch_tlsa_records, validate_cert_against_tlsa};
 use super::mta_sts::{fetch_mta_sts_policy, mx_allowed_by_policy, MtaStsMode};
 use erooster_core::line_codec::LinesCodec;
+use std::{collections::BTreeMap, error::Error, io, net::IpAddr, path::Path, time::Duration};
 use {
     color_eyre::{self, Result},
     futures::{SinkExt, StreamExt},
@@ -33,7 +34,6 @@ use {
     uuid::Uuid,
     webpki_roots,
 };
-use std::{collections::BTreeMap, error::Error, io, net::IpAddr, path::Path, time::Duration};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(crate = "self::serde")]
@@ -64,12 +64,10 @@ fn dkim_sign(
     dkim_key_selector: &str,
 ) -> Result<String> {
     let private_key = std::fs::read_to_string(Path::new(&dkim_key_path))?;
-    let pk_rsa = RsaKey::<Sha256>::from_key_der(
-        PrivateKeyDer::Pkcs1(
-            PrivatePkcs1KeyDer::from_pem_slice(private_key.as_bytes())
-                .map_err(|e| color_eyre::eyre::eyre!("Failed to parse DKIM PEM: {e}"))?,
-        ),
-    )
+    let pk_rsa = RsaKey::<Sha256>::from_key_der(PrivateKeyDer::Pkcs1(
+        PrivatePkcs1KeyDer::from_pem_slice(private_key.as_bytes())
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to parse DKIM PEM: {e}"))?,
+    ))
     .map_err(|e| color_eyre::eyre::eyre!("Failed to load DKIM private key: {e:?}"))?;
     let signature_rsa = DkimSigner::from_key(pk_rsa)
         .domain(domain)
@@ -114,12 +112,7 @@ async fn connect_with_starttls(
     email: &EmailPayload,
     tls_domain: &str,
 ) -> Result<Port25Connection, Box<dyn Error + Send + Sync + 'static>> {
-    let tcp = match timeout(
-        Duration::from_secs(10),
-        TcpStream::connect((addr, 25u16)),
-    )
-    .await
-    {
+    let tcp = match timeout(Duration::from_secs(10), TcpStream::connect((addr, 25u16))).await {
         Ok(Ok(s)) => s,
         Ok(Err(e)) => return Err(e.into()),
         Err(_) => return Err("Connection to port 25 timed out".into()),
@@ -140,9 +133,7 @@ async fn connect_with_starttls(
     }
 
     // Send EHLO and collect capability lines
-    sender
-        .send(format!("EHLO {}", email.sender_domain))
-        .await?;
+    sender.send(format!("EHLO {}", email.sender_domain)).await?;
     let mut starttls_available = false;
     loop {
         let line = reader
@@ -175,9 +166,7 @@ async fn connect_with_starttls(
             // Extract the underlying TcpStream and wrap in TLS
             let plain_framed = sender
                 .reunite(reader)
-                .map_err(|e| -> Box<dyn Error + Send + Sync + 'static> {
-                    e.to_string().into()
-                })?;
+                .map_err(|e| -> Box<dyn Error + Send + Sync + 'static> { e.to_string().into() })?;
             let tcp = plain_framed.into_inner();
 
             let connector = tls_connector();
@@ -185,7 +174,10 @@ async fn connect_with_starttls(
                 .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid dnsname"))?
                 .to_owned();
             let tls_stream = connector.connect(domain, tcp).await?;
-            debug!("[{}] STARTTLS upgrade complete for {}", email.id, tls_domain);
+            debug!(
+                "[{}] STARTTLS upgrade complete for {}",
+                email.id, tls_domain
+            );
 
             // Extract leaf certificate before consuming the stream into Framed.
             let peer_cert_der = tls_stream
@@ -226,9 +218,7 @@ async fn connect_with_starttls(
 
             let tls_rejoined = tls_sender
                 .reunite(tls_reader)
-                .map_err(|e| -> Box<dyn Error + Send + Sync + 'static> {
-                    e.to_string().into()
-                })?;
+                .map_err(|e| -> Box<dyn Error + Send + Sync + 'static> { e.to_string().into() })?;
             return Ok(Port25Connection {
                 framed: tls_rejoined,
                 is_tls: true,
@@ -263,13 +253,8 @@ async fn smtp_deliver(
 ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let (mut sender, mut reader) = framed.split();
 
-    sender
-        .send(format!("MAIL FROM:<{}>", email.from))
-        .await?;
-    let line = reader
-        .next()
-        .await
-        .ok_or("No response to MAIL FROM")??;
+    sender.send(format!("MAIL FROM:<{}>", email.from)).await?;
+    let line = reader.next().await.ok_or("No response to MAIL FROM")??;
     debug!("[{}] MAIL FROM: {}", email.id, line);
     if !line.starts_with("250") {
         sender.send(String::from("QUIT")).await?;
@@ -278,10 +263,7 @@ async fn smtp_deliver(
 
     for addr in to {
         sender.send(format!("RCPT TO:<{addr}>")).await?;
-        let line = reader
-            .next()
-            .await
-            .ok_or("No response to RCPT TO")??;
+        let line = reader.next().await.ok_or("No response to RCPT TO")??;
         debug!("[{}] RCPT TO <{}>: {}", email.id, addr, line);
         // 251 = user not local, but will forward — still acceptable
         if !line.starts_with("250") && !line.starts_with("251") {
@@ -291,10 +273,7 @@ async fn smtp_deliver(
     }
 
     sender.send(String::from("DATA")).await?;
-    let line = reader
-        .next()
-        .await
-        .ok_or("No response to DATA")??;
+    let line = reader.next().await.ok_or("No response to DATA")??;
     debug!("[{}] DATA: {}", email.id, line);
     if !line.starts_with("354") {
         sender.send(String::from("QUIT")).await?;
@@ -347,8 +326,7 @@ pub async fn send_email_job(
                 .filter_map(|record| {
                     if let RData::MX(mx) = &record.data {
                         let exchange = mx.exchange.to_string();
-                        let host =
-                            exchange.strip_suffix('.').unwrap_or(&exchange).to_string();
+                        let host = exchange.strip_suffix('.').unwrap_or(&exchange).to_string();
                         Some((mx.preference, host))
                     } else {
                         None
@@ -400,9 +378,7 @@ pub async fn send_email_job(
 
             // MTA-STS: in enforce mode the MX host must match the policy's mx list.
             if let Some(ref policy) = sts_policy {
-                if policy.mode == MtaStsMode::Enforce
-                    && !mx_allowed_by_policy(host, policy)
-                {
+                if policy.mode == MtaStsMode::Enforce && !mx_allowed_by_policy(host, policy) {
                     warn!(
                         "[{}] MTA-STS enforce: MX host {} is not in the policy mx \
                          list for {}; skipping",
@@ -470,7 +446,10 @@ pub async fn send_email_job(
                         .as_deref()
                         .is_some_and(|cert| validate_cert_against_tlsa(cert, &tlsa_records));
                     if valid {
-                        debug!("[{}] DANE: cert for {} passed TLSA validation", email.id, host);
+                        debug!(
+                            "[{}] DANE: cert for {} passed TLSA validation",
+                            email.id, host
+                        );
                     } else {
                         warn!(
                             "[{}] DANE: cert for {} failed TLSA validation; skipping MX host",
@@ -502,8 +481,7 @@ pub async fn send_email_job(
 
         if !delivered {
             return Err(
-                format!("Failed to deliver message to {target}: all MX hosts exhausted")
-                    .into(),
+                format!("Failed to deliver message to {target}: all MX hosts exhausted").into(),
             );
         }
     }

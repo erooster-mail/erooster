@@ -3,12 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::config::Config;
+use sqlx::Pool;
 use {
     color_eyre::{self, Result},
     secrecy::SecretString,
     tracing::instrument,
 };
-use sqlx::Pool;
 
 /// Postgres specific database implementation
 #[cfg(feature = "postgres")]

@@ -12,6 +12,7 @@ use erooster_core::{
     line_codec::LinesCodec,
     LINE_LIMIT,
 };
+use std::{io, net::SocketAddr, path::Path};
 use {
     color_eyre,
     color_eyre::eyre::Context,
@@ -25,11 +26,6 @@ use {
     tokio_stream::wrappers::TcpListenerStream,
     tokio_util::{codec::Framed, sync::CancellationToken},
     tracing::{debug, error, info, instrument},
-};
-use std::{
-    io,
-    net::SocketAddr,
-    path::Path,
 };
 /// An encrypted smtp Server
 pub struct Encrypted;
@@ -45,8 +41,12 @@ fn load_certs(path: &Path) -> color_eyre::eyre::Result<Vec<CertificateDer<'stati
 
 #[instrument(skip(path))]
 fn load_key(path: &Path) -> color_eyre::eyre::Result<PrivateKeyDer<'static>> {
-    PrivateKeyDer::from_pem_file(path)
-        .map_err(|e| color_eyre::eyre::eyre!("no keys found in {:?} (encrypted keys not supported): {e:?}", path))
+    PrivateKeyDer::from_pem_file(path).map_err(|e| {
+        color_eyre::eyre::eyre!(
+            "no keys found in {:?} (encrypted keys not supported): {e:?}",
+            path
+        )
+    })
 }
 
 pub fn get_tls_acceptor(config: &Config) -> color_eyre::eyre::Result<TlsAcceptor> {

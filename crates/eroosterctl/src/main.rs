@@ -130,7 +130,7 @@ fn status() {
         HEAD, FINS, HEAD, EYES, HEAD, EYES, HEAD, BEAK, HEAD, FEATHER, BODY, LINE, CLAWS, LINE,
         CLAWS, LINE, CLAWS,
     ]
-        .map(|color| color.parse().unwrap());
+    .map(|color| color.parse().unwrap());
 
     let mut current_color_index = 0;
     let mut out = String::new();
@@ -215,8 +215,8 @@ async fn register(username: Option<String>, password: Option<SecretString>, conf
             rpassword::prompt_password(
                 "Please enter the email password of the new user: ".fg::<BrightCyan>(),
             )
-                .expect("Couldn't read line")
-                .into_boxed_str(),
+            .expect("Couldn't read line")
+            .into_boxed_str(),
         );
 
         let pb = ProgressBar::new_spinner();
@@ -320,8 +320,8 @@ async fn change_password(
             rpassword::prompt_password(
                 "Please enter the current password of the user: ".fg::<BrightCyan>(),
             )
-                .expect("Couldn't read line")
-                .into_boxed_str(),
+            .expect("Couldn't read line")
+            .into_boxed_str(),
         );
 
         // TODO repromt as needed
@@ -337,8 +337,8 @@ async fn change_password(
             rpassword::prompt_password(
                 "Please enter the new password of the user: ".fg::<BrightCyan>(),
             )
-                .expect("Couldn't read line")
-                .into_boxed_str(),
+            .expect("Couldn't read line")
+            .into_boxed_str(),
         );
 
         let pb = ProgressBar::new_spinner();

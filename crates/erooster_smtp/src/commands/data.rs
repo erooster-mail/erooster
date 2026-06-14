@@ -4,11 +4,7 @@
 
 use crate::{
     commands::Data,
-    servers::{
-        sending::EmailPayload,
-        state::Data as StateData,
-        state::State,
-    },
+    servers::{sending::EmailPayload, state::Data as StateData, state::State},
     utils::rspamd::{Action, Response},
 };
 
@@ -25,6 +21,8 @@ use erooster_core::{
     },
     config::{Config, Rspamd},
 };
+use std::{collections::BTreeMap, io::Write, path::Path, time::Duration};
+use time::{macros::format_description, OffsetDateTime};
 use {
     cfg_if::cfg_if,
     color_eyre::{self, eyre::ContextCompat},
@@ -38,8 +36,6 @@ use {
     tracing::{debug, instrument, warn},
     uuid,
 };
-use std::{collections::BTreeMap, io::Write, path::Path, time::Duration};
-use time::{macros::format_description, OffsetDateTime};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct DataCommand<'a> {
@@ -51,7 +47,7 @@ impl DataCommand<'_> {
     pub async fn exec<S, E>(&mut self, lines: &mut S) -> color_eyre::eyre::Result<()>
     where
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
-        S: Sink<String, Error=E> + std::marker::Unpin + std::marker::Send,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         debug!("Waiting for incoming data");
         {
@@ -80,7 +76,7 @@ impl DataCommand<'_> {
     ) -> color_eyre::eyre::Result<()>
     where
         E: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
-        S: Sink<String, Error=E> + std::marker::Unpin + std::marker::Send,
+        S: Sink<String, Error = E> + std::marker::Unpin + std::marker::Send,
     {
         debug!("Reading incoming data");
 
@@ -121,19 +117,20 @@ impl DataCommand<'_> {
 
                     let data_owned: String;
                     let data = if let Some(rspamd_config) = &config.rspamd {
-                        match self.call_rspamd(
-                            rspamd_config,
-                            data,
-                            self.data.con_state.ehlo.as_ref().context("Missing ehlo")?,
-                            &self.data.con_state.peer_addr,
-                            self.data
-                                .con_state
-                                .sender
-                                .as_ref()
-                                .context("Missing sender")?,
-                            address,
-                            Some(username.clone()),
-                        )
+                        match self
+                            .call_rspamd(
+                                rspamd_config,
+                                data,
+                                self.data.con_state.ehlo.as_ref().context("Missing ehlo")?,
+                                &self.data.con_state.peer_addr,
+                                self.data
+                                    .con_state
+                                    .sender
+                                    .as_ref()
+                                    .context("Missing sender")?,
+                                address,
+                                Some(username.clone()),
+                            )
                             .await?
                         {
                             RspamdDecision::Accept(modified) => {
@@ -142,14 +139,11 @@ impl DataCommand<'_> {
                             }
                             RspamdDecision::PermReject => {
                                 lines
-                                    .send(String::from(
-                                        "550 5.7.1 Message cannot be accepted.",
-                                    ))
+                                    .send(String::from("550 5.7.1 Message cannot be accepted."))
                                     .await?;
                                 self.data.con_state.receipts = None;
                                 self.data.con_state.sender = None;
-                                self.data.con_state.state =
-                                    State::Authenticated(username.clone());
+                                self.data.con_state.state = State::Authenticated(username.clone());
                                 return Ok(());
                             }
                             RspamdDecision::TempReject => {
@@ -160,8 +154,7 @@ impl DataCommand<'_> {
                                     .await?;
                                 self.data.con_state.receipts = None;
                                 self.data.con_state.sender = None;
-                                self.data.con_state.state =
-                                    State::Authenticated(username.clone());
+                                self.data.con_state.state = State::Authenticated(username.clone());
                                 return Ok(());
                             }
                         }
@@ -176,7 +169,12 @@ impl DataCommand<'_> {
                         .sender
                         .clone()
                         .context("Missing sender in internal state")?;
-                    let to_addrs_str = to.values().flatten().cloned().collect::<Vec<_>>().join(", ");
+                    let to_addrs_str = to
+                        .values()
+                        .flatten()
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        .join(", ");
                     let email_payload = EmailPayload {
                         id: email_id,
                         to,
@@ -188,7 +186,14 @@ impl DataCommand<'_> {
                         require_tls: self.data.con_state.require_tls,
                     };
                     let payload_json = serde_json::to_string(&email_payload)?;
-                    queue::push(database.get_pool(), email_id, payload_json, &from, &to_addrs_str).await?;
+                    queue::push(
+                        database.get_pool(),
+                        email_id,
+                        payload_json,
+                        &from,
+                        &to_addrs_str,
+                    )
+                    .await?;
                     debug!("Email queued for outbound sending");
                 }
 
@@ -229,19 +234,20 @@ impl DataCommand<'_> {
 
                     let data_owned: String;
                     let data = if let Some(rspamd_config) = &config.rspamd {
-                        match self.call_rspamd(
-                            rspamd_config,
-                            data,
-                            self.data.con_state.ehlo.as_ref().context("Missing ehlo")?,
-                            &self.data.con_state.peer_addr,
-                            self.data
-                                .con_state
-                                .sender
-                                .as_ref()
-                                .context("Missing sender")?,
-                            receipt,
-                            None,
-                        )
+                        match self
+                            .call_rspamd(
+                                rspamd_config,
+                                data,
+                                self.data.con_state.ehlo.as_ref().context("Missing ehlo")?,
+                                &self.data.con_state.peer_addr,
+                                self.data
+                                    .con_state
+                                    .sender
+                                    .as_ref()
+                                    .context("Missing sender")?,
+                                receipt,
+                                None,
+                            )
                             .await?
                         {
                             RspamdDecision::Accept(modified) => {
@@ -250,9 +256,7 @@ impl DataCommand<'_> {
                             }
                             RspamdDecision::PermReject => {
                                 lines
-                                    .send(String::from(
-                                        "550 5.7.1 Message rejected by spam filter",
-                                    ))
+                                    .send(String::from("550 5.7.1 Message rejected by spam filter"))
                                     .await?;
                                 self.data.con_state.receipts = None;
                                 self.data.con_state.sender = None;

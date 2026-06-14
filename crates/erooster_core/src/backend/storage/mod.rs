@@ -9,12 +9,12 @@ use crate::{
     },
     config::Config,
 };
+use std::path::{Path, PathBuf};
 use {
     color_eyre,
     mailparse::{MailHeader, ParsedMail},
     tracing::instrument,
 };
-use std::path::{Path, PathBuf};
 
 /// The maildir format
 #[cfg(feature = "maildir")]

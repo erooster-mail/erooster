@@ -7,7 +7,7 @@
 //! failure it is nacked so the scheduler can retry with exponential backoff.
 
 use crate::servers::sending::{send_email_job, EmailPayload};
-use erooster_core::backend::{database::DB, database::Database, queue};
+use erooster_core::backend::{database::Database, database::DB, queue};
 use {
     serde_json,
     tokio::{self, time::Duration},
@@ -81,10 +81,7 @@ async fn deliver(database: &DB, entry: queue::QueueEntry) {
                     entry.id
                 );
                 if let Err(ack_err) = queue::ack(database.get_pool(), &entry.id).await {
-                    error!(
-                        "Failed to remove abandoned entry {}: {ack_err:?}",
-                        entry.id
-                    );
+                    error!("Failed to remove abandoned entry {}: {ack_err:?}", entry.id);
                 }
             } else {
                 warn!(

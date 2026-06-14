@@ -10,12 +10,12 @@ use erooster_core::{
     backend::storage::{MailStorage, Storage},
     config::Config,
 };
+use std::path::Path;
 use {
     color_eyre::{self, eyre::ContextCompat},
     futures::{Sink, SinkExt},
     tracing::{debug, instrument},
 };
-use std::path::Path;
 
 /// Returns the RFC 6154 special-use attribute for a folder, if any.
 fn special_use_flag(display_name: &str) -> Option<&'static str> {
@@ -279,7 +279,10 @@ impl List<'_> {
                 .await?;
         } else {
             lines
-                .send(format!("{} BAD LIST extended form not supported", command_data.tag))
+                .send(format!(
+                    "{} BAD LIST extended form not supported",
+                    command_data.tag
+                ))
                 .await?;
         }
         Ok(())

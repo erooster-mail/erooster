@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{backend::database::Database, config::Config};
+use sqlx::{pool::PoolOptions, sqlite::SqliteConnectOptions, SqlitePool};
+use std::str::FromStr;
 use {
     argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier},
     color_eyre::{self, Result},
@@ -10,8 +12,6 @@ use {
     secrecy::{ExposeSecret, SecretString},
     tracing::{debug, debug_span, error, instrument},
 };
-use sqlx::{pool::PoolOptions, sqlite::SqliteConnectOptions, SqlitePool};
-use std::str::FromStr;
 
 /// Postgres specific database implementation
 /// Holds data to connect to the database

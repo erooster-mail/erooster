@@ -9,7 +9,9 @@
 //! can correlate source and destination UIDs.
 
 use crate::{
-    commands::{parsers::parse_selected_range, select::get_or_create_uidvalidity, CommandData, Data},
+    commands::{
+        parsers::parse_selected_range, select::get_or_create_uidvalidity, CommandData, Data,
+    },
     servers::state::{Access, State},
 };
 use erooster_core::backend::storage::{maildir::MaildirMailEntry, MailEntry, MailStorage, Storage};
@@ -145,7 +147,10 @@ impl Copy<'_> {
 
         if src_uids.is_empty() {
             lines
-                .send(format!("{} OK COPY completed (no messages matched)", command_data.tag))
+                .send(format!(
+                    "{} OK COPY completed (no messages matched)",
+                    command_data.tag
+                ))
                 .await?;
             return Ok(());
         }
@@ -237,11 +242,15 @@ mod tests {
             .await
             .unwrap();
         let (mut tx, mut rx) = futures::channel::mpsc::unbounded();
-        let res = Copy { data: &data }.exec(&mut tx, &storage, &cmd_data, false).await;
+        let res = Copy { data: &data }
+            .exec(&mut tx, &storage, &cmd_data, false)
+            .await;
         assert!(res.is_ok(), "{res:?}");
         assert_eq!(
             rx.next().await,
-            Some(String::from("a1 BAD [CLIENTBUG] COPY requires a selected mailbox"))
+            Some(String::from(
+                "a1 BAD [CLIENTBUG] COPY requires a selected mailbox"
+            ))
         );
     }
 

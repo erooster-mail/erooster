@@ -14,6 +14,7 @@ use crate::{
 use erooster_core::backend::storage::{
     maildir::MaildirMailEntry, MailEntry, MailEntryType, MailStorage, Storage,
 };
+use time::{format_description::well_known::Rfc2822, OffsetDateTime};
 use {
     color_eyre::{
         self,
@@ -24,7 +25,6 @@ use {
     nom::{error::convert_error, Finish},
     tracing::{debug, error, instrument, warn},
 };
-use time::{format_description::well_known::Rfc2822, OffsetDateTime};
 
 pub struct Fetch<'a> {
     pub data: &'a Data,
@@ -108,9 +108,7 @@ impl Fetch<'_> {
                                 if let Some(resp) = generate_response(args.clone(), mail)? {
                                     // RFC 9051 Appendix E.21: all FETCH responses MUST include UID
                                     if resp.contains("UID") {
-                                        lines
-                                            .feed(format!("* {sequence} FETCH ({resp})"))
-                                            .await?;
+                                        lines.feed(format!("* {sequence} FETCH ({resp})")).await?;
                                     } else {
                                         lines
                                             .feed(format!("* {sequence} FETCH (UID {uid} {resp})"))
@@ -207,7 +205,10 @@ fn generate_response_for_attributes(
                     .collect::<Vec<_>>()
                     .join("\r\n");
                 let literal = format!("{headers}\r\n\r\n");
-                Ok(Some(format!("RFC822.HEADER {{{}}}\r\n{literal}", literal.len())))
+                Ok(Some(format!(
+                    "RFC822.HEADER {{{}}}\r\n{literal}",
+                    literal.len()
+                )))
             } else {
                 Ok(Some(String::from("RFC822.HEADER {2}\r\n\r\n")))
             }
@@ -253,25 +254,23 @@ fn generate_response_for_attributes(
             }
         }
         FetchAttributes::Uid => Ok(Some(format!("UID {}", mail.uid()))),
-        FetchAttributes::InternalDate => {
-            match mail.received() {
-                Ok(ts) => {
-                    let dt = OffsetDateTime::from_unix_timestamp(ts)
-                        .unwrap_or(OffsetDateTime::UNIX_EPOCH);
-                    match dt.format(&Rfc2822) {
-                        Ok(s) => Ok(Some(format!("INTERNALDATE \"{s}\""))),
-                        Err(e) => {
-                            warn!("Failed to format INTERNALDATE: {e}");
-                            Ok(Some(String::from("INTERNALDATE NIL")))
-                        }
+        FetchAttributes::InternalDate => match mail.received() {
+            Ok(ts) => {
+                let dt =
+                    OffsetDateTime::from_unix_timestamp(ts).unwrap_or(OffsetDateTime::UNIX_EPOCH);
+                match dt.format(&Rfc2822) {
+                    Ok(s) => Ok(Some(format!("INTERNALDATE \"{s}\""))),
+                    Err(e) => {
+                        warn!("Failed to format INTERNALDATE: {e}");
+                        Ok(Some(String::from("INTERNALDATE NIL")))
                     }
                 }
-                Err(e) => {
-                    warn!("Failed to get received timestamp: {e}");
-                    Ok(Some(String::from("INTERNALDATE NIL")))
-                }
             }
-        }
+            Err(e) => {
+                warn!("Failed to get received timestamp: {e}");
+                Ok(Some(String::from("INTERNALDATE NIL")))
+            }
+        },
         FetchAttributes::BodySection(section_text, range) => {
             Ok(Some(body(section_text, range, mail)))
         }

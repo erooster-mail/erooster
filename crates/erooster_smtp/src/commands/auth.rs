@@ -210,10 +210,9 @@ impl Auth<'_> {
         let bytes = BASE64_DECODER.decode(line.as_bytes());
         match bytes {
             Ok(bytes) => {
-                let password =
-                    SecretString::new(Box::from(from_utf8(
-                        SecretBox::<[u8]>::new(bytes.into_boxed_slice()).expose_secret(),
-                    )?));
+                let password = SecretString::new(Box::from(from_utf8(
+                    SecretBox::<[u8]>::new(bytes.into_boxed_slice()).expose_secret(),
+                )?));
 
                 {
                     if let State::Authenticating(AuthState::Password(username)) =

@@ -78,9 +78,7 @@ impl<'de> Deserialize<'de> for MessageSize {
 fn parse_size(s: &str) -> Result<MessageSize, String> {
     let s = s.trim();
     // Split into numeric prefix and unit suffix.
-    let split_pos = s
-        .find(|c: char| c.is_alphabetic())
-        .unwrap_or(s.len());
+    let split_pos = s.find(|c: char| c.is_alphabetic()).unwrap_or(s.len());
     let (num_str, unit_str) = s.split_at(split_pos);
     let num: u64 = num_str
         .trim()
@@ -92,7 +90,11 @@ fn parse_size(s: &str) -> Result<MessageSize, String> {
         "MB" | "MIB" => 1_048_576,
         "GB" | "GIB" => 1_073_741_824,
         "TB" | "TIB" => 1_099_511_627_776,
-        other => return Err(format!("unknown size unit \"{other}\"; use B, KB, MB, GB, or TB")),
+        other => {
+            return Err(format!(
+                "unknown size unit \"{other}\"; use B, KB, MB, GB, or TB"
+            ))
+        }
     };
     Ok(MessageSize(num * multiplier))
 }

@@ -63,9 +63,8 @@ impl Search<'_> {
                     // Assign sequence numbers (1-based, sorted by UID) before searching
                     mails.sort_by_key(MaildirMailEntry::uid);
                     for (idx, mail) in mails.iter_mut().enumerate() {
-                        mail.sequence_number = Some(
-                            u32::try_from(idx).expect("mail index fits u32") + 1,
-                        );
+                        mail.sequence_number =
+                            Some(u32::try_from(idx).expect("mail index fits u32") + 1);
                     }
 
                     let is_rev2 = self

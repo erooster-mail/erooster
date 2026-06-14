@@ -10,13 +10,13 @@ use erooster_core::{
     backend::storage::{MailStorage, Storage},
     config::Config,
 };
+use std::{io::Write, path::Path};
 use {
     color_eyre::{self, eyre::ContextCompat},
     futures::{Sink, SinkExt},
     nom::{error::convert_error, Finish},
     tracing::{debug, error, instrument},
 };
-use std::{io::Write, path::Path};
 
 pub struct Append<'a> {
     pub data: &'a mut Data,

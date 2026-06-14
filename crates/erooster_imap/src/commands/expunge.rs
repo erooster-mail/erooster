@@ -126,7 +126,9 @@ mod tests {
             .await
             .unwrap();
         let (mut tx, mut rx) = mpsc::unbounded();
-        let res = Expunge { data: &data }.exec(&mut tx, &storage, &cmd_data).await;
+        let res = Expunge { data: &data }
+            .exec(&mut tx, &storage, &cmd_data)
+            .await;
         assert!(res.is_ok(), "{:?}", res);
         assert_eq!(
             rx.next().await,
@@ -156,7 +158,9 @@ mod tests {
             .await
             .unwrap();
         let (mut tx, mut rx) = mpsc::unbounded();
-        let res = Expunge { data: &data }.exec(&mut tx, &storage, &cmd_data).await;
+        let res = Expunge { data: &data }
+            .exec(&mut tx, &storage, &cmd_data)
+            .await;
         assert!(res.is_ok(), "{:?}", res);
         assert_eq!(
             rx.next().await,

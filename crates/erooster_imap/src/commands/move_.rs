@@ -11,8 +11,8 @@
 
 use crate::{
     commands::{
-        copy::uid_set_string, parsers::parse_selected_range,
-        select::get_or_create_uidvalidity, CommandData, Data,
+        copy::uid_set_string, parsers::parse_selected_range, select::get_or_create_uidvalidity,
+        CommandData, Data,
     },
     servers::state::{Access, State},
 };

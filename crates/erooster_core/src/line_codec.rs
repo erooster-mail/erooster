@@ -3,12 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
+use std::{cmp, fmt, io, str};
 use {
     bytes::{Buf, BufMut, BytesMut},
     simdutf8::compat::from_utf8,
     tokio_util::codec::{Decoder, Encoder},
 };
-use std::{cmp, fmt, io, str};
 
 /// A simple [`Decoder`] and [`Encoder`] implementation that splits up data into lines.
 ///

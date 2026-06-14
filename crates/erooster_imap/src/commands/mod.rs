@@ -239,7 +239,9 @@ pub enum Response {
     /// Client sent IDLE; server already sent `+ idling`.  The server loop
     /// must now watch the selected mailbox and send unsolicited EXISTS updates
     /// until the client sends `DONE`.
-    Idle { tag: String },
+    Idle {
+        tag: String,
+    },
 }
 
 impl Data {
@@ -454,9 +456,7 @@ impl Data {
                         Namespace.exec(lines, &command_data).await?;
                     }
                     Commands::Unselect => {
-                        Unselect { data: self }
-                            .exec(lines, &command_data)
-                            .await?;
+                        Unselect { data: self }.exec(lines, &command_data).await?;
                     }
                     Commands::Copy => {
                         Copy { data: self }
@@ -491,8 +491,8 @@ impl Data {
 mod tests {
     use super::*;
     use convert_case::{Case, Casing};
-    use tokio;
     use enum_iterator::all;
+    use tokio;
 
     #[test]
     fn test_parsing_imaptag() {
@@ -618,7 +618,9 @@ mod tests {
         assert_eq!(response.unwrap(), Response::Continue);
         assert_eq!(
             rx.next().await,
-            Some(String::from("a1 BAD [CLIENTBUG] IDLE requires a selected mailbox"))
+            Some(String::from(
+                "a1 BAD [CLIENTBUG] IDLE requires a selected mailbox"
+            ))
         );
     }
 
@@ -648,7 +650,12 @@ mod tests {
             .parse(&mut tx, &config, &database, &storage, "a1 IDLE".to_string())
             .await;
         assert!(response.is_ok());
-        assert_eq!(response.unwrap(), Response::Idle { tag: "a1".to_string() });
+        assert_eq!(
+            response.unwrap(),
+            Response::Idle {
+                tag: "a1".to_string()
+            }
+        );
         assert_eq!(rx.next().await, Some(String::from("+ idling")));
     }
 }

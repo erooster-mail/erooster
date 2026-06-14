@@ -54,9 +54,7 @@ impl Vrfy<'_> {
                 .trim_end_matches('>')
                 .to_lowercase();
             if database.user_exists(&username).await {
-                lines
-                    .send(format!("250 2.1.5 <{username}>"))
-                    .await?;
+                lines.send(format!("250 2.1.5 <{username}>")).await?;
             } else {
                 lines
                     .send(format!(

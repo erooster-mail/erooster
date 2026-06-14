@@ -7,15 +7,15 @@ use crate::{
     servers::state::{Access, State},
 };
 use erooster_core::backend::storage::{MailStorage, Storage};
+use std::{
+    path::PathBuf,
+    time::{SystemTime, UNIX_EPOCH},
+};
 use {
     color_eyre::{self, eyre::ContextCompat},
     futures::{Sink, SinkExt},
     tokio::fs,
     tracing::instrument,
-};
-use std::{
-    path::PathBuf,
-    time::{SystemTime, UNIX_EPOCH},
 };
 
 pub struct Select<'a> {
@@ -27,21 +27,18 @@ pub struct Select<'a> {
 /// Reads `.uidvalidity` from the mailbox directory, creating it with the
 /// current Unix timestamp (seconds) if it doesn't exist yet. This ensures
 /// the value survives across server restarts and SELECT calls.
-pub async fn get_or_create_uidvalidity(mailbox_path: &std::path::Path) -> color_eyre::eyre::Result<u32> {
+pub async fn get_or_create_uidvalidity(
+    mailbox_path: &std::path::Path,
+) -> color_eyre::eyre::Result<u32> {
     let validity_file = mailbox_path.join(".uidvalidity");
     if validity_file.exists() {
         let contents = fs::read_to_string(&validity_file).await?;
-        let value: u32 = contents
-            .trim()
-            .parse()
-            .unwrap_or(1);
+        let value: u32 = contents.trim().parse().unwrap_or(1);
         return Ok(value);
     }
     // First time: seed from current Unix timestamp in seconds.
     #[allow(clippy::cast_possible_truncation)]
-    let value = SystemTime::now()
-        .duration_since(UNIX_EPOCH)?
-        .as_secs() as u32;
+    let value = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as u32;
     let value = value.max(1); // UIDVALIDITY must be non-zero
     if let Some(parent) = validity_file.parent() {
         fs::create_dir_all(parent).await?;

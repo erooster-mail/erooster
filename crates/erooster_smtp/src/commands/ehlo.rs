@@ -63,9 +63,7 @@ impl Ehlo<'_> {
         lines.feed(format!("250-{hostname}")).await?;
         lines.feed(String::from("250-ENHANCEDSTATUSCODES")).await?;
         lines.feed(String::from("250-PIPELINING")).await?;
-        lines
-            .feed(format!("250-SIZE {max_message_bytes}"))
-            .await?;
+        lines.feed(format!("250-SIZE {max_message_bytes}")).await?;
         lines.feed(String::from("250-8BITMIME")).await?;
         lines.feed(String::from("250-SMTPUTF8")).await?;
         if !self.data.con_state.secure {

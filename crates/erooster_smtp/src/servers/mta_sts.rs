@@ -2,17 +2,17 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use {
-    hickory_resolver::{proto::rr::RData, TokioResolver},
-    reqwest,
-    tracing::{debug, warn},
-};
 use std::{
     collections::HashMap,
     sync::OnceLock,
     time::{Duration, Instant},
 };
 use tokio::sync::RwLock;
+use {
+    hickory_resolver::{proto::rr::RData, TokioResolver},
+    reqwest,
+    tracing::{debug, warn},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MtaStsMode {
@@ -90,10 +90,7 @@ async fn fetch_policy_text(domain: &str) -> Option<String> {
 
 /// Fetch and cache the MTA-STS policy for `domain`.
 /// Returns `None` if the domain has no policy or the policy cannot be parsed.
-pub async fn fetch_mta_sts_policy(
-    domain: &str,
-    resolver: &TokioResolver,
-) -> Option<MtaStsPolicy> {
+pub async fn fetch_mta_sts_policy(domain: &str, resolver: &TokioResolver) -> Option<MtaStsPolicy> {
     let policy_id = lookup_policy_id(domain, resolver).await?;
 
     // Check the in-process cache before making an HTTPS request.

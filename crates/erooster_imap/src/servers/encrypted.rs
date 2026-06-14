@@ -17,6 +17,7 @@ use erooster_core::{
     LINE_LIMIT,
 };
 use notify;
+use std::{io, net::SocketAddr, path::Path, sync::Arc};
 use {
     color_eyre::{self, eyre::Context},
     futures::{SinkExt, StreamExt},
@@ -31,12 +32,6 @@ use {
     tokio_stream::wrappers::TcpListenerStream,
     tokio_util::codec::Framed,
     tracing::{debug, error, info, instrument},
-};
-use std::{
-    io,
-    net::SocketAddr,
-    path::Path,
-    sync::Arc,
 };
 
 /// An encrypted imap Server
@@ -68,8 +63,12 @@ fn load_certs(path: &Path) -> color_eyre::eyre::Result<Vec<CertificateDer<'stati
 
 #[instrument(skip(path))]
 fn load_key(path: &Path) -> color_eyre::eyre::Result<PrivateKeyDer<'static>> {
-    PrivateKeyDer::from_pem_file(path)
-        .map_err(|e| color_eyre::eyre::eyre!("no keys found in {:?} (encrypted keys not supported): {e:?}", path))
+    PrivateKeyDer::from_pem_file(path).map_err(|e| {
+        color_eyre::eyre::eyre!(
+            "no keys found in {:?} (encrypted keys not supported): {e:?}",
+            path
+        )
+    })
 }
 
 impl Server for Encrypted {
@@ -210,20 +209,29 @@ pub fn listen_tls(
                         Ok(Response::Idle { ref tag }) => {
                             let tag = tag.clone();
                             let idle_info = if let State::Selected(f, _) = &data.con_state.state {
-                                data.con_state.username.clone().map(|u| (f.replace('/', "."), u))
+                                data.con_state
+                                    .username
+                                    .clone()
+                                    .map(|u| (f.replace('/', "."), u))
                             } else {
                                 None
                             };
                             if let Some((folder, username)) = idle_info {
                                 match storage.to_ondisk_path(folder, username) {
                                     Ok(mailbox_path) => {
-                                        let (tx, mut rx) = mpsc::channel::<notify::Result<notify::Event>>(16);
+                                        let (tx, mut rx) =
+                                            mpsc::channel::<notify::Result<notify::Event>>(16);
                                         match recommended_watcher(move |res| {
                                             let _ = tx.blocking_send(res);
                                         }) {
                                             Ok(mut watcher) => {
-                                                if let Err(e) = watcher.watch(&mailbox_path, RecursiveMode::NonRecursive) {
-                                                    error!("[IMAP] IDLE: failed to watch mailbox: {e}");
+                                                if let Err(e) = watcher.watch(
+                                                    &mailbox_path,
+                                                    RecursiveMode::NonRecursive,
+                                                ) {
+                                                    error!(
+                                                        "[IMAP] IDLE: failed to watch mailbox: {e}"
+                                                    );
                                                 } else {
                                                     loop {
                                                         tokio::select! {
@@ -252,7 +260,9 @@ pub fn listen_tls(
                                                 }
                                                 drop(watcher);
                                             }
-                                            Err(e) => error!("[IMAP] IDLE: failed to create watcher: {e}"),
+                                            Err(e) => {
+                                                error!("[IMAP] IDLE: failed to create watcher: {e}")
+                                            }
                                         }
                                     }
                                     Err(e) => error!("[IMAP] IDLE: bad mailbox path: {e}"),

@@ -146,10 +146,19 @@ pub mod postgres {
         now_utc_iso8601, parse_delivery_log, retry_delay_secs, DeliveryAttempt, QueueEntry,
         QueueStatus, Result, MAX_ATTEMPTS,
     };
-    use {serde_json, tracing::instrument, uuid::Uuid};
     use sqlx::PgPool;
+    use {serde_json, tracing::instrument, uuid::Uuid};
 
-    type EntryRow = (String, String, String, i32, Option<String>, String, String, String);
+    type EntryRow = (
+        String,
+        String,
+        String,
+        i32,
+        Option<String>,
+        String,
+        String,
+        String,
+    );
 
     /// Insert a new entry into the queue.
     #[instrument(skip(pool, payload_json))]
@@ -326,7 +335,16 @@ pub mod postgres {
         Ok(rows
             .into_iter()
             .map(
-                |(id, payload, status, attempts, last_error, delivery_log_raw, from_addr, to_addrs)| {
+                |(
+                    id,
+                    payload,
+                    status,
+                    attempts,
+                    last_error,
+                    delivery_log_raw,
+                    from_addr,
+                    to_addrs,
+                )| {
                     QueueEntry {
                         id,
                         payload,
@@ -354,10 +372,19 @@ pub mod sqlite {
         now_utc_iso8601, parse_delivery_log, retry_delay_secs, DeliveryAttempt, QueueEntry,
         QueueStatus, Result, MAX_ATTEMPTS,
     };
-    use {serde_json, tracing::instrument, uuid::Uuid};
     use sqlx::SqlitePool;
+    use {serde_json, tracing::instrument, uuid::Uuid};
 
-    type EntryRow = (String, String, String, i32, Option<String>, String, String, String);
+    type EntryRow = (
+        String,
+        String,
+        String,
+        i32,
+        Option<String>,
+        String,
+        String,
+        String,
+    );
 
     /// Insert a new entry into the queue.
     #[instrument(skip(pool, payload_json))]
@@ -384,20 +411,28 @@ pub mod sqlite {
     #[instrument(skip(pool))]
     pub async fn pop(pool: &SqlitePool) -> Result<Option<QueueEntry>> {
         let row: Option<EntryRow> = sqlx::query_as(
-                "SELECT id, payload, status, attempts, last_error, delivery_log, from_addr, to_addrs \
+            "SELECT id, payload, status, attempts, last_error, delivery_log, from_addr, to_addrs \
                  FROM outbound_queue \
                  WHERE status IN ('pending', 'failed') \
                    AND next_retry_at <= datetime('now') \
                    AND attempts < $1 \
                  ORDER BY next_retry_at \
                  LIMIT 1",
-            )
-            .bind(MAX_ATTEMPTS)
-            .fetch_optional(pool)
-            .await?;
+        )
+        .bind(MAX_ATTEMPTS)
+        .fetch_optional(pool)
+        .await?;
 
-        if let Some((id, payload, status, attempts, last_error, delivery_log_raw, from_addr, to_addrs)) =
-            row
+        if let Some((
+            id,
+            payload,
+            status,
+            attempts,
+            last_error,
+            delivery_log_raw,
+            from_addr,
+            to_addrs,
+        )) = row
         {
             sqlx::query(
                 "UPDATE outbound_queue SET status = 'delivering', updated_at = datetime('now') WHERE id = $1",
@@ -502,26 +537,35 @@ pub mod sqlite {
     #[instrument(skip(pool))]
     pub async fn list_all(pool: &SqlitePool, status: Option<&str>) -> Result<Vec<QueueEntry>> {
         let rows: Vec<EntryRow> = if let Some(s) = status {
-                sqlx::query_as(
+            sqlx::query_as(
                     "SELECT id, payload, status, attempts, last_error, delivery_log, from_addr, to_addrs \
                      FROM outbound_queue WHERE status = $1 ORDER BY created_at",
                 )
                 .bind(s)
                 .fetch_all(pool)
                 .await?
-            } else {
-                sqlx::query_as(
+        } else {
+            sqlx::query_as(
                     "SELECT id, payload, status, attempts, last_error, delivery_log, from_addr, to_addrs \
                      FROM outbound_queue ORDER BY created_at",
                 )
                 .fetch_all(pool)
                 .await?
-            };
+        };
 
         Ok(rows
             .into_iter()
             .map(
-                |(id, payload, status, attempts, last_error, delivery_log_raw, from_addr, to_addrs)| {
+                |(
+                    id,
+                    payload,
+                    status,
+                    attempts,
+                    last_error,
+                    delivery_log_raw,
+                    from_addr,
+                    to_addrs,
+                )| {
                     QueueEntry {
                         id,
                         payload,

@@ -15,7 +15,6 @@ use erooster_core::{
     panic_handler::EroosterPanicMessage,
 };
 use {
-    cfg_if::cfg_if,
     clap::{self, Parser},
     color_eyre::{self, eyre::Result},
     tokio::{
@@ -24,7 +23,8 @@ use {
     },
     tokio_util::sync::CancellationToken,
     tracing::{error, info},
-    tracing_error, tracing_subscriber,
+    tracing_error::ErrorLayer,
+    tracing_subscriber::{self, EnvFilter, layer::SubscriberExt, util::SubscriberInitExt},
 };
 
 #[derive(Parser, Debug)]
@@ -48,33 +48,11 @@ async fn main() -> Result<()> {
     let config = erooster_core::get_config(args.config).await?;
 
     // Setup the rest of our logging
-    cfg_if! {
-        if #[cfg(feature = "jaeger")] {
-            use tracing_subscriber::layer::SubscriberExt;
-            use tracing_subscriber::util::SubscriberInitExt;
-            use tracing_subscriber::EnvFilter;
-            let tracer = opentelemetry_jaeger::new_agent_pipeline()
-                .with_service_name(env!("CARGO_PKG_NAME"))
-                .with_auto_split_batch(true)
-                .install_batch(opentelemetry::runtime::Tokio)?;
-            tracing_subscriber::Registry::default()
-                .with(ErrorLayer::default())
-                .with(tracing_subscriber::fmt::Layer::default())
-                .with(EnvFilter::from_default_env())
-                .with(tracing_opentelemetry::layer().with_tracer(tracer))
-                .init();
-        } else {
-            use tracing_error::ErrorLayer;
-            use tracing_subscriber::layer::SubscriberExt;
-            use tracing_subscriber::util::SubscriberInitExt;
-            use tracing_subscriber::EnvFilter;
-            tracing_subscriber::Registry::default()
-                .with(ErrorLayer::default())
-                .with(tracing_subscriber::fmt::Layer::default())
-                .with(EnvFilter::from_default_env())
-                .init();
-        }
-    }
+    tracing_subscriber::Registry::default()
+        .with(ErrorLayer::default())
+        .with(tracing_subscriber::fmt::Layer::default())
+        .with(EnvFilter::from_default_env())
+        .init();
 
     // Make panics pretty
     let next = std::panic::take_hook();
@@ -120,10 +98,5 @@ async fn main() -> Result<()> {
 fn cleanup(shutdown_flag: &CancellationToken) {
     info!("Received shutdown signal. Cleaning up");
     shutdown_flag.cancel();
-    cfg_if! {
-        if #[cfg(feature = "jaeger")] {
-            opentelemetry::global::shutdown_tracer_provider();
-        }
-    }
     info!("Shutdown complete");
 }

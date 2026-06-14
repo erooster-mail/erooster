@@ -29,7 +29,6 @@ color-eyre = { workspace = true }
 futures = { workspace = true }
 maildir = { workspace = true, optional = true }
 mailparse = { workspace = true }
-opentelemetry-otlp = { workspace = true, optional = true }
 owo-colors = { workspace = true }
 rand_core = { workspace = true }
 secrecy = { workspace = true }
@@ -41,7 +40,6 @@ sys-info = { workspace = true }
 tokio = { workspace = true }
 tokio-stream = { workspace = true }
 tokio-util = { workspace = true }
-tracing-opentelemetry = { workspace = true, optional = true }
 url = { workspace = true }
 uuid = { workspace = true }
 
@@ -51,7 +49,6 @@ vergen-gix = "10.0.0"
 [features]
 default = ["maildir"]
 maildir = ["dep:maildir"]
-jaeger = ["dep:opentelemetry-otlp", "dep:tracing-opentelemetry"]
 postgres = ["sqlx/postgres"]
 sqlite = ["sqlx/sqlite", "dep:rusqlite"]
 test-helpers = ["sqlite"]

@@ -35,6 +35,7 @@ allow = [
     "WTFPL",
     "Unicode-DFS-2016",
     "Unicode-3.0",
+    "CDLA-Permissive-2.0",
 ]
 confidence-threshold = 0.8
 exceptions = []

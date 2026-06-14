@@ -35,7 +35,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # stable
         with:
           toolchain: stable
-      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - run: cargo check
 
   test-pg:
@@ -75,7 +75,7 @@ jobs:
           persist-credentials: false
       - name: Install Rust
         run: rustup toolchain install nightly --component llvm-tools-preview
-      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - name: Install opendkim
         run: apt update && apt install -y opendkim-tools
       - name: Generate dkim-key
@@ -102,7 +102,7 @@ jobs:
           echo '  port: 80' >> /etc/erooster/config.yml
           echo '  tls: false' >> /etc/erooster/config.yml
       - name: Install cargo-llvm-cov and nextest
-        uses: taiki-e/install-action@84c20235bedc3797c7e1ddf685c574a4a6c666da # v2.52.2
+        uses: taiki-e/install-action@7a79fe8c3a13344501c80d99cae481c1c9085912 # v2.81.10
         with:
           tool: cargo-llvm-cov,nextest
       - name: Generate code coverage
@@ -122,7 +122,7 @@ jobs:
           cargo +nightly llvm-cov nextest --no-report --no-default-features --features "jaeger,postgres" --workspace --exclude erooster_imap
           cargo +nightly llvm-cov report --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
@@ -145,7 +145,7 @@ jobs:
           persist-credentials: false
       - name: Install Rust
         run: rustup toolchain install nightly --component llvm-tools-preview
-      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - name: Install opendkim and sqlite
         run: apt update && apt install -y opendkim-tools sqlite3
       - name: Generate dkim-key
@@ -172,7 +172,7 @@ jobs:
           echo '  port: 80' >> /etc/erooster/config.yml
           echo '  tls: false' >> /etc/erooster/config.yml
       - name: Install cargo-llvm-cov and nextest
-        uses: taiki-e/install-action@84c20235bedc3797c7e1ddf685c574a4a6c666da # v2.52.2
+        uses: taiki-e/install-action@7a79fe8c3a13344501c80d99cae481c1c9085912 # v2.81.10
         with:
           tool: cargo-llvm-cov,nextest
       - name: Generate code coverage
@@ -192,7 +192,7 @@ jobs:
           cargo +nightly llvm-cov nextest --no-report --no-default-features --features "jaeger,sqlite" --workspace
           cargo +nightly llvm-cov report --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
@@ -224,5 +224,5 @@ jobs:
         with:
           toolchain: stable
           components: rustfmt
-      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - run: cargo fmt --all -- --check

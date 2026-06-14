@@ -45,7 +45,7 @@ impl MaildirStorage {
 impl MailStorage<MaildirMailEntry> for MaildirStorage {
     #[instrument(skip(self, mailbox))]
     async fn get_uid_for_folder(&self, mailbox: &str) -> color_eyre::eyre::Result<u32> {
-        let max_uid: Option<i64> =
+        let max_uid: Option<i32> =
             sqlx::query_scalar("SELECT MAX(uid) FROM mails WHERE mailbox = $1")
                 .bind(mailbox)
                 .fetch_optional(self.db.get_pool())
@@ -181,7 +181,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
             .collect::<Vec<_>>()
             .join("");
         let maildir_id = maildir.store_cur_with_flags(data, &maildir_flags)?;
-        let next_uid: i64 =
+        let next_uid: i32 =
             sqlx::query_scalar("SELECT COALESCE(MAX(uid), 0) + 1 FROM mails WHERE mailbox = $1")
                 .bind(mailbox.as_str())
                 .fetch_one(self.db.get_pool())
@@ -205,7 +205,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
     ) -> color_eyre::eyre::Result<String> {
         let maildir = Maildir::from(path.to_path_buf());
         let maildir_id = maildir.store_new(data)?;
-        let next_uid: i64 =
+        let next_uid: i32 =
             sqlx::query_scalar("SELECT COALESCE(MAX(uid), 0) + 1 FROM mails WHERE mailbox = $1")
                 .bind(mailbox.as_str())
                 .fetch_one(self.db.get_pool())

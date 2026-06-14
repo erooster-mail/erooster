@@ -76,4 +76,6 @@ jobs:
         with:
           branchName: ${{ github.base_ref }}
           token: ${{ github.token }}
-          features: "benchmarking"
+          package: erooster_smtp
+          features: "benchmarking,postgres"
+          defaultFeatures: false

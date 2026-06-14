@@ -9,25 +9,59 @@ SPDX-License-Identifier: Apache-2.0
 [![codecov](https://codecov.io/gh/MTRNord/erooster/branch/main/graph/badge.svg?token=ieNQlSkDTF)](https://codecov.io/gh/MTRNord/erooster)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md)
 
-A mail suite written in rust meant to be easy to use.
+A mail suite written in Rust, meant to be easy to use.
+
+## Features
+
+**IMAP (ports 143 / 993)**
+- IMAP4rev2 (RFC 9051) and IMAP4rev1 (RFC 3501) compatible
+- TLS on port 993, STARTTLS on port 143
+- Extensions: `IDLE`, `NAMESPACE`, `UNSELECT`, `MOVE`, `ESEARCH`, `ENABLE`, `UTF8=ONLY`
+- `AUTH=PLAIN` over TLS
+
+**SMTP (port 25)**
+- STARTTLS
+- Extensions: `PIPELINING`, `SIZE`, `8BITMIME`, `AUTH LOGIN PLAIN` (over TLS), `REQUIRETLS`, `VRFY`
+- DKIM signing on outbound messages (RSA PKCS#1 and PKCS#8)
+- DKIM and DMARC verification on inbound messages
+- SPF verification
+- Optional [Rspamd](https://rspamd.com/) integration for spam filtering
+
+**General**
+- Maildir storage
+- PostgreSQL (default) or SQLite backend
+- Single binary, stable Rust
+- Autoconfig endpoint (`/mail/config-v1.1.xml`) for automatic client setup (Thunderbird etc.)
+- Optional [Sentry](https://sentry.io/) error reporting
+
+## Non-goals
+
+- MySQL / MariaDB support
+- POP3
+- Exchange / ActiveSync
+- Every optional extension from every RFC
 
 ## Getting started
 
-Currently, the setup is quite rough.
+### Requirements
 
-You need some certificates for your server (PEM format) and a Postgres database as well as dkim keys.
-The easiest way to get them is to use opendkim like this:
+- TLS certificates in PEM format (e.g. from Let's Encrypt)
+- DKIM key pair
+- PostgreSQL database (or SQLite for testing)
+
+### Generate DKIM keys
 
 ```bash
 opendkim-genkey \
-    --domain=<hostname> \
+    --domain=<your-hostname> \
     --subdomains
 ```
 
-you should save the file in the folder at `mail.dkim_key_path`.
-You also should add the TXT dns record that is in the txt file to your domain.
+Save the `.private` file at the path you set in `mail.dkim_key_path` and add the generated TXT record to your DNS.
 
-To get started you need a `config.yml` like this, it can either be in /etc/erooster or the working dir:
+### Configuration
+
+Create `config.yml` in `/etc/erooster/` or the working directory:
 
 ```yaml
 tls:
@@ -35,80 +69,59 @@ tls:
   cert_path: "./certs/cert.pem"
 mail:
   maildir_folders: "./maildir"
-  hostname: "localhost"
-  displayname: Erooster
+  hostname: "example.com"
+  displayname: "Erooster"
   dkim_key_path: "/etc/erooster/keys/default.private"
   dkim_key_selector: "default"
 database:
-  postgres_url: ""
+  url: "postgres://user:password@localhost/erooster"
 listen_ips:
-  - "[::1]"
-  - "127.0.0.1"
+  - "0.0.0.0"
+  - "[::]"
 webserver:
   port: 80
   tls: false
-sentry: false
+# Optional — remove if not using Rspamd
 rspamd:
   address: http://localhost:11333
 ```
 
-The maildir_folders defines where the emails and folders can be found at. This is close to the maildir format postfix uses. (We use other files to keep track of the state of it)
+`maildir_folders` is the root directory where per-user mail is stored in Maildir format.
 
-After that, you can just do `cargo run --release` to run it. The server is reachable via the usual IMAP ports. STARTTLS is only supported for SMTP.
+### Run
 
-### Setting up users
+```bash
+cargo run --release
+```
 
-To set up users, you can use the `eroosterctl` command.
-It will talk to the database. So make sure your config file is set up.
+Or with SQLite (testing only):
 
-To register a user, you simply run `eroosterctl register` and follow the questions.
-The password is saved as an argon2 hash inside the database.
+```bash
+cargo run --release --no-default-features --features sqlite
+```
 
-To change a password, there is the `change-password` subcommand.
-You need to provide the old password and the new one.
-It is planned that admins can also change this using a pre-encrypted password instead.
-In the future, this is going to be replaced by an integrated web interface users can directly use.
+### Manage users
 
-_Note: The status subcommand at this time doesn't actually check the server status._
+Use the bundled `eroosterctl` binary. It reads the same `config.yml`.
 
-## Features
+```bash
+# Create a new user
+eroosterctl register
 
-- Imap4rev2 compatible
-- Maildir support
-- TLS by default
-- Single binary
-- Low Resource usage
-- Postgres first
-- Integrated SMTP server
+# Change a user's password
+eroosterctl change-password
+```
 
-## Non Goal
+Passwords are stored as Argon2 hashes.
 
-- Implementing every single piece of optional spec
-- MySQL/MariaDB support
-- Support for IMAP LOGIN command (It is per rev2 spec)
-- Support for POP3
-- Support for Exchange (this is subject to change)
+## SQLite
 
-## Error Reporting
-
-Erooster by default does not auto report any panics or errors.
-It provides however a GitHub reporting link on panics.
-
-## Comparisons
-
-As I made a Reddit post, some comparisons were made in the commands.
-You can check them out at <https://www.reddit.com/r/rust/comments/uyxxrg/comment/ia7qwcg/?utm_source=share&utm_medium=web2x&context=3>
+SQLite is supported as a compile-time feature (`--features sqlite`) and is useful for local development and tests. It is **not recommended for production** — use PostgreSQL instead.
 
 ## Support
 
-Due to personal constraints, I currently do not prove enterprise support for this. Please open issues instead. I will try to reply as soon as I can, but I cannot guarantee a specific time frame.
+Due to personal constraints, there is no enterprise support for Erooster. Please open GitHub issues instead. Responses are best-effort with no guaranteed time frame.
 
-## Contact
+## Error reporting
 
-To contact the erooster team you can find us at <https://matrix.to/#/#erooster:midnightthoughts.space> or if an email is absolutely needed please write to [support@nordgedanken.dev](mailto:support@nordgedanken.dev). As written in the Support section, there is no enterprise support at this time. So please don't ask for it. It will just fill up the mailbox. :)
-
-## Note on SQLITE
-
-Note that this isnt officially supported outside of running tests. Some migrations rely on sql functions which sqlite does NOT support.
-
-Running sqlite in prod means no support whatsoever.
+Erooster does not report errors automatically. A GitHub link is printed on panics. You can optionally configure a Sentry DSN via environment variable for self-hosted error reporting.

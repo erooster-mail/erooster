@@ -490,8 +490,14 @@ impl Data {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use convert_case::{Case, Casing};
     use enum_iterator::all;
+
+    fn alternating_case(s: &str) -> String {
+        s.chars()
+            .enumerate()
+            .map(|(i, c)| if i % 2 == 0 { c.to_ascii_lowercase() } else { c.to_ascii_uppercase() })
+            .collect()
+    }
     use tokio;
 
     #[test]
@@ -513,12 +519,7 @@ mod tests {
                 Ok(("", Ok(command_variant)))
             );
             assert_eq!(
-                command(
-                    &command_variant
-                        .to_string()
-                        .to_lowercase()
-                        .to_case(Case::Alternating)
-                ),
+                command(&alternating_case(&command_variant.to_string().to_lowercase())),
                 Ok(("", Ok(command_variant)))
             );
         }

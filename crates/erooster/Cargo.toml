@@ -54,7 +54,7 @@ clap = { version = "4.1.6", features = [
     "suggestions",
     "env",
 ] }
-clap_mangen = "0.2.13"
+clap_mangen = "0.3.0"
 vergen-gix = "10.0.0"
 
 [lints]

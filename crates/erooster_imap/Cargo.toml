@@ -42,8 +42,7 @@ sqlite = ["erooster_core/sqlite"]
 
 [dev-dependencies]
 erooster_core = { version = "0.1.0", path = "../erooster_core", features = ["test-helpers"] }
-convert_case = "0.6.0"
-enum-iterator = "1.3.0"
+enum-iterator = "2.3.0"
 enum-display-derive = "0.1.1"
 
 [lints]

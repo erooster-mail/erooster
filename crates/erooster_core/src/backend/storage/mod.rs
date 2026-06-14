@@ -106,6 +106,7 @@ pub trait MailStorage<M: MailEntry> {
         mailbox: String,
         path: &Path,
         data: &[u8],
+        dkim_status: Option<String>,
     ) -> color_eyre::eyre::Result<String>;
     /// Store a message
     async fn store_cur_with_flags(

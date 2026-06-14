@@ -202,6 +202,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
         mailbox: String,
         path: &Path,
         data: &[u8],
+        dkim_status: Option<String>,
     ) -> color_eyre::eyre::Result<String> {
         let maildir = Maildir::from(path.to_path_buf());
         let maildir_id = maildir.store_new(data)?;
@@ -210,13 +211,16 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                 .bind(mailbox.as_str())
                 .fetch_one(self.db.get_pool())
                 .await?;
-        sqlx::query("INSERT INTO mails (maildir_id, modseq, mailbox, uid) VALUES ($1, $2, $3, $4)")
-            .bind(maildir_id.clone())
-            .bind(1i64)
-            .bind(mailbox)
-            .bind(next_uid)
-            .execute(self.db.get_pool())
-            .await?;
+        sqlx::query(
+            "INSERT INTO mails (maildir_id, modseq, mailbox, uid, dkim_status) VALUES ($1, $2, $3, $4, $5)",
+        )
+        .bind(maildir_id.clone())
+        .bind(1i64)
+        .bind(mailbox)
+        .bind(next_uid)
+        .bind(dkim_status)
+        .execute(self.db.get_pool())
+        .await?;
         Ok(maildir_id)
     }
 
@@ -737,14 +741,14 @@ mod tests {
         storage.create_dirs(&path).unwrap();
 
         storage
-            .store_new(mailbox.to_string(), &path, MSG)
+            .store_new(mailbox.to_string(), &path, MSG, None)
             .await
             .unwrap();
         let uid1 = storage.get_uid_for_folder(mailbox).await.unwrap();
         assert_eq!(uid1, 1, "first message should get UID 1");
 
         storage
-            .store_new(mailbox.to_string(), &path, MSG)
+            .store_new(mailbox.to_string(), &path, MSG, None)
             .await
             .unwrap();
         let uid2 = storage.get_uid_for_folder(mailbox).await.unwrap();
@@ -766,11 +770,11 @@ mod tests {
         storage.create_dirs(&sent_path).unwrap();
 
         storage
-            .store_new(inbox.to_string(), &inbox_path, MSG)
+            .store_new(inbox.to_string(), &inbox_path, MSG, None)
             .await
             .unwrap();
         storage
-            .store_new(inbox.to_string(), &inbox_path, MSG)
+            .store_new(inbox.to_string(), &inbox_path, MSG, None)
             .await
             .unwrap();
         // INBOX has 2 messages, so max uid = 2
@@ -778,7 +782,7 @@ mod tests {
 
         // Sent is independent — first message gets UID 1, not 3
         storage
-            .store_new(sent.to_string(), &sent_path, MSG)
+            .store_new(sent.to_string(), &sent_path, MSG, None)
             .await
             .unwrap();
         assert_eq!(storage.get_uid_for_folder(sent).await.unwrap(), 1);
@@ -799,11 +803,11 @@ mod tests {
         storage.create_dirs(&sent_path).unwrap();
 
         storage
-            .store_new(inbox.to_string(), &inbox_path, MSG)
+            .store_new(inbox.to_string(), &inbox_path, MSG, None)
             .await
             .unwrap();
         storage
-            .store_new(sent.to_string(), &sent_path, MSG)
+            .store_new(sent.to_string(), &sent_path, MSG, None)
             .await
             .unwrap();
 
@@ -827,7 +831,7 @@ mod tests {
 
         for _ in 0..3 {
             storage
-                .store_new(mailbox.to_string(), &path, MSG)
+                .store_new(mailbox.to_string(), &path, MSG, None)
                 .await
                 .unwrap();
         }

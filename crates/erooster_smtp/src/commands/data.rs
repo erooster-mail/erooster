@@ -28,16 +28,15 @@ use erooster_core::{
     config::{Config, Rspamd},
 };
 use futures::{Sink, SinkExt};
+use mail_auth::DkimResult;
 #[cfg(not(feature = "benchmarking"))]
-use mail_auth::{dmarc::verify::DmarcParameters, DkimResult, DmarcResult};
+use mail_auth::{dmarc::verify::DmarcParameters, DmarcResult};
 use mail_auth::{AuthenticatedMessage, MessageAuthenticator};
 use reqwest;
 use simdutf8::compat::from_utf8;
 use std::{collections::BTreeMap, io::Write, path::Path, time::Duration};
 use time::{macros::format_description, OffsetDateTime};
-#[cfg(not(feature = "benchmarking"))]
-use tracing::warn;
-use tracing::{debug, instrument};
+use tracing::{debug, instrument, warn};
 use uuid;
 
 #[allow(clippy::module_name_repetitions)]
@@ -191,7 +190,7 @@ impl DataCommand<'_> {
                             }
                         };
                         let message_id = storage
-                            .store_new(db_foldername, &mailbox_path, signed_data.as_bytes())
+                            .store_new(db_foldername, &mailbox_path, signed_data.as_bytes(), None)
                             .await?;
                         debug!("Stored local message: {}", message_id);
                         // Record in audit queue so postmasters can inspect local deliveries.
@@ -346,18 +345,48 @@ impl DataCommand<'_> {
                     // Validate signature
                     let dkim_result = resolver.verify_dkim(&authenticated_message).await;
 
-                    // Handle fail
+                    // Summarise to a single status string for logging and DB storage.
+                    // Priority: pass > temp_error > fail > neutral > none.
+                    let dkim_status = {
+                        let mut status = "none";
+                        for r in &dkim_result {
+                            match r.result() {
+                                DkimResult::Pass => {
+                                    status = "pass";
+                                    break;
+                                }
+                                DkimResult::TempError(_) if status != "pass" => {
+                                    status = "temp_error";
+                                }
+                                DkimResult::PermError(_) | DkimResult::Fail(_)
+                                    if !matches!(status, "pass" | "temp_error") =>
+                                {
+                                    status = "fail";
+                                }
+                                DkimResult::Neutral(_) if status == "none" => {
+                                    status = "neutral";
+                                }
+                                _ => {}
+                            }
+                        }
+                        status
+                    };
+                    if !matches!(dkim_status, "pass" | "none") {
+                        warn!("Incoming message DKIM status: {dkim_status}");
+                    }
+
+                    // Handle fail — reject in production, skip in benchmarking mode.
                     // TODO: generate reports
                     cfg_if! {
                         if #[cfg(feature = "benchmarking")] {} else {
                             for s in &dkim_result {
                                 match s.result() {
                                     DkimResult::Pass | DkimResult::None => break,
-                                    DkimResult::Neutral(e) => {
-                                        warn!("DKIM neutral result for email: {:?}", e);
+                                    DkimResult::Neutral(_) => {
+                                        // neutral: logged above, allow through
                                     },
                                     DkimResult::Fail(e) | DkimResult::PermError(e) => {
-                                        warn!("Message was rejected for missing passing DKIM signatures: {}", e);
+                                        warn!("Message rejected - no passing DKIM signatures: {}", e);
                                         lines
                                             .send(String::from(
                                                 "550 5.7.20 No passing DKIM signatures found.\r\n",
@@ -366,7 +395,7 @@ impl DataCommand<'_> {
                                         return Ok(());
                                     },
                                     DkimResult::TempError(e) => {
-                                        warn!("Message was rejected for missing passing DKIM signatures due to temp error: {}", e);
+                                        warn!("Message rejected - DKIM temp error: {}", e);
                                         lines
                                             .send(String::from(
                                                 "451 4.7.20 No passing DKIM signatures found.\r\n",
@@ -422,7 +451,12 @@ impl DataCommand<'_> {
                     }
 
                     let message_id = storage
-                        .store_new(db_foldername, &mailbox_path, data.as_bytes())
+                        .store_new(
+                            db_foldername,
+                            &mailbox_path,
+                            data.as_bytes(),
+                            Some(dkim_status.to_string()),
+                        )
                         .await?;
                     debug!("Stored message: {}", message_id);
                 }

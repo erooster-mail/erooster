@@ -28,10 +28,8 @@ jobs:
           allowed-endpoints: >
             api.github.com:443
             github.com:443
-            static.rust-lang.org:443
-            index.crates.io:443
-            crates.io:443
-            static.crates.io:443
+            objects.githubusercontent.com:443
+            release-assets.githubusercontent.com:443
 
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -39,7 +37,9 @@ jobs:
           persist-credentials: false
 
       - name: Install zizmor
-        run: cargo install zizmor
+        run: |
+          curl -sSfL https://github.com/woodruffw/zizmor/releases/latest/download/zizmor-x86_64-unknown-linux-musl.tar.gz \
+            | tar xz -C /usr/local/bin zizmor
 
       - name: Run zizmor
         run: zizmor --format sarif .github/workflows/ > zizmor.sarif

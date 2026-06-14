@@ -67,6 +67,7 @@ webpki-roots = "1.0.7"
 [workspace.lints.rust]
 unsafe_code = "forbid"
 missing_docs = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
 
 [workspace.lints.clippy]
 unwrap_used = "deny"

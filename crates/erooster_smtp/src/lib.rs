@@ -10,6 +10,7 @@
 //!
 //! This crate is containing the smtp logic of the erooster mail server.
 //!
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 #![allow(
     clippy::missing_panics_doc,
     clippy::missing_errors_doc,

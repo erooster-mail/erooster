@@ -11,7 +11,9 @@
 
 use crate::{
     commands::{
-        copy::uid_set_string, parsers::parse_selected_range, select::get_or_create_uidvalidity,
+        copy::{maildir_flags_to_imap, uid_set_string},
+        parsers::parse_selected_range,
+        select::get_or_create_uidvalidity,
         CommandData, Data,
     },
     servers::state::{Access, State},
@@ -135,13 +137,7 @@ impl Move<'_> {
             }
 
             let bytes = fs::read(mail.path()).await?;
-            let flags_str = mail.flags().to_string();
-            let imap_flags: Vec<String> = flags_str
-                .split(',')
-                .filter(|s| !s.is_empty())
-                .map(ToString::to_string)
-                .collect();
-
+            let imap_flags = maildir_flags_to_imap(mail.flags());
             storage
                 .store_cur_with_flags(dest_db_name.clone(), &dest_path, &bytes, imap_flags)
                 .await?;

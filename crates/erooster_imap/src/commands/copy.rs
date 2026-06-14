@@ -129,13 +129,7 @@ impl Copy<'_> {
             }
 
             let bytes = fs::read(mail.path()).await?;
-            let flags_str = mail.flags().to_string();
-            let imap_flags: Vec<String> = flags_str
-                .split(',')
-                .filter(|s| !s.is_empty())
-                .map(ToString::to_string)
-                .collect();
-
+            let imap_flags = maildir_flags_to_imap(mail.flags());
             storage
                 .store_cur_with_flags(dest_db_name.clone(), &dest_path, &bytes, imap_flags)
                 .await?;
@@ -167,6 +161,25 @@ impl Copy<'_> {
             .await?;
         Ok(())
     }
+}
+
+/// Converts raw maildir flag characters (e.g. `"SF"`) to IMAP flag strings.
+///
+/// Maildir encodes flags as single characters in the filename suffix; IMAP
+/// uses `\Seen`, `\Flagged`, etc.  Both COPY and MOVE must translate when
+/// writing a message to a new mailbox via `store_cur_with_flags`.
+pub fn maildir_flags_to_imap(maildir_flags: &str) -> Vec<String> {
+    maildir_flags
+        .chars()
+        .filter_map(|c| match c {
+            'S' => Some("\\Seen".to_string()),
+            'F' => Some("\\Flagged".to_string()),
+            'R' => Some("\\Answered".to_string()),
+            'T' => Some("\\Deleted".to_string()),
+            'D' => Some("\\Draft".to_string()),
+            _ => None,
+        })
+        .collect()
 }
 
 /// Formats a sorted list of UIDs as a compact RFC sequence set string (e.g. `1,3:5,7`).

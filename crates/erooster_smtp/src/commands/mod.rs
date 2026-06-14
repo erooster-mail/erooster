@@ -22,7 +22,7 @@ use {
         character::complete::alpha1,
         error::context,
         multi::many0,
-        sequence::{terminated, tuple},
+        sequence::terminated,
         Finish, IResult, Parser,
     },
     nom_language::error::{convert_error, VerboseError},
@@ -147,7 +147,7 @@ pub enum Response {
 impl Data {
     #[instrument(skip(line))]
     fn parse_internal(line: &str) -> Res<'_, (Result<Commands, String>, Vec<&str>)> {
-        context("parse_internal", tuple((command, arguments))).parse(line)
+        context("parse_internal", (command, arguments)).parse(line)
     }
 
     #[instrument(skip(self, lines, config, database, storage, line))]

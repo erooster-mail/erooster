@@ -23,19 +23,18 @@ use erooster_core::{
 };
 use std::{collections::BTreeMap, io::Write, path::Path, time::Duration};
 use time::{macros::format_description, OffsetDateTime};
-use {
-    cfg_if::cfg_if,
-    color_eyre::{self, eyre::ContextCompat},
-    futures::{Sink, SinkExt},
-    mail_auth::{
-        dmarc::verify::DmarcParameters, AuthenticatedMessage, DkimResult, DmarcResult,
-        MessageAuthenticator,
-    },
-    reqwest,
-    simdutf8::compat::from_utf8,
-    tracing::{debug, instrument, warn},
-    uuid,
-};
+use cfg_if::cfg_if;
+use color_eyre::{self, eyre::ContextCompat};
+use futures::{Sink, SinkExt};
+use mail_auth::{AuthenticatedMessage, MessageAuthenticator};
+#[cfg(not(feature = "benchmarking"))]
+use mail_auth::{DkimResult, DmarcResult, dmarc::verify::DmarcParameters};
+use reqwest;
+use simdutf8::compat::from_utf8;
+#[cfg(not(feature = "benchmarking"))]
+use tracing::warn;
+use tracing::{debug, instrument};
+use uuid;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct DataCommand<'a> {

@@ -12,7 +12,7 @@ use {
         combinator::{map, opt},
         error::context,
         multi::{many0, separated_list0, separated_list1},
-        sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
+        sequence::{delimited, pair, preceded, separated_pair, terminated},
         IResult, Parser,
     },
     nom_language::error::VerboseError,
@@ -109,7 +109,7 @@ fn fetch_attributes(input: &str) -> Res<'_, FetchAttributes> {
             }),
             map(tag_no_case("UID"), |_| FetchAttributes::Uid),
             map(
-                tuple((
+                (
                     tag_no_case("BODY.PEEK"),
                     section,
                     opt(space1),
@@ -122,7 +122,7 @@ fn fetch_attributes(input: &str) -> Res<'_, FetchAttributes> {
                         ),
                         char('>'),
                     )),
-                )),
+                ),
                 |(_, x, _, y)| {
                     FetchAttributes::BodyPeek(
                         x,
@@ -136,7 +136,7 @@ fn fetch_attributes(input: &str) -> Res<'_, FetchAttributes> {
                 },
             ),
             map(
-                tuple((
+                (
                     tag_no_case("RFC822.PEEK"),
                     section,
                     opt(space1),
@@ -149,7 +149,7 @@ fn fetch_attributes(input: &str) -> Res<'_, FetchAttributes> {
                         ),
                         char('>'),
                     )),
-                )),
+                ),
                 |(_, x, _, y)| {
                     FetchAttributes::BodyPeek(
                         x,
@@ -163,7 +163,7 @@ fn fetch_attributes(input: &str) -> Res<'_, FetchAttributes> {
                 },
             ),
             map(
-                tuple((
+                (
                     tag_no_case("BINARY.PEEK"),
                     section,
                     opt(space1),
@@ -176,7 +176,7 @@ fn fetch_attributes(input: &str) -> Res<'_, FetchAttributes> {
                         ),
                         char('>'),
                     )),
-                )),
+                ),
                 |(_, x, _, y)| {
                     FetchAttributes::BinaryPeek(
                         x,
@@ -191,11 +191,11 @@ fn fetch_attributes(input: &str) -> Res<'_, FetchAttributes> {
                     )
                 },
             ),
-            map(tuple((tag_no_case("BINARY.SIZE"), section)), |(_, x)| {
+            map((tag_no_case("BINARY.SIZE"), section), |(_, x)| {
                 FetchAttributes::BinarySize(x)
             }),
             map(
-                tuple((
+                (
                     tag_no_case("BODY"),
                     section,
                     opt(space1),
@@ -208,7 +208,7 @@ fn fetch_attributes(input: &str) -> Res<'_, FetchAttributes> {
                         ),
                         char('>'),
                     )),
-                )),
+                ),
                 |(_, x, _, y)| {
                     FetchAttributes::BodySection(
                         x,
@@ -222,7 +222,7 @@ fn fetch_attributes(input: &str) -> Res<'_, FetchAttributes> {
                 },
             ),
             map(
-                tuple((
+                (
                     tag_no_case("BINARY"),
                     section,
                     opt(space1),
@@ -235,7 +235,7 @@ fn fetch_attributes(input: &str) -> Res<'_, FetchAttributes> {
                         ),
                         char('>'),
                     )),
-                )),
+                ),
                 |(_, x, _, y)| {
                     FetchAttributes::Binary(
                         x,
@@ -737,7 +737,7 @@ fn search_return_opts(input: &str) -> Res<'_, SearchReturnOption> {
     context(
         "search_return_opts",
         map(
-            tuple((
+            (
                 tag_no_case("RETURN"),
                 space1,
                 delimited(
@@ -754,7 +754,7 @@ fn search_return_opts(input: &str) -> Res<'_, SearchReturnOption> {
                     )),
                     char(')'),
                 ),
-            )),
+            ),
             |(_, _, list)| {
                 if list.is_empty() {
                     SearchReturnOption::ALL
@@ -887,12 +887,12 @@ fn time(input: &str) -> Res<'_, Time> {
     context(
         "time",
         map(
-            tuple((
+            (
                 digit1,
                 tag_no_case(":"),
                 digit1,
                 opt(pair(tag_no_case(":"), digit1)),
-            )),
+            ),
             |(hours, _, minutes, seconds)| {
                 if let Some((_, seconds)) = seconds {
                     Time(format!("{hours}:{minutes}:{seconds}"))
@@ -916,8 +916,8 @@ fn date_time(input: &str) -> Res<'_, DateTime> {
     context(
         "date_time",
         map(
-            tuple((
-                opt(tuple((day_of_week, tag_no_case(","), space1))),
+            (
+                opt((day_of_week, tag_no_case(","), space1)),
                 digit1,
                 space1,
                 month,
@@ -926,8 +926,8 @@ fn date_time(input: &str) -> Res<'_, DateTime> {
                 space1,
                 time,
                 space1,
-                tuple((alt((tag_no_case("+"), tag_no_case("-"))), digit1)),
-            )),
+                (alt((tag_no_case("+"), tag_no_case("-"))), digit1),
+            ),
             |(day_of_week, day, _, month, _, year, _, time, _, (zone_dir, zone_offset))| {
                 if let Some((dayname, _, _)) = day_of_week {
                     DateTime::DayName(format!(
@@ -958,7 +958,7 @@ pub fn append_arguments(input: &str) -> Res<'_, AppendArgs<'_>> {
     context(
         "append_arguments",
         map(
-            tuple((
+            (
                 opt(delimited(
                     char('('),
                     separated_list0(
@@ -988,7 +988,7 @@ pub fn append_arguments(input: &str) -> Res<'_, AppendArgs<'_>> {
                     },
                 ),
                 tag_no_case("}"),
-            )),
+            ),
             |(flags, _, datetime, _, _, _, _, _, _, literal, _)| (flags, datetime, literal),
         ),
     )
@@ -1016,7 +1016,7 @@ pub fn parse_search_date(input: &str) -> Res<'_, time::Date> {
     context(
         "parse_search_date",
         map(
-            tuple((
+            (
                 opt(char('"')),
                 digit1,
                 char('-'),
@@ -1037,7 +1037,7 @@ pub fn parse_search_date(input: &str) -> Res<'_, time::Date> {
                 char('-'),
                 digit1,
                 opt(char('"')),
-            )),
+            ),
             |(_, day, _, month, _, year, _)| {
                 let date = format!("{day}-{month}-{year}");
                 time::Date::parse(

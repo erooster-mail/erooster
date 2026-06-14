@@ -37,9 +37,9 @@ jobs:
           persist-credentials: false
 
       - name: Install zizmor
-        run: |
-          curl -sSfL https://github.com/woodruffw/zizmor/releases/latest/download/zizmor-x86_64-unknown-linux-musl.tar.gz \
-            | tar xz -C /usr/local/bin zizmor
+        uses: taiki-e/install-action@7a79fe8c3a13344501c80d99cae481c1c9085912 # v2.81.10
+        with:
+          tool: zizmor
 
       - name: Run zizmor
         run: zizmor --format sarif .github/workflows/ > zizmor.sarif

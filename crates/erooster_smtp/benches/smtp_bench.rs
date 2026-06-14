@@ -32,9 +32,17 @@ async fn receive_message() {
     let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("250-ENHANCEDSTATUSCODES"));
     let resp = reader.next().await.unwrap().unwrap();
+    assert_eq!(resp, String::from("250-PIPELINING"));
+    let resp = reader.next().await.unwrap().unwrap();
+    assert!(resp.starts_with("250-SIZE "), "expected SIZE capability, got: {resp}");
+    let resp = reader.next().await.unwrap().unwrap();
+    assert_eq!(resp, String::from("250-8BITMIME"));
+    let resp = reader.next().await.unwrap().unwrap();
+    assert_eq!(resp, String::from("250-SMTPUTF8"));
+    let resp = reader.next().await.unwrap().unwrap();
     assert_eq!(resp, String::from("250-STARTTLS"));
     let resp = reader.next().await.unwrap().unwrap();
-    assert_eq!(resp, String::from("250 SMTPUTF8"));
+    assert_eq!(resp, String::from("250 VRFY"));
 
     // Login to SMTP server (not needed here)
     // TODO we need to make sure to do tls here.

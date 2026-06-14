@@ -33,7 +33,7 @@ pub type MailEntryType = MaildirMailEntry;
 pub enum MailState {
     /// Messages that have been marked as read
     Read,
-    /// Messaages that have been marked as unread
+    /// Messages that have been marked as unread
     New,
 }
 

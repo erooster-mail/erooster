@@ -11,3 +11,5 @@ locale = "en"
 [default.extend-words]
 # EMAIL term
 HELO = "HELO"
+# Deliberate test IMAP tag token in unit tests
+abd = "abd"

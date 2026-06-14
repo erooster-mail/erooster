@@ -4,13 +4,10 @@
 
 use {
     nom::{
-        bytes::complete::take_while1,
-        character::complete::char,
-        error::{context, VerboseError},
-        multi::many0,
-        sequence::delimited,
-        IResult,
+        bytes::complete::take_while1, character::complete::char, error::context, multi::many0,
+        sequence::delimited, IResult, Parser,
     },
+    nom_language::error::VerboseError,
     tracing::instrument,
 };
 
@@ -22,7 +19,8 @@ fn localpart(input: &str) -> Res<'_, Vec<&str>> {
     context(
         "localpart",
         many0(take_while1(|c: char| c != ',' && c != '>')),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[instrument(skip(input))]
@@ -30,5 +28,6 @@ pub fn localpart_arguments(input: &str) -> Res<'_, Vec<&str>> {
     context(
         "localpart_arguments",
         delimited(char('<'), localpart, char('>')),
-    )(input)
+    )
+    .parse(input)
 }

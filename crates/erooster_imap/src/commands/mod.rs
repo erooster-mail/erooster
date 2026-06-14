@@ -44,11 +44,12 @@ use {
         branch::alt,
         bytes::complete::{tag, take_while1},
         character::complete::alpha1,
-        error::{context, convert_error, VerboseError},
+        error::context,
         multi::many0,
         sequence::{terminated, tuple},
-        Finish, IResult,
+        Finish, IResult, Parser,
     },
+    nom_language::error::{convert_error, VerboseError},
     tracing::{debug, error, instrument, warn},
 };
 
@@ -207,13 +208,15 @@ fn imaptag(input: &str) -> Res<'_, &str> {
     context(
         "imaptag",
         terminated(take_while1(is_imaptag_char), tag(" ")),
-    )(input)
+    )
+    .parse(input)
 }
 
 /// Gets the input minus the tag
 #[instrument(skip(input))]
 fn command(input: &str) -> Res<'_, Result<Commands, String>> {
-    context("command", alt((terminated(alpha1, tag(" ")), alpha1)))(input)
+    context("command", alt((terminated(alpha1, tag(" ")), alpha1)))
+        .parse(input)
         .map(|(next_input, res)| (next_input, res.try_into()))
 }
 
@@ -227,7 +230,8 @@ fn arguments(input: &str) -> Res<'_, Vec<&str>> {
             terminated(take_while1(|c: char| !c.is_whitespace()), tag(" ")),
             take_while1(|c: char| c != ' '),
         ))),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[allow(clippy::upper_case_acronyms)]
@@ -247,7 +251,7 @@ pub enum Response {
 impl Data {
     #[instrument(skip(line))]
     fn parse_internal(line: &str) -> Res<'_, (&str, Result<Commands, String>, Vec<&str>)> {
-        context("parse_internal", tuple((imaptag, command, arguments)))(line)
+        context("parse_internal", tuple((imaptag, command, arguments))).parse(line)
     }
 
     #[allow(clippy::too_many_lines)]

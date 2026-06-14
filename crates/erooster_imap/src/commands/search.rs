@@ -10,7 +10,8 @@ use erooster_core::backend::storage::{maildir::MaildirMailEntry, MailEntry, Mail
 use {
     color_eyre::{self, eyre::ContextCompat},
     futures::{Sink, SinkExt},
-    nom::{error::convert_error, Finish},
+    nom::Finish,
+    nom_language::error::convert_error,
     tracing::{debug, error, instrument},
 };
 
@@ -494,6 +495,7 @@ mod tests {
     use super::*;
     use crate::commands::parsers::search_arguments;
     use nom::Finish;
+    use nom_language::error::VerboseError;
 
     #[test]
     fn test_generate_ranges_single() {

@@ -22,7 +22,8 @@ use {
         Result,
     },
     futures::{Sink, SinkExt},
-    nom::{error::convert_error, Finish},
+    nom::Finish,
+    nom_language::error::convert_error,
     tracing::{debug, error, instrument, warn},
 };
 

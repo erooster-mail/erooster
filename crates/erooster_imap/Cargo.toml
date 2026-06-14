@@ -26,6 +26,7 @@ color-eyre = { workspace = true }
 const_format = { workspace = true }
 futures = { workspace = true }
 nom = { workspace = true }
+nom-language = { workspace = true }
 notify = { workspace = true }
 rustls = { workspace = true }
 secrecy = { workspace = true }

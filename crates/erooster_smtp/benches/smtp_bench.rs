@@ -9,11 +9,11 @@ use erooster_core::{config::Config, line_codec::LinesCodec};
 use futures::{SinkExt, StreamExt};
 use secrecy::SecretString;
 use sqlx::migrate::MigrateDatabase;
-use std::str::FromStr;
 use std::{path::Path, thread, time::Duration};
 use tokio::net::TcpStream;
 use tokio::runtime;
 use tokio_util::codec::Framed;
+use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
 
 // Warning: This seems to fail on windows but works on linux fine
@@ -111,10 +111,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             error!("No config file found. Please follow the readme.");
             return;
         };
-        sqlx::postgres::Postgres::drop_database(&config.database.postgres_url)
+        sqlx::postgres::Postgres::drop_database(&config.database.url)
             .await
             .unwrap();
-        sqlx::postgres::Postgres::create_database(&config.database.postgres_url)
+        sqlx::postgres::Postgres::create_database(&config.database.url)
             .await
             .unwrap();
         match get_database(&config).await {
@@ -124,7 +124,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 database.add_user("test@localhost").await.unwrap();
                 info!("Setting user password");
                 database
-                    .change_password("test@localhost", SecretString::from_str("test").unwrap())
+                    .change_password("test@localhost", SecretString::from("test"))
                     .await
                     .unwrap();
                 info!("Created users");
@@ -133,7 +133,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
                 info!("Starting SMTP Server");
                 if let Err(e) = erooster_smtp::servers::unencrypted::Unencrypted::run(
-                    config, &database, &storage,
+                    config,
+                    &database,
+                    &storage,
+                    CancellationToken::new(),
                 )
                 .await
                 {

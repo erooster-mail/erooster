@@ -10,11 +10,12 @@ use {
         bytes::complete::{tag_no_case, take_while1},
         character::complete::{char, digit1, space1},
         combinator::{map, opt},
-        error::{context, VerboseError},
+        error::context,
         multi::{many0, separated_list0, separated_list1},
         sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
-        IResult,
+        IResult, Parser,
     },
+    nom_language::error::VerboseError,
     tracing::instrument,
 };
 
@@ -32,7 +33,8 @@ fn header_list(input: &str) -> Res<'_, Vec<&str>> {
             ),
             char(')'),
         ),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[derive(Debug, Clone)]
@@ -59,7 +61,8 @@ fn section_text(input: &str) -> Res<'_, SectionText> {
             map(tag_no_case("Header"), |_| SectionText::Header),
             map(tag_no_case("Text"), |_| SectionText::Text),
         )),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[instrument(skip(input))]
@@ -67,7 +70,8 @@ fn section(input: &str) -> Res<'_, Option<SectionText>> {
     context(
         "section",
         delimited(char('['), opt(section_text), char(']')),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[derive(Debug, Clone)]
@@ -258,7 +262,8 @@ fn fetch_attributes(input: &str) -> Res<'_, FetchAttributes> {
                 FetchAttributes::BodySection(None, None)
             }),
         )),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[derive(Debug, Clone)]
@@ -292,12 +297,13 @@ fn inner_fetch_arguments(input: &str) -> Res<'_, FetchArguments> {
             ),
             map(fetch_attributes, FetchArguments::Single),
         )),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[instrument(skip(input))]
 pub fn fetch_arguments(input: &str) -> Res<'_, FetchArguments> {
-    context("fetch_arguments", inner_fetch_arguments)(input)
+    context("fetch_arguments", inner_fetch_arguments).parse(input)
 }
 
 #[derive(Debug, Clone)]
@@ -369,7 +375,7 @@ pub struct SearchArguments {
 
 #[instrument(skip(input))]
 pub fn search_arguments(input: &str) -> Res<'_, SearchArguments> {
-    context("search_arguments", inner_search_arguments)(input)
+    context("search_arguments", inner_search_arguments).parse(input)
 }
 
 enum ProgramWithOrWithoutCharset {
@@ -459,7 +465,8 @@ fn inner_search_arguments(input: &str) -> Res<'_, SearchArguments> {
                 },
             ),
         )),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[instrument(skip(input))]
@@ -474,7 +481,8 @@ fn search_program(input: &str) -> Res<'_, SearchProgram> {
                 first_element.clone()
             }
         }),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[allow(clippy::too_many_lines)]
@@ -720,7 +728,8 @@ fn search_key(input: &str) -> Res<'_, SearchProgram> {
                 ),
             )),
         )),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[instrument(skip(input))]
@@ -756,7 +765,8 @@ fn search_return_opts(input: &str) -> Res<'_, SearchReturnOption> {
                 }
             },
         ),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[derive(Debug, Clone)]
@@ -818,7 +828,8 @@ pub fn parse_selected_range_inner(input: &str) -> Res<'_, Range> {
                 Range::Single(x.parse::<u32>().expect("single range is a number"))
             }),
         )),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[instrument(skip(input))]
@@ -826,7 +837,8 @@ pub fn parse_selected_range(input: &str) -> Res<'_, Vec<Range>> {
     context(
         "parse_selected_range",
         separated_list0(char(','), parse_selected_range_inner),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[instrument(skip(input))]
@@ -842,7 +854,8 @@ fn day_of_week(input: &str) -> Res<'_, &str> {
             tag_no_case("Sat"),
             tag_no_case("Sun"),
         )),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[instrument(skip(input))]
@@ -863,7 +876,8 @@ fn month(input: &str) -> Res<'_, &str> {
             tag_no_case("Nov"),
             tag_no_case("Dec"),
         )),
-    )(input)
+    )
+    .parse(input)
 }
 
 struct Time(String);
@@ -887,7 +901,8 @@ fn time(input: &str) -> Res<'_, Time> {
                 }
             },
         ),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -927,7 +942,8 @@ fn date_time(input: &str) -> Res<'_, DateTime> {
                 }
             },
         ),
-    )(input)
+    )
+    .parse(input)
 }
 
 pub struct LiteralSize {
@@ -975,7 +991,8 @@ pub fn append_arguments(input: &str) -> Res<'_, AppendArgs<'_>> {
             )),
             |(flags, _, datetime, _, _, _, _, _, _, literal, _)| (flags, datetime, literal),
         ),
-    )(input)
+    )
+    .parse(input)
 }
 
 // Parses this ABNF:
@@ -1032,7 +1049,8 @@ pub fn parse_search_date(input: &str) -> Res<'_, time::Date> {
                 .expect("date is in correct format")
             },
         ),
-    )(input)
+    )
+    .parse(input)
 }
 
 // Parses this ABNF:

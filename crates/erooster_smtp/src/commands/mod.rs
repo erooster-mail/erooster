@@ -20,11 +20,12 @@ use {
         branch::alt,
         bytes::complete::{tag, take_while1},
         character::complete::alpha1,
-        error::{context, convert_error, VerboseError},
+        error::context,
         multi::many0,
         sequence::{terminated, tuple},
-        Finish, IResult,
+        Finish, IResult, Parser,
     },
+    nom_language::error::{convert_error, VerboseError},
     tracing::{debug, error, instrument, warn},
 };
 
@@ -118,7 +119,8 @@ fn command(input: &str) -> Res<'_, Result<Commands, String>> {
             terminated(alpha1, tag(" ")),
             alpha1,
         )),
-    )(input)
+    )
+    .parse(input)
     .map(|(next_input, res)| (next_input, res.try_into()))
 }
 
@@ -131,7 +133,8 @@ fn arguments(input: &str) -> Res<'_, Vec<&str>> {
             terminated(take_while1(|c: char| c != ' '), tag(" ")),
             take_while1(|c: char| c != ' '),
         ))),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[allow(clippy::upper_case_acronyms)]
@@ -144,7 +147,7 @@ pub enum Response {
 impl Data {
     #[instrument(skip(line))]
     fn parse_internal(line: &str) -> Res<'_, (Result<Commands, String>, Vec<&str>)> {
-        context("parse_internal", tuple((command, arguments)))(line)
+        context("parse_internal", tuple((command, arguments))).parse(line)
     }
 
     #[instrument(skip(self, lines, config, database, storage, line))]

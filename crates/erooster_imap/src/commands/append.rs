@@ -14,7 +14,8 @@ use std::{io::Write, path::Path};
 use {
     color_eyre::{self, eyre::ContextCompat},
     futures::{Sink, SinkExt},
-    nom::{error::convert_error, Finish},
+    nom::Finish,
+    nom_language::error::convert_error,
     tracing::{debug, error, instrument},
 };
 

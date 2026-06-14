@@ -12,13 +12,12 @@ mail:
   dkim_key_path: "/etc/erooster/keys/default.private"
   dkim_key_selector: "default"
 database:
-  postgres_url: ""
+  url: "postgres://user:password@localhost/erooster"
 listen_ips:
   - "[::1]"
   - "127.0.0.1"
 webserver:
   port: 80
   tls: false
-sentry: false
 rspamd:
   address: http://localhost:11333

@@ -24,7 +24,7 @@ use {
     tokio_util::sync::CancellationToken,
     tracing::{error, info},
     tracing_error::ErrorLayer,
-    tracing_subscriber::{self, EnvFilter, layer::SubscriberExt, util::SubscriberInitExt},
+    tracing_subscriber::{self, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter},
 };
 
 #[derive(Parser, Debug)]

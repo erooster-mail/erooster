@@ -33,7 +33,7 @@ hickory-resolver = { version = "0.26.1", features = ["tokio"] }
 indicatif = "0.18.4"
 mail-auth = { version = "0.9.0", features = ["aws-lc-rs"] }
 maildir = { version = "0.6.4", features = ["mmap"] }
-mailparse = "0.14.1"
+mailparse = "0.16.1"
 mime = "0.3.17"
 nom = "8.0.0"
 nom-language = "0.1.0"

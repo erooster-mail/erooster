@@ -1,0 +1,94 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl \- command\-line management tool for the Erooster mail server
+.SH SYNOPSIS
+.B eroosterctl
+[\fI\-\-config\fR \fIpath\fR]
+[\fI\-\-output\fR \fBtable\fR|\fBjson\fR]
+[\fI\-\-no\-color\fR]
+[\fI\-y\fR]
+\fIcommand\fR [\fIoptions\fR]
+.SH DESCRIPTION
+\fBeroosterctl\fR is the administration CLI for the Erooster mail server suite.
+It provides commands for checking server health, managing users, inspecting the
+outbound mail queue, and verifying DNS configuration.
+.P
+All commands accept \fB\-\-output json\fR for machine\-readable output suitable
+for use with Ansible, scripts, and monitoring systems. When all required flags
+are supplied, commands run silently without prompts. When run interactively
+from a TTY with flags omitted, commands prompt for missing values using guided
+input.
+.SH OPTIONS
+.TP
+\fB\-c, \-\-config\fR \fIpath\fR
+Path to the Erooster configuration file. Defaults to \fI./config.yml\fR.
+.TP
+\fB\-\-output\fR \fBtable\fR|\fBjson\fR
+Output format. \fBtable\fR (default) renders a human\-readable table.
+\fBjson\fR emits newline\-terminated JSON for scripting.
+.TP
+\fB\-\-no\-color\fR
+Disable ANSI color output. Color is also automatically disabled when the
+\fBNO_COLOR\fR environment variable is set (to any value, including empty),
+when \fBTERM=dumb\fR, or when stdout is not a TTY.
+.TP
+\fB\-y, \-\-yes\fR
+Suppress interactive confirmation prompts globally. Equivalent to passing
+\fB\-\-yes\fR to each individual command.
+.SH COMMANDS
+.TP
+\fBstatus\fR
+Run live health checks against the database, TLS certificate, DKIM key, and
+autoconfig endpoint. See \fBeroosterctl\-status\fR(1).
+.TP
+\fBversion\fR
+Display version and build information. See \fBeroosterctl\-version\fR(1).
+.TP
+\fBconfig validate\fR
+Validate the configuration file. See \fBeroosterctl\-config\-validate\fR(1).
+.TP
+\fBuser\fR \fIsubcommand\fR (alias: \fBu\fR)
+Manage mail users: list, add, delete, passwd, exists, import.
+See \fBeroosterctl\-user\fR(1).
+.TP
+\fBmailbox list\fR (alias: \fBmb list\fR)
+List mailbox folders for a user. See \fBeroosterctl\-mailbox\-list\fR(1).
+.TP
+\fBqueue\fR \fIsubcommand\fR (alias: \fBq\fR)
+Manage the outbound mail queue: list, show, retry, flush, abandon.
+See \fBeroosterctl\-queue\fR(1).
+.TP
+\fBdomain check\fR (alias: \fBdns check\fR)
+Perform DNS record checks for the mail domain.
+See \fBeroosterctl\-domain\-check\fR(1).
+.SH EXIT STATUS
+.TP
+\fB0\fR
+Success.
+.TP
+\fB1\fR
+Operational error (health check failed, user not found, DB error, etc.).
+.TP
+\fB2\fR
+Usage error — required flags were missing in non\-interactive mode.
+.SH ENVIRONMENT
+.TP
+\fBNO_COLOR\fR
+When set to any value (including empty), disables all ANSI color output.
+See https://no\-color.org/ for the specification.
+.TP
+\fBTERM\fR
+When set to \fBdumb\fR, disables color output.
+.SH FILES
+.TP
+\fI./config.yml\fR
+Default configuration file path (override with \fB\-\-config\fR).
+.SH SEE ALSO
+\fBeroosterctl\-status\fR(1),
+\fBeroosterctl\-version\fR(1),
+\fBeroosterctl\-user\fR(1),
+\fBeroosterctl\-queue\fR(1),
+\fBeroosterctl\-domain\-check\fR(1)

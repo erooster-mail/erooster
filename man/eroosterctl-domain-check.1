@@ -1,0 +1,62 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-domain-check 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-domain\-check \- check DNS records for the mail domain
+.SH SYNOPSIS
+.B eroosterctl domain check
+[\fIhostname\fR]
+[\fI\-\-output\fR \fBtable\fR|\fBjson\fR]
+.SH DESCRIPTION
+Performs four DNS lookups against the mail domain and reports whether the
+records required for correct mail delivery are present and well\-formed:
+.P
+.RS 4
+\fBMX\fR \(em at least one MX record must exist; its priority and target host
+are shown.
+.P
+\fBSPF\fR \(em a TXT record starting with \fIv=spf1\fR must exist on the
+domain.
+.P
+\fBDKIM\fR \(em a TXT record must exist at
+\fI<selector>._domainkey.<hostname>\fR (selector is taken from
+\fImail.dkim_key_selector\fR in the configuration) and must contain a \fBp=\fR
+field with the public key.
+.P
+\fBDMARC\fR \(em a TXT record starting with \fIv=DMARC1\fR must exist at
+\fI_dmarc.<hostname>\fR.
+.RE
+.P
+The \fBdomain\fR command group may be abbreviated as \fBdns\fR.
+.SH OPTIONS
+.TP
+\fIhostname\fR
+Domain to check. Defaults to \fImail.hostname\fR from the configuration file.
+.TP
+\fB\-\-output\fR \fBtable\fR|\fBjson\fR
+\fBtable\fR (default) prints one row per check: CHECK, PASS/FAIL, detail.
+\fBjson\fR emits an array of objects with \fIcheck\fR, \fIstatus\fR, and
+\fIdetail\fR fields.
+.SH EXAMPLES
+.EX
+# Check the domain from config
+eroosterctl domain check
+
+# Check a specific domain
+eroosterctl dns check example.com
+
+# Suitable for CI / deployment pipelines
+eroosterctl --output json domain check example.com \
+  | jq '.[] | select(.status != "PASS")'
+.EE
+.SH EXIT STATUS
+.TP
+\fB0\fR
+All DNS checks passed.
+.TP
+\fB1\fR
+One or more DNS checks failed.
+.SH SEE ALSO
+\fBeroosterctl\fR(1),
+\fBeroosterctl\-status\fR(1)

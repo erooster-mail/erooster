@@ -1,0 +1,51 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-config-validate 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-config\-validate \- validate the Erooster configuration file
+.SH SYNOPSIS
+.B eroosterctl config validate
+[\fI\-\-output\fR \fBtable\fR|\fBjson\fR]
+.SH DESCRIPTION
+Reads the configuration file (default \fI./config.yml\fR, override with
+\fBeroosterctl \-\-config\fR) and validates it:
+.P
+.RS 4
+\(bu Required fields (\fImail.hostname\fR, \fImail.dkim_key_path\fR,
+\fImail.dkim_key_selector\fR, \fItls.cert_path\fR, \fItls.key_path\fR,
+\fIdatabase.url\fR) must not be empty.
+.P
+\(bu File paths (\fImail.dkim_key_path\fR, \fItls.cert_path\fR,
+\fItls.key_path\fR) must point to readable files.
+.P
+\(bu A database connection must be established successfully.
+.RE
+.P
+Each failure is reported on stderr. With \fB\-\-output json\fR the entire
+result is returned as a single JSON object even when errors are present.
+.SH OPTIONS
+.TP
+\fB\-\-output\fR \fBtable\fR|\fBjson\fR
+Output format. \fBjson\fR returns \fI{"ok": bool, "issues": [...]}\fR.
+.SH EXIT STATUS
+.TP
+\fB0\fR
+Configuration is valid.
+.TP
+\fB1\fR
+One or more validation errors were found.
+.SH EXAMPLES
+.EX
+# Validate and report errors
+eroosterctl config validate
+
+# Use in a deployment script
+eroosterctl --config /etc/erooster/config.yml config validate || exit 1
+
+# Parse issues in a pipeline
+eroosterctl --output json config validate | jq '.issues[]'
+.EE
+.SH SEE ALSO
+\fBeroosterctl\fR(1),
+\fBeroosterctl\-status\fR(1)

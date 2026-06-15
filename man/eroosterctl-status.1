@@ -1,0 +1,54 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-status 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-status \- show live health status of all server components
+.SH SYNOPSIS
+.B eroosterctl status
+[\fI\-\-output\fR \fBtable\fR|\fBjson\fR]
+.SH DESCRIPTION
+Runs a set of live health checks against each server component and prints
+a summary. The checks are:
+.P
+.RS 4
+\fBDatabase\fR \(em connects to the configured database and runs a lightweight
+query to confirm the connection is alive.
+.P
+\fBTLS cert\fR \(em reads the certificate at \fItls.cert_path\fR, verifies it
+has not expired, confirms the configured \fImail.hostname\fR is covered by the
+Subject Alternative Name or Common Name, and warns if expiry is fewer than 30
+days away.
+.P
+\fBDKIM key\fR \(em loads the private key at \fImail.dkim_key_path\fR and
+performs a test sign to confirm the key is valid and the file is readable.
+.P
+\fBAutoconfig\fR \(em sends an HTTP GET to the autoconfig discovery endpoint
+and verifies the response contains a valid \fI<clientConfig>\fR element.
+.RE
+.P
+After the check summary, \fBstatus\fR prints aggregate counts: total users,
+total mailbox folders, and queue pending / failed entries.
+.SH OPTIONS
+.TP
+\fB\-\-output\fR \fBtable\fR|\fBjson\fR
+Output format. \fBjson\fR emits a single JSON object containing the version,
+all check results, and aggregate counts.
+.SH EXIT STATUS
+.TP
+\fB0\fR
+All checks passed.
+.TP
+\fB1\fR
+One or more checks failed.
+.SH EXAMPLES
+.EX
+# Interactive health check
+eroosterctl status
+
+# Suitable for monitoring scripts
+eroosterctl --output json status | jq '.checks[] | select(.status != "OK")'
+.EE
+.SH SEE ALSO
+\fBeroosterctl\fR(1),
+\fBeroosterctl\-config\-validate\fR(1)

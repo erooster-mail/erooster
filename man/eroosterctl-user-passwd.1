@@ -1,0 +1,49 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-user-passwd 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-user\-passwd \- change a mail user's password
+.SH SYNOPSIS
+.B eroosterctl user passwd
+\fIemail\fR
+[\fI\-\-current\-password\fR \fIsecret\fR]
+[\fI\-\-new\-password\fR \fIsecret\fR]
+.SH DESCRIPTION
+Changes the password for an existing mail user. The current password must be
+provided and verified before the new password is accepted. Prompted
+interactively when stdin is a TTY and either flag is omitted.
+.SH OPTIONS
+.TP
+\fIemail\fR
+Email address of the user (required positional argument).
+.TP
+\fB\-\-current\-password\fR \fIsecret\fR
+The user's existing password. Prefer using the interactive prompt to avoid
+the value appearing in shell history or process listings.
+.TP
+\fB\-\-new\-password\fR \fIsecret\fR
+The replacement password. Prefer using the interactive prompt.
+.SH EXAMPLES
+.EX
+# Guided interactive change (recommended)
+eroosterctl user passwd alice@example.com
+
+# Scripted change using secrets from environment
+eroosterctl user passwd alice@example.com \
+  --current-password "$OLD_PW" \
+  --new-password "$NEW_PW"
+.EE
+.SH EXIT STATUS
+.TP
+\fB0\fR
+Password changed successfully.
+.TP
+\fB1\fR
+Current password incorrect or database error.
+.TP
+\fB2\fR
+Required flag missing in non\-interactive mode.
+.SH SEE ALSO
+\fBeroosterctl\-user\fR(1),
+\fBeroosterctl\-user\-add\fR(1)

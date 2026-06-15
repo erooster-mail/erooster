@@ -1,0 +1,35 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-queue-flush 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-queue\-flush \- force retry of all failed queue entries
+.SH SYNOPSIS
+.B eroosterctl queue flush
+.SH DESCRIPTION
+Resets every queue entry with status \fBfailed\fR to \fBpending\fR with an
+immediate \fInext_retry_at\fR. This is equivalent to running
+\fBeroosterctl queue retry\fR for each failed entry individually.
+.P
+Use this after resolving a systemic issue (e.g., DNS misconfiguration, expired
+TLS certificate on the outbound relay) to immediately reattempt all held
+messages.
+.SH EXAMPLES
+.EX
+# How many entries are failed?
+eroosterctl --output json queue list --status failed | jq length
+
+# Flush them all
+eroosterctl queue flush
+# 12 entries flushed, 0 errors.
+.EE
+.SH EXIT STATUS
+.TP
+\fB0\fR
+All entries successfully reset.
+.TP
+\fB1\fR
+One or more entries could not be reset (database errors).
+.SH SEE ALSO
+\fBeroosterctl\-queue\-retry\fR(1),
+\fBeroosterctl\-queue\-list\fR(1)

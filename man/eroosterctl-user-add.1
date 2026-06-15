@@ -1,0 +1,55 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-user-add 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-user\-add \- add a new user to the mail server
+.SH SYNOPSIS
+.B eroosterctl user add
+[\fI\-\-email\fR \fIaddress\fR]
+[\fI\-\-password\fR \fIsecret\fR]
+.SH DESCRIPTION
+Creates a new mail user account. When \fB\-\-email\fR and \fB\-\-password\fR
+are both supplied the command runs non\-interactively and exits silently with
+code 0 on success. When either flag is omitted and stdin is a TTY, the missing
+values are collected via interactive prompts; the password prompt requests
+confirmation.
+.P
+If stdin is not a TTY and a required flag is missing, the command writes a
+usage error to stderr and exits with code 2.
+.P
+The email address is lowercased before storage.
+.SH OPTIONS
+.TP
+\fB\-e, \-\-email\fR \fIaddress\fR
+Email address of the new user.
+.TP
+\fB\-p, \-\-password\fR \fIsecret\fR
+Password for the new user. Prefer passing this via an interactive prompt
+rather than on the command line, to avoid the password appearing in shell
+history.
+.SH EXAMPLES
+.EX
+# Guided interactive creation
+eroosterctl user add
+
+# Scripted (e.g., from Ansible)
+eroosterctl user add --email alice@example.com --password "$(cat /run/secrets/alice_pw)"
+
+# Pipe password securely from a secret manager
+printf '%s' "$SECRET" | eroosterctl user add --email bob@example.com --password -
+.EE
+.SH EXIT STATUS
+.TP
+\fB0\fR
+User created successfully.
+.TP
+\fB1\fR
+Database error or duplicate user.
+.TP
+\fB2\fR
+Required flag missing in non\-interactive mode.
+.SH SEE ALSO
+\fBeroosterctl\-user\fR(1),
+\fBeroosterctl\-user\-delete\fR(1),
+\fBeroosterctl\-user\-passwd\fR(1)

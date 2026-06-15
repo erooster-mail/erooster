@@ -108,6 +108,24 @@ impl Database<sqlx::Postgres> for Postgres {
         Ok(())
     }
 
+    #[instrument(skip(self))]
+    async fn list_users(&self) -> color_eyre::eyre::Result<Vec<String>> {
+        let rows: Vec<(String,)> =
+            sqlx::query_as("SELECT username FROM users ORDER BY username")
+                .fetch_all(self.get_pool())
+                .await?;
+        Ok(rows.into_iter().map(|(u,)| u).collect())
+    }
+
+    #[instrument(skip(self, username))]
+    async fn delete_user(&self, username: &str) -> color_eyre::eyre::Result<()> {
+        sqlx::query("DELETE FROM users WHERE username = $1")
+            .bind(username)
+            .execute(self.get_pool())
+            .await?;
+        Ok(())
+    }
+
     #[instrument(skip(self, username))]
     async fn user_exists(&self, username: &str) -> bool {
         let exists = sqlx::query("SELECT 1 FROM users WHERE username = $1")

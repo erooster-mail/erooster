@@ -1,0 +1,50 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-user-delete 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-user\-delete \- delete a mail user (aliases: \fBdel\fR, \fBrm\fR)
+.SH SYNOPSIS
+.B eroosterctl user delete
+\fIemail\fR
+[\fI\-\-yes\fR]
+.SH DESCRIPTION
+Removes the specified user from the database. This operation cannot be undone.
+Any stored mail for that user remains on disk in the maildir; it is not
+removed automatically.
+.P
+Unless \fB\-\-yes\fR is passed (or \fBeroosterctl \-y\fR) and stdin is a TTY,
+the user is prompted to confirm deletion. In non\-interactive mode (non\-TTY
+stdin), \fB\-\-yes\fR is required.
+.SH OPTIONS
+.TP
+\fIemail\fR
+Email address of the user to delete (required positional argument).
+.TP
+\fB\-y, \-\-yes\fR
+Skip the confirmation prompt.
+.SH EXAMPLES
+.EX
+# Interactive deletion with confirmation
+eroosterctl user delete alice@example.com
+
+# Scripted deletion (no prompt)
+eroosterctl user delete alice@example.com --yes
+
+# Ansible task (global --yes on root command)
+eroosterctl -y user delete alice@example.com
+.EE
+.SH EXIT STATUS
+.TP
+\fB0\fR
+User deleted.
+.TP
+\fB1\fR
+User not found or database error.
+.TP
+\fB2\fR
+\fB\-\-yes\fR required but not provided in non\-interactive mode.
+.SH SEE ALSO
+\fBeroosterctl\-user\fR(1),
+\fBeroosterctl\-user\-add\fR(1),
+\fBeroosterctl\-user\-list\fR(1)

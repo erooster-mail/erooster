@@ -1,0 +1,56 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-user-import 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-user\-import \- bulk import users from a CSV file
+.SH SYNOPSIS
+.B eroosterctl user import
+[\fI\-\-file\fR \fIpath\fR]
+.SH DESCRIPTION
+Reads a list of users from a CSV file (or stdin) and creates them in bulk.
+Each non\-empty, non\-comment line must be in the format:
+.P
+.RS 4
+\fIemail\fR,\fIpassword\fR
+.RE
+.P
+Lines beginning with \fB#\fR are treated as comments and skipped. Blank lines
+are skipped. The email address is lowercased before storage.
+.P
+If creation of a user fails (for example, because the address already exists),
+that row is skipped and counted as failed; the import continues with the
+remaining rows. A summary is printed at the end.
+.P
+\fBNote on security:\fR Passwords in the CSV file are visible to any user with
+read access to the file. Use file permissions (\fBchmod 600\fR) to restrict
+access, and delete or shred the file after import.
+.SH OPTIONS
+.TP
+\fB\-f, \-\-file\fR \fIpath\fR
+Path to the CSV file. If omitted, reads from stdin.
+.SH EXAMPLES
+.EX
+# Import from a file
+eroosterctl user import --file /tmp/new_users.csv
+
+# Import from a heredoc (password never touches disk)
+eroosterctl user import <<EOF
+alice@example.com,correct-horse-battery-staple
+bob@example.com,hunter2
+EOF
+
+# Count failures
+eroosterctl user import --file users.csv
+# 47 imported, 2 failed
+.EE
+.SH EXIT STATUS
+.TP
+\fB0\fR
+All users imported successfully.
+.TP
+\fB1\fR
+One or more users failed to import.
+.SH SEE ALSO
+\fBeroosterctl\-user\fR(1),
+\fBeroosterctl\-user\-add\fR(1)

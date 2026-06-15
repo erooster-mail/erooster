@@ -24,13 +24,24 @@ erooster_core = { version = "0.1.0", path = "../erooster_core" }
 clap = { workspace = true }
 clearscreen = { workspace = true }
 color-eyre = { workspace = true }
+comfy-table = "7.2.2"
+dialoguer = "0.12.0"
+hickory-resolver = { workspace = true }
 indicatif = { workspace = true }
+mail-auth = { workspace = true }
 owo-colors = { workspace = true }
+reqwest = { workspace = true }
+rustls = { workspace = true }
 rpassword = { workspace = true }
 secrecy = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+time = "0.3"
 tokio = { workspace = true }
+tokio-rustls = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+x509-parser = "0.18.1"
 
 [build-dependencies]
 vergen-gix = "10.0.0"

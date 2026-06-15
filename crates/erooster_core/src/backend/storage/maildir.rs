@@ -51,7 +51,7 @@ impl MailStorage<MaildirMailEntry> for MaildirStorage {
                 .fetch_optional(self.db.get_pool())
                 .await?
                 .flatten();
-        Ok(max_uid.unwrap_or(0) as u32)
+        Ok(max_uid.unwrap_or(0).cast_unsigned())
     }
 
     async fn find(&self, path: &Path, id: &str) -> Option<MaildirMailEntry> {

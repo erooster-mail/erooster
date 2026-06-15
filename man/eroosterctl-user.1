@@ -1,0 +1,40 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-user 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-user \- manage mail users (alias: \fBu\fR)
+.SH SYNOPSIS
+.B eroosterctl user
+\fIsubcommand\fR [\fIoptions\fR]
+.SH DESCRIPTION
+The \fBuser\fR command group provides subcommands for creating, listing,
+deleting, and managing mail user accounts. The group can be abbreviated as
+\fBu\fR.
+.SH SUBCOMMANDS
+.TP
+\fBlist\fR (alias: \fBls\fR)
+List all users. See \fBeroosterctl\-user\-list\fR(1).
+.TP
+\fBadd\fR
+Add a new user. See \fBeroosterctl\-user\-add\fR(1).
+.TP
+\fBdelete\fR (aliases: \fBdel\fR, \fBrm\fR)
+Delete a user. See \fBeroosterctl\-user\-delete\fR(1).
+.TP
+\fBpasswd\fR
+Change a user's password. See \fBeroosterctl\-user\-passwd\fR(1).
+.TP
+\fBexists\fR
+Check whether a user exists. See \fBeroosterctl\-user\-exists\fR(1).
+.TP
+\fBimport\fR
+Bulk\-import users from a CSV file. See \fBeroosterctl\-user\-import\fR(1).
+.SH SEE ALSO
+\fBeroosterctl\fR(1),
+\fBeroosterctl\-user\-list\fR(1),
+\fBeroosterctl\-user\-add\fR(1),
+\fBeroosterctl\-user\-delete\fR(1),
+\fBeroosterctl\-user\-passwd\fR(1),
+\fBeroosterctl\-user\-exists\fR(1),
+\fBeroosterctl\-user\-import\fR(1)

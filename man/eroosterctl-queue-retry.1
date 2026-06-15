@@ -1,0 +1,40 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-queue-retry 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-queue\-retry \- force immediate retry of a queue entry
+.SH SYNOPSIS
+.B eroosterctl queue retry
+\fIid\fR
+.SH DESCRIPTION
+Resets a failed or abandoned queue entry to \fBpending\fR and sets its
+\fInext_retry_at\fR to the current time, causing the delivery worker to pick
+it up on its next pass. Attempt count is reset to zero so the full retry
+schedule applies again.
+.P
+Use this when a transient error (DNS failure, remote MTA downtime) has been
+resolved and you want to reattempt delivery immediately rather than waiting
+for the next automatic retry.
+.SH OPTIONS
+.TP
+\fIid\fR
+The queue entry ID (required positional argument).
+.SH EXAMPLES
+.EX
+eroosterctl queue retry 550e8400-e29b-41d4-a716-446655440000
+
+# Retry all failed entries at once
+eroosterctl queue flush
+.EE
+.SH EXIT STATUS
+.TP
+\fB0\fR
+Entry queued for retry.
+.TP
+\fB1\fR
+Database error or entry not found.
+.SH SEE ALSO
+\fBeroosterctl\-queue\-flush\fR(1),
+\fBeroosterctl\-queue\-abandon\fR(1),
+\fBeroosterctl\-queue\-show\fR(1)

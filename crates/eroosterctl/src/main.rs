@@ -1,433 +1,154 @@
-// SPDX-FileCopyrightText: 2023 MTRNord
+// SPDX-FileCopyrightText: 2026 MTRNord
 //
 // SPDX-License-Identifier: Apache-2.0
 
-//! Erooster Mail Server
-//!
-//! Erooster is a rust native imap server build on modern solutions.
-//! The goal being easy to setup, use and maintain for smaller mail servers
-//! while being also fast and efficient.
-//!
+//! eroosterctl — command-line management tool for Erooster mail server.
+
 #![allow(clippy::missing_panics_doc)]
 
-use {
-    clap::{self, Parser, Subcommand},
-    clearscreen,
-    color_eyre::{self, Result},
-    indicatif::{ProgressBar, ProgressStyle},
-    owo_colors::{
-        colors::{BrightCyan, BrightGreen, BrightRed, BrightWhite},
-        DynColors, OwoColorize,
-    },
-    rpassword,
-    secrecy::SecretString,
-    tokio,
-    tracing::error,
-    tracing_subscriber,
-};
+use clap::{Parser, Subcommand};
+use color_eyre::Result;
+use erooster_core::panic_handler::EroosterPanicMessage;
 
-use erooster_core::{
-    backend::database::{get_database, Database},
-    config::Config,
-    panic_handler::EroosterPanicMessage,
-};
-use std::io::Write;
-use std::time::Duration;
-use std::{io, process::exit};
+mod config_cmd;
+mod domain;
+mod mailbox;
+mod output;
+mod queue;
+mod status;
+mod user;
+
+use output::OutputFormat;
+
 #[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None, propagate_version = true)]
+#[command(
+    author,
+    version,
+    about = "Erooster mail server management CLI",
+    long_about = None,
+    propagate_version = true
+)]
 struct Cli {
-    #[clap(subcommand)]
-    command: Commands,
-    #[clap(short, long, default_value = "./config.yml")]
+    /// Path to the configuration file
+    #[arg(short, long, default_value = "./config.yml")]
     config: String,
+
+    /// Output format
+    #[arg(long, value_enum, default_value = "table")]
+    output: OutputFormat,
+
+    /// Disable color output (also respected: `NO_COLOR` env var, `TERM=dumb`)
+    #[arg(long)]
+    no_color: bool,
+
+    /// Skip interactive confirmation prompts
+    #[arg(short, long)]
+    yes: bool,
+
+    #[command(subcommand)]
+    command: Commands,
 }
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Checks the server status
+    /// Show live health status of all server components
     Status,
-    /// Register a new User to the server
-    Register {
-        /// The email of the new user (optional, required if --password is set)
-        #[clap(short, long)]
-        email: Option<String>,
-        /// The password of the new user (optional, required if --username is set)
-        #[clap(short, long)]
-        password: Option<SecretString>,
-    },
-    // Change a users password
-    ChangePassword {
-        /// The email of the user (optional, required if any option is set)
-        #[clap(short, long)]
-        email: Option<String>,
-        /// The current password of the user (optional, required if any option is set)
-        #[clap(short, long)]
-        current_password: Option<SecretString>,
-        /// The new password of the user (optional, required if any option is set)
-        #[clap(short, long)]
-        new_password: Option<SecretString>,
-    },
+
+    /// Show version and build information
+    Version,
+
+    /// Configuration management
+    #[command(subcommand, alias = "cfg")]
+    Config(config_cmd::ConfigCommands),
+
+    /// User management
+    #[command(subcommand, alias = "u")]
+    User(user::UserCommands),
+
+    /// Mailbox management
+    #[command(subcommand, alias = "mb")]
+    Mailbox(mailbox::MailboxCommands),
+
+    /// Outbound queue management
+    #[command(subcommand, alias = "q")]
+    Queue(queue::QueueCommands),
+
+    /// Domain DNS record checks
+    #[command(subcommand, alias = "dns")]
+    Domain(domain::DomainCommands),
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let builder = color_eyre::config::HookBuilder::default().panic_message(EroosterPanicMessage);
+    let builder =
+        color_eyre::config::HookBuilder::default().panic_message(EroosterPanicMessage);
     let (panic_hook, eyre_hook) = builder.into_hooks();
     eyre_hook.install()?;
 
+    let next = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        eprintln!("{}", panic_hook.panic_report(info));
+        next(info);
+    }));
+
     let cli = Cli::parse();
-    let config = erooster_core::get_config(cli.config).await?;
+
+    // Install the aws-lc-rs crypto provider so rustls TLS checks don't panic.
+    // This must happen before any TLS code runs (e.g. the status command's IMAP :993 check).
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
 
     tracing_subscriber::fmt::init();
 
-    let next = std::panic::take_hook();
-    std::panic::set_hook(Box::new(move |panic_info| {
-        eprintln!("{}", panic_hook.panic_report(panic_info));
-        next(panic_info);
-    }));
+    if let Commands::Version = cli.command {
+        print_version(cli.output, cli.no_color);
+        return Ok(());
+    }
+
+    let config = erooster_core::get_config(cli.config).await?;
 
     match cli.command {
         Commands::Status => {
-            status();
+            status::run(&config, cli.output, cli.no_color).await?;
         }
-        Commands::Register { email, password } => {
-            register(email, password, &config).await;
+        Commands::Config(cmd) => {
+            config_cmd::run(cmd, &config, cli.output, cli.no_color).await?;
         }
-        Commands::ChangePassword {
-            email,
-            current_password,
-            new_password,
-        } => {
-            change_password(email, current_password, new_password, &config).await;
+        Commands::User(cmd) => {
+            user::run(cmd, &config, cli.output, cli.yes, cli.no_color).await?;
         }
+        Commands::Mailbox(cmd) => {
+            mailbox::run(cmd, &config, cli.output).await?;
+        }
+        Commands::Queue(cmd) => {
+            queue::run(cmd, &config, cli.output, cli.yes, cli.no_color).await?;
+        }
+        Commands::Domain(cmd) => {
+            domain::run(cmd, &config, cli.output, cli.no_color).await?;
+        }
+        Commands::Version => unreachable!(),
     }
+
     Ok(())
 }
 
-const ICON: &str = r#"
-     __;//;
-    /;.;__;.;\
-    \ ;\/; /;
- ';__/    \
-  \-      )
-   \_____/;
-_____;|;_;|;____; 
-     " ""#;
+fn print_version(format: OutputFormat, no_color: bool) {
+    let version = env!("CARGO_PKG_VERSION");
 
-const FINS: &str = "#A62A13";
-const HEAD: &str = "#FFBA00";
-const EYES: &str = "#232324";
-const BEAK: &str = "#FF8D16";
-const BODY: &str = "#8E5E4F";
-const FEATHER: &str = "#2C5422";
-const LINE: &str = "#000000";
-const CLAWS: &str = "#FFB804";
+    #[cfg(feature = "postgres")]
+    let db_backend = "postgres";
+    #[cfg(feature = "sqlite")]
+    let db_backend = "sqlite";
+    #[cfg(not(any(feature = "postgres", feature = "sqlite")))]
+    let db_backend = "unknown";
 
-#[allow(clippy::unwrap_used)]
-fn status() {
-    let colors: [DynColors; 17] = [
-        HEAD, FINS, HEAD, EYES, HEAD, EYES, HEAD, BEAK, HEAD, FEATHER, BODY, LINE, CLAWS, LINE,
-        CLAWS, LINE, CLAWS,
-    ]
-    .map(|color| color.parse().unwrap());
-
-    let mut current_color_index = 0;
-    let mut out = String::new();
-    for char in ICON.chars() {
-        if char == ';' {
-            current_color_index += 1;
-        } else {
-            out = format!("{out}{}", char.color(colors[current_color_index]).bold());
-        }
-    }
-
-    for (index, line) in out.lines().enumerate() {
-        if index == 2 {
-            println!(
-                "{}    {}         {}",
-                line,
-                "Erooster:".fg::<BrightWhite>(),
-                "OK".fg::<BrightGreen>().bold()
-            );
-        } else if index == 3 {
-            println!(
-                "{}    {}   {}",
-                line,
-                "Outgoing Email:".fg::<BrightWhite>(),
-                "OK".fg::<BrightGreen>().bold()
-            );
-        } else if index == 4 {
-            println!(
-                "{}    {}   {}",
-                line,
-                "Incoming Email:".fg::<BrightWhite>(),
-                "OK".fg::<BrightGreen>().bold()
-            );
-        } else if index == 5 {
-            println!(
-                "{}   {}        {}",
-                line,
-                "Webserver:".fg::<BrightWhite>(),
-                "OK".fg::<BrightGreen>().bold()
-            );
-        } else if index == 6 {
-            println!(
-                "{}    {}         {}",
-                line,
-                "Database:".fg::<BrightWhite>(),
-                "OK".fg::<BrightGreen>().bold()
-            );
-        } else {
-            println!("{line}");
-        }
-    }
-}
-
-async fn register(username: Option<String>, password: Option<SecretString>, config: &Config) {
-    let spinner_style = ProgressStyle::default_spinner()
-        .template("{spinner} {wide_msg}")
-        .expect("template working")
-        .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
-    if username.is_some() && password.is_none() {
-        error!("Missing password");
-    } else if username.is_none() && password.is_some() {
-        error!("Missing username");
-    } else if username.is_none() && password.is_none() {
-        clearscreen::clear().expect("failed to clear screen");
-        // Get users username
-        let mut username = String::new();
-        print!(
-            "{}",
-            "Please enter the email address of the new user: ".fg::<BrightCyan>()
-        );
-        io::stdout().flush().expect("Couldn't flush stdout");
-        io::stdin()
-            .read_line(&mut username)
-            .expect("Couldn't read line");
-        // We remove the newline
-        username = username.replace(['\n', '\r'], "");
-
-        // TODO input validation
-
-        // Get users password (doesnt show it)
-        let password = SecretString::new(
-            rpassword::prompt_password(
-                "Please enter the email password of the new user: ".fg::<BrightCyan>(),
-            )
-            .expect("Couldn't read line")
-            .into_boxed_str(),
-        );
-
-        let pb = ProgressBar::new_spinner();
-        pb.set_style(spinner_style);
-        pb.enable_steady_tick(Duration::from_millis(100));
-        clearscreen::clear().expect("failed to clear screen");
-        pb.set_message("Adding the new user...".fg::<BrightGreen>().to_string());
-        let result = actual_register(username, password, config).await;
-
-        clearscreen::clear().expect("failed to clear screen");
-        if let Err(error) = result {
-            pb.finish_with_message(format!(
-                "{}\n{}",
-                "There has been an error while registering the user:".fg::<BrightRed>(),
-                error.fg::<BrightRed>()
-            ));
-        } else {
-            pb.finish_with_message(
-                "User was successfully added"
-                    .fg::<BrightGreen>()
-                    .to_string(),
-            );
-        }
+    if format == OutputFormat::Json {
+        let _ = output::print_json(&serde_json::json!({
+            "version": version,
+            "db_backend": db_backend,
+        }));
     } else {
-        clearscreen::clear().expect("failed to clear screen");
-        let pb = ProgressBar::new_spinner();
-        pb.set_style(spinner_style);
-        pb.enable_steady_tick(Duration::from_millis(100));
-        pb.set_message("Adding the new user...".fg::<BrightGreen>().to_string());
-
-        let username = username.expect("Username is not empty");
-        let password = password.expect("Password is not empty");
-        let result = actual_register(username, password, config).await;
-
-        clearscreen::clear().expect("failed to clear screen");
-        if let Err(error) = result {
-            pb.finish_with_message(format!(
-                "{}\n{}",
-                "There has been an error while registering the user:".fg::<BrightRed>(),
-                error.fg::<BrightRed>()
-            ));
-        } else {
-            pb.finish_with_message(
-                "User was successfully added"
-                    .fg::<BrightGreen>()
-                    .to_string(),
-            );
-        }
+        let _ = output::color_disabled(no_color);
+        println!("eroosterctl {version}");
+        println!("DB backend:  {db_backend}");
     }
-}
-
-async fn actual_register(username: String, password: SecretString, config: &Config) -> Result<()> {
-    let database = get_database(config).await?;
-    database.add_user(&username.to_lowercase()).await?;
-    database
-        .change_password(&username.to_lowercase(), password)
-        .await?;
-    Ok(())
-}
-
-#[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
-async fn change_password(
-    username: Option<String>,
-    current_password: Option<SecretString>,
-    new_password: Option<SecretString>,
-    config: &Config,
-) {
-    let spinner_style = ProgressStyle::default_spinner()
-        .template("{spinner} {wide_msg}")
-        .expect("template working")
-        .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
-    if username.is_some() && new_password.is_none() && current_password.is_none() {
-        error!("Missing new password and current password");
-    } else if username.is_none() && new_password.is_some() && current_password.is_none() {
-        error!("Missing username and current password");
-    } else if username.is_some() && new_password.is_some() && current_password.is_none() {
-        error!("Missing current password");
-    } else if username.is_some() && new_password.is_none() && current_password.is_some() {
-        error!("Missing new password");
-    } else if username.is_none() && new_password.is_some() && current_password.is_some() {
-        error!("Missing username");
-    } else if username.is_none() && new_password.is_none() && current_password.is_none() {
-        clearscreen::clear().expect("failed to clear screen");
-        // Get users username
-        let mut username = String::new();
-        print!(
-            "{}",
-            "Please enter the email address of the user: ".fg::<BrightCyan>()
-        );
-        io::stdout().flush().expect("Couldn't flush stdout");
-        io::stdin()
-            .read_line(&mut username)
-            .expect("Couldn't read line");
-        // We remove the newline
-        username = username.replace(['\n', '\r'], "");
-
-        // TODO input validation
-
-        // Get users current password (doesnt show it)
-        let current_password = SecretString::new(
-            rpassword::prompt_password(
-                "Please enter the current password of the user: ".fg::<BrightCyan>(),
-            )
-            .expect("Couldn't read line")
-            .into_boxed_str(),
-        );
-
-        // TODO repromt as needed
-        if !verify_password(username.to_lowercase(), current_password, config).await {
-            error!(
-                "{}",
-                "The password was incorrect. Please try again".fg::<BrightRed>()
-            );
-            exit(1);
-        }
-
-        let new_password = SecretString::new(
-            rpassword::prompt_password(
-                "Please enter the new password of the user: ".fg::<BrightCyan>(),
-            )
-            .expect("Couldn't read line")
-            .into_boxed_str(),
-        );
-
-        let pb = ProgressBar::new_spinner();
-        pb.set_style(spinner_style);
-        pb.enable_steady_tick(Duration::from_millis(100));
-        clearscreen::clear().expect("failed to clear screen");
-        pb.set_message(
-            "Changing the users password..."
-                .fg::<BrightGreen>()
-                .to_string(),
-        );
-        let result = actual_change_password(username, new_password, config).await;
-
-        clearscreen::clear().expect("failed to clear screen");
-        if let Err(error) = result {
-            pb.finish_with_message(format!(
-                "{}\n{}",
-                "There has been an error while changing the users password:".fg::<BrightRed>(),
-                error.fg::<BrightRed>()
-            ));
-        } else {
-            pb.finish_with_message(
-                "User's password was successfully changed"
-                    .fg::<BrightGreen>()
-                    .to_string(),
-            );
-        }
-    } else {
-        clearscreen::clear().expect("failed to clear screen");
-        let pb = ProgressBar::new_spinner();
-        pb.set_style(spinner_style);
-        pb.enable_steady_tick(Duration::from_millis(100));
-        pb.set_message(
-            "Changing the users password..."
-                .fg::<BrightGreen>()
-                .to_string(),
-        );
-
-        let username = username.expect("Username is not empty");
-        let current_password = current_password.expect("Password is not empty");
-        if !verify_password(username.clone(), current_password, config).await {
-            error!(
-                "{}",
-                "The password was incorrect. Please try again".fg::<BrightRed>()
-            );
-            exit(1);
-        }
-        let new_password = new_password.expect("New Password is not empty");
-        let result = actual_register(username, new_password, config).await;
-
-        clearscreen::clear().expect("failed to clear screen");
-        if let Err(error) = result {
-            pb.finish_with_message(format!(
-                "{}\n{}",
-                "There has been an error while changing the users password:".fg::<BrightRed>(),
-                error.fg::<BrightRed>()
-            ));
-        } else {
-            pb.finish_with_message(
-                "User's password was successfully changed"
-                    .fg::<BrightGreen>()
-                    .to_string(),
-            );
-        }
-    }
-}
-
-async fn verify_password(
-    username: String,
-    current_password: SecretString,
-    config: &Config,
-) -> bool {
-    match get_database(config).await {
-        Ok(database) => database.verify_user(&username, current_password).await,
-        Err(e) => {
-            error!("Failed to verify password: {}", e);
-            false
-        }
-    }
-}
-
-async fn actual_change_password(
-    username: String,
-    new_password: SecretString,
-    config: &Config,
-) -> Result<()> {
-    let database = get_database(config).await?;
-    database
-        .change_password(&username.to_lowercase(), new_password)
-        .await?;
-    Ok(())
 }

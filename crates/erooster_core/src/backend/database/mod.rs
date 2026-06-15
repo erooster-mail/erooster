@@ -50,6 +50,12 @@ pub trait Database<S: sqlx::Database> {
 
     /// Adds a new user without password
     async fn add_user(&self, username: &str) -> color_eyre::eyre::Result<()>;
+
+    /// Returns all usernames ordered alphabetically
+    async fn list_users(&self) -> color_eyre::eyre::Result<Vec<String>>;
+
+    /// Deletes a user and their password record
+    async fn delete_user(&self, username: &str) -> color_eyre::eyre::Result<()>;
 }
 
 /// Get a postgres database connection pool and the higher level wrapper

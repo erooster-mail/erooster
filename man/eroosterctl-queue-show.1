@@ -1,0 +1,38 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-queue-show 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-queue\-show \- show details for a queue entry
+.SH SYNOPSIS
+.B eroosterctl queue show
+\fIid\fR
+[\fI\-\-output\fR \fBtable\fR|\fBjson\fR]
+.SH DESCRIPTION
+Displays the full details of a single queue entry, including the sender,
+recipients, current status, attempt count, last error, and a timestamped log
+of every delivery attempt.
+.SH OPTIONS
+.TP
+\fIid\fR
+The queue entry ID (required positional argument). Obtain IDs from
+\fBeroosterctl queue list\fR.
+.TP
+\fB\-\-output\fR \fBtable\fR|\fBjson\fR
+\fBjson\fR emits a full object including the \fIdelivery_log\fR array.
+.SH EXAMPLES
+.EX
+eroosterctl queue show 550e8400-e29b-41d4-a716-446655440000
+
+eroosterctl --output json queue show $ID | jq '.delivery_log'
+.EE
+.SH EXIT STATUS
+.TP
+\fB0\fR
+Entry found and displayed.
+.TP
+\fB1\fR
+Entry not found.
+.SH SEE ALSO
+\fBeroosterctl\-queue\-list\fR(1),
+\fBeroosterctl\-queue\-retry\fR(1)

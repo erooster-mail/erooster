@@ -1,0 +1,47 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-queue-abandon 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-queue\-abandon \- permanently abandon a queue entry
+.SH SYNOPSIS
+.B eroosterctl queue abandon
+\fIid\fR
+[\fI\-\-yes\fR]
+.SH DESCRIPTION
+Marks the specified queue entry as \fBabandoned\fR. The entry is not deleted
+from the database (the audit trail is preserved), but the delivery worker will
+not attempt delivery again. This is the appropriate action for messages that
+are permanently undeliverable (invalid recipient domain, unresolvable MX) and
+cannot be bounced automatically.
+.P
+Without \fB\-\-yes\fR and when stdin is a TTY, a confirmation prompt is shown.
+In non\-interactive mode, \fB\-\-yes\fR is required.
+.SH OPTIONS
+.TP
+\fIid\fR
+The queue entry ID (required positional argument).
+.TP
+\fB\-y, \-\-yes\fR
+Skip the confirmation prompt.
+.SH EXAMPLES
+.EX
+# Guided confirmation
+eroosterctl queue abandon 550e8400-e29b-41d4-a716-446655440000
+
+# Scripted abandon
+eroosterctl queue abandon $ID --yes
+.EE
+.SH EXIT STATUS
+.TP
+\fB0\fR
+Entry abandoned.
+.TP
+\fB1\fR
+Database error.
+.TP
+\fB2\fR
+\fB\-\-yes\fR required but not provided in non\-interactive mode.
+.SH SEE ALSO
+\fBeroosterctl\-queue\-retry\fR(1),
+\fBeroosterctl\-queue\-show\fR(1)

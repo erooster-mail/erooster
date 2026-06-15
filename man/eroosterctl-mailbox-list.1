@@ -1,0 +1,44 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-mailbox-list 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-mailbox\-list \- list mailbox folders for a user
+.SH SYNOPSIS
+.B eroosterctl mailbox list
+\fIemail\fR
+[\fI\-\-output\fR \fBtable\fR|\fBjson\fR]
+.SH DESCRIPTION
+Lists all IMAP mailbox folders belonging to the specified user, together with
+the number of messages in each folder.
+.P
+The \fBmailbox\fR command group may be abbreviated as \fBmb\fR:
+\fBeroosterctl mb list alice@example.com\fR.
+.SH OPTIONS
+.TP
+\fIemail\fR
+Email address of the user (required positional argument).
+.TP
+\fB\-\-output\fR \fBtable\fR|\fBjson\fR
+\fBtable\fR (default) shows two columns: \fBMAILBOX\fR and \fBMESSAGES\fR.
+\fBjson\fR emits an array of objects with \fImailbox\fR and \fImessages\fR
+fields.
+.SH EXAMPLES
+.EX
+# Table output
+eroosterctl mailbox list alice@example.com
+
+# JSON for a monitoring script
+eroosterctl --output json mb list alice@example.com \
+  | jq '.[] | select(.messages > 1000)'
+.EE
+.SH EXIT STATUS
+.TP
+\fB0\fR
+Success (even if the user has no mailboxes).
+.TP
+\fB1\fR
+Database error or user not found.
+.SH SEE ALSO
+\fBeroosterctl\fR(1),
+\fBeroosterctl\-user\-list\fR(1)

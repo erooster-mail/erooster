@@ -1,0 +1,32 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-user-list 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-user\-list \- list all mail users
+.SH SYNOPSIS
+.B eroosterctl user list
+[\fI\-\-output\fR \fBtable\fR|\fBjson\fR]
+.SH DESCRIPTION
+Retrieves all registered mail users from the database and prints them in the
+requested format. The list is sorted alphabetically.
+.SH OPTIONS
+.TP
+\fB\-\-output\fR \fBtable\fR|\fBjson\fR
+\fBtable\fR (default) renders a single \fBUSERNAME\fR column.
+\fBjson\fR emits a JSON array of objects with a \fIusername\fR field.
+.SH EXAMPLES
+.EX
+# Table output
+eroosterctl user list
+
+# Ansible\-friendly JSON
+eroosterctl --output json user list
+
+# Count users in a script
+eroosterctl --output json user list | jq length
+.EE
+.SH SEE ALSO
+\fBeroosterctl\-user\fR(1),
+\fBeroosterctl\-user\-add\fR(1),
+\fBeroosterctl\-user\-delete\fR(1)

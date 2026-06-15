@@ -1,0 +1,43 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-user-exists 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-user\-exists \- check if a mail user exists
+.SH SYNOPSIS
+.B eroosterctl user exists
+\fIemail\fR
+.SH DESCRIPTION
+Checks whether \fIemail\fR is registered in the database. Produces no output;
+communicates the result via the exit code. This makes it suitable for use in
+shell conditionals, Ansible \fBfailed_when\fR, and CI scripts.
+.SH OPTIONS
+.TP
+\fIemail\fR
+Email address to look up (required positional argument).
+.SH EXAMPLES
+.EX
+# Shell conditional
+if eroosterctl user exists alice@example.com; then
+    echo "User exists"
+else
+    echo "User not found"
+fi
+
+# Ansible
+- name: Check user exists
+  command: eroosterctl user exists alice@example.com
+  register: result
+  failed_when: result.rc not in [0, 1]
+  changed_when: false
+.EE
+.SH EXIT STATUS
+.TP
+\fB0\fR
+User exists.
+.TP
+\fB1\fR
+User does not exist.
+.SH SEE ALSO
+\fBeroosterctl\-user\fR(1),
+\fBeroosterctl\-user\-add\fR(1)

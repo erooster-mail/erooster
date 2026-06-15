@@ -2,6 +2,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+/// Admin-facing queries for eroosterctl
+pub mod admin;
+
 /// The database logic of the server
 pub mod database;
 

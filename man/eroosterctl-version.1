@@ -1,0 +1,28 @@
+.\" SPDX-FileCopyrightText: 2026 MTRNord
+.\"
+.\" SPDX-License-Identifier: Apache-2.0
+.TH eroosterctl-version 1 "June 2026" "eroosterctl" "Erooster Manual"
+.SH NAME
+eroosterctl\-version \- display version and build information
+.SH SYNOPSIS
+.B eroosterctl version
+[\fI\-\-output\fR \fBtable\fR|\fBjson\fR]
+.SH DESCRIPTION
+Prints the eroosterctl version number and the database backend compiled into
+this binary (\fBpostgres\fR or \fBsqlite\fR). This command does not require
+the configuration file and exits without connecting to any external service.
+.SH OPTIONS
+.TP
+\fB\-\-output\fR \fBjson\fR
+Emit a JSON object with \fIversion\fR and \fIdb_backend\fR fields.
+.SH EXAMPLES
+.EX
+eroosterctl version
+# eroosterctl 0.1.0
+# DB backend:  postgres
+
+eroosterctl --output json version
+# {"version":"0.1.0","db_backend":"postgres"}
+.EE
+.SH SEE ALSO
+\fBeroosterctl\fR(1)

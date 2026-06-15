@@ -21,3 +21,4 @@ webserver:
   tls: false
 rspamd:
   address: http://localhost:11333
+task_folder: "./task_folder"
